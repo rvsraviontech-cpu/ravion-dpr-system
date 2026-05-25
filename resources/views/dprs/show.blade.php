@@ -259,6 +259,561 @@
     @endif
 
 </div>
+
+<!-- Material Consumption -->
+
+<div class="bg-white rounded shadow p-6 mb-6">
+
+    <h2 class="text-2xl font-bold mb-6">
+        Material Consumption
+    </h2>
+
+    @if($dpr->materials->count() > 0)
+
+        <table class="w-full border">
+
+            <thead class="bg-gray-200">
+
+                <tr>
+
+                    <th class="p-4 border text-left">
+                        Material
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Quantity
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Unit
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach($dpr->materials as $material)
+
+                <tr>
+
+                    <td class="p-4 border">
+
+                        {{ $material->material->material_name }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $material->quantity_used }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $material->material->unit }}
+
+                    </td>
+
+                </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
+
+    @else
+
+        <p class="text-gray-500">
+            No material consumption entries available.
+        </p>
+
+    @endif
+
+</div>
+
+<!-- Material Received -->
+
+<div class="bg-white rounded shadow p-6 mb-6">
+
+    <h2 class="text-2xl font-bold mb-6">
+        Material Received
+    </h2>
+
+    @if($dpr->materialReceived->count() > 0)
+
+        <table class="w-full border">
+
+            <thead class="bg-gray-200">
+
+                <tr>
+
+                    <th class="p-4 border text-left">
+                        Material
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Vendor
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Quantity
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Challan
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Bill
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach($dpr->materialReceived as $received)
+
+                <tr>
+
+                    <td class="p-4 border">
+
+                        {{ $received->material->material_name }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $received->vendor->vendor_name ?? '-' }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $received->quantity_received }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $received->challan_number }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $received->bill_number }}
+
+                    </td>
+
+                </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
+
+    @else
+
+        <p class="text-gray-500">
+            No material receipts available.
+        </p>
+
+    @endif
+
+</div>
+
+<!-- Material Required -->
+
+<div class="bg-white rounded shadow p-6 mb-6">
+
+    <h2 class="text-2xl font-bold mb-6">
+        Material Required
+    </h2>
+
+    @if($dpr->materialRequired->count() > 0)
+
+        <table class="w-full border">
+
+            <thead class="bg-gray-200">
+
+                <tr>
+
+                    <th class="p-4 border text-left">
+                        Material
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Quantity
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Required Date
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Priority
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Reason
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach($dpr->materialRequired as $required)
+
+                <tr>
+
+                    <td class="p-4 border">
+
+                        {{ $required->material->material_name }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $required->required_quantity }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $required->required_date }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $required->priority }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $required->reason }}
+
+                    </td>
+
+                </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
+
+    @else
+
+        <p class="text-gray-500">
+            No material requirements available.
+        </p>
+
+    @endif
+
+</div>
+
+<!-- Machinery / Tools -->
+
+<div class="bg-white rounded shadow p-6 mb-6">
+
+    <h2 class="text-2xl font-bold mb-6">
+        Machinery / Tools Used
+    </h2>
+
+    @if($dpr->machineryTools->count() > 0)
+
+        <table class="w-full border">
+
+            <thead class="bg-gray-200">
+
+                <tr>
+
+                    <th class="p-4 border text-left">
+                        Machine
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Quantity
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Usage Hours
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Condition
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Remarks
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach($dpr->machineryTools as $machine)
+
+                <tr>
+
+                    <td class="p-4 border">
+
+                        {{ $machine->machineryTool->machine_name }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $machine->quantity }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $machine->usage_hours }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $machine->working_condition }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $machine->remarks }}
+
+                    </td>
+
+                </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
+
+    @else
+
+        <p class="text-gray-500">
+            No machinery usage available.
+        </p>
+
+    @endif
+
+    <!-- Issues / Delays -->
+
+<div class="bg-white rounded shadow p-6 mb-6">
+
+    <h2 class="text-2xl font-bold mb-6">
+        Issues / Delays
+    </h2>
+
+    @if($dpr->siteIssues->count() > 0)
+
+        <table class="w-full border">
+
+            <thead class="bg-gray-200">
+
+                <tr>
+
+                    <th class="p-4 border text-left">
+                        Issue
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Activity
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Priority
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Status
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Responsible
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach($dpr->siteIssues as $issue)
+
+                <tr>
+
+                    <td class="p-4 border">
+
+                        {{ $issue->issue_type }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $issue->related_activity }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $issue->priority }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $issue->status }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $issue->responsible_person }}
+
+                    </td>
+
+                </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
+
+    @else
+
+        <p class="text-gray-500">
+            No site issues reported.
+        </p>
+
+    @endif
+
+</div>
+
+</div>
+
+<!-- Tomorrow Plan -->
+
+<div class="bg-white rounded shadow p-6 mb-6">
+
+    <h2 class="text-2xl font-bold mb-6">
+        Tomorrow Plan
+    </h2>
+
+    @if($dpr->tomorrowPlans->count() > 0)
+
+        <table class="w-full border">
+
+            <thead class="bg-gray-200">
+
+                <tr>
+
+                    <th class="p-4 border text-left">
+                        Activity
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Planned Qty
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Unit
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Labour
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Materials
+                    </th>
+
+                    <th class="p-4 border text-left">
+                        Machinery
+                    </th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                @foreach($dpr->tomorrowPlans as $plan)
+
+                <tr>
+
+                    <td class="p-4 border">
+
+                        {{ $plan->activity->activity_name ?? '-' }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $plan->planned_quantity }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $plan->unit }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $plan->planned_labour }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $plan->materials_required }}
+
+                    </td>
+
+                    <td class="p-4 border">
+
+                        {{ $plan->machinery_required }}
+
+                    </td>
+
+                </tr>
+
+                @endforeach
+
+            </tbody>
+
+        </table>
+
+    @else
+
+        <p class="text-gray-500">
+            No tomorrow plans available.
+        </p>
+
+    @endif
+
+</div>
+
 <!-- Site Photos -->
 
 <div class="bg-white rounded shadow p-6 mb-6">

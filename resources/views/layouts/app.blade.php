@@ -105,6 +105,67 @@
 
     </a>
 </li>
+<li>
+
+    <a href="{{ route('labour-types.index') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Labour Types
+
+    </a>
+
+</li>
+
+<li>
+
+    <a href="{{ route('materials.index') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Materials
+
+    </a>
+
+</li>
+<li>
+
+    <a href="{{ route('vendors.index') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Vendors
+
+    </a>
+
+</li>
+<li>
+
+    <a href="{{ route('machinery-tools.index') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Machinery & Tools
+
+    </a>
+
+</li>
+<li>
+
+    <a href="{{ route('weekly-plans.index') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Weekly Plans
+
+    </a>
+
+</li>
+<li>
+
+    <a href="{{ route('weekly-plans.progress-dashboard') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Weekly Progress Dasboard
+
+    </a>
+
+</li>
 
 @endif
 
@@ -163,6 +224,26 @@
         Engineer Productivity
 
     </a>
+</li>
+<li>
+
+    <a href="{{ route('weekly-plans.index') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Weekly Plans
+
+    </a>
+
+</li>
+<li>
+
+    <a href="{{ route('weekly-plans.progress-dashboard') }}"
+       class="block px-4 py-2 hover:bg-gray-700">
+
+        Weekly Progress Dasboard
+
+    </a>
+
 </li>
 
 @endif

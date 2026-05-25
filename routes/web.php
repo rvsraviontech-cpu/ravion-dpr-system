@@ -8,6 +8,11 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\ContractorController;
 use App\Http\Controllers\DprController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\MaterialController;
+use App\Http\Controllers\LabourTypeController;
+use App\Http\Controllers\VendorController;
+use App\Http\Controllers\MachineryToolController;
+use App\Http\Controllers\WeeklyPlanController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -76,7 +81,29 @@ Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
     ->middleware(['auth']);
     Route::resource('labour-types', LabourTypeController::class)
     ->middleware(['auth', 'role:Admin']);
+    Route::resource('materials', MaterialController::class )->middleware(['auth', 'role:Admin']);
+    Route::resource('vendors', VendorController::class )->middleware(['auth', 'role:Admin']);
+    Route::resource( 'machinery-tools', MachineryToolController::class
+)->middleware(['auth', 'role:Admin']);
 
-});
+Route::resource(
+    'weekly-plans',
+    WeeklyPlanController::class
+)->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+Route::get(
+    '/weekly-plan-progress',
+    [WeeklyPlanController::class, 'progressDashboard']
+)
+->name('weekly-plans.progress-dashboard')
+->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+    });
 
 require __DIR__.'/auth.php';

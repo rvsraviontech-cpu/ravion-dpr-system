@@ -12,6 +12,14 @@ use App\Models\DprWorkItem;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\DprPhoto;
 use App\Models\DprLabour;
+use App\Models\Material;
+use App\Models\DprMaterial;
+use App\Models\Vendor;
+use App\Models\DprMaterialReceived;
+use App\Models\DprMaterialRequired;
+use App\Models\MachineryTool;
+use App\Models\DprMachineryTool;
+use App\Models\TomorrowPlan;
 
 class DprController extends Controller
 {
@@ -94,12 +102,17 @@ else
     ));
 }
 
+// CREATE FUNCTION
+
     public function create()
     {
         $projects = auth()->user()->projects;
         $activities = Activity::all();
         $contractors = Contractor::all();
         $labourTypes = \App\Models\LabourType::all();
+        $materials = Material::all();
+        $vendors = Vendor::all();
+        $machineries = MachineryTool::all();
 
         
 
@@ -107,9 +120,14 @@ else
             'projects',
             'activities',
             'contractors',
-            'labourTypes'
+            'labourTypes',
+            'materials',
+            'vendors',
+            'machineries'
         ));
     }
+
+    // STORE FUNCTION
 
     public function store(Request $request)
     {
@@ -217,11 +235,254 @@ if($request->labour_type)
     }
 }
 
+if($request->material_id)
+{
+    foreach($request->material_id as $index => $materialId)
+    {
+        if(!$materialId)
+        {
+            continue;
+        }
+
+        DprMaterial::create([
+
+            'dpr_id' => $dpr->id,
+
+            'material_id' => $materialId,
+
+            'quantity_used' =>
+                $request->quantity_used[$index] ?? 0
+
+        ]);
+    }
+}
+
+// Material Received
+
+if($request->received_material_id)
+{
+    foreach(
+        $request->received_material_id
+        as $index => $materialId
+    )
+    {
+        if(!$materialId)
+        {
+            continue;
+        }
+
+        DprMaterialReceived::create([
+
+            'dpr_id' => $dpr->id,
+
+            'material_id' => $materialId,
+
+            'vendor_id' =>
+                $request->vendor_id[$index]
+                ?? null,
+
+            'quantity_received' =>
+                $request->quantity_received[$index]
+                ?? 0,
+
+            'challan_number' =>
+                $request->challan_number[$index]
+                ?? null,
+
+            'bill_number' =>
+                $request->bill_number[$index]
+                ?? null
+
+        ]);
+    }
+}
+
+// Material Required
+
+if($request->required_material_id)
+{
+    foreach(
+        $request->required_material_id
+        as $index => $materialId
+    )
+    {
+        if(!$materialId)
+        {
+            continue;
+        }
+
+        DprMaterialRequired::create([
+
+            'dpr_id' => $dpr->id,
+
+            'material_id' => $materialId,
+
+            'required_quantity' =>
+                $request->required_quantity[$index]
+                ?? 0,
+
+            'required_date' =>
+                $request->required_date[$index]
+                ?? null,
+
+            'priority' =>
+                $request->priority[$index]
+                ?? 'Normal',
+
+            'reason' =>
+                $request->reason[$index]
+                ?? null,
+
+            'remarks' =>
+                $request->required_remarks[$index]
+                ?? null
+
+        ]);
+    }
+}
+
+// Machinery/Tool Used
+
+if($request->machinery_tool_id)
+{
+    foreach(
+        $request->machinery_tool_id
+        as $index => $machineId
+    )
+    {
+        if(!$machineId)
+        {
+            continue;
+        }
+
+        DprMachineryTool::create([
+
+            'dpr_id' => $dpr->id,
+
+            'machinery_tool_id' => $machineId,
+
+            'quantity' =>
+                $request->machine_quantity[$index]
+                ?? 1,
+
+            'usage_hours' =>
+                $request->usage_hours[$index]
+                ?? 0,
+
+            'working_condition' =>
+                $request->working_condition[$index]
+                ?? 'Working',
+
+            'remarks' =>
+                $request->machine_remarks[$index]
+                ?? null
+
+        ]);
+    }
+}
+
+// Site Issues
+if($request->issue_type)
+{
+    foreach(
+        $request->issue_type
+        as $index => $issueType
+    )
+    {
+        if(!$issueType)
+        {
+            continue;
+        }
+
+        SiteIssue::create([
+
+            'dpr_id' => $dpr->id,
+
+            'issue_type' =>
+                $issueType,
+
+            'related_activity' =>
+                $request->related_activity[$index]
+                ?? null,
+
+            'description' =>
+                $request->issue_description[$index]
+                ?? null,
+
+            'responsible_person' =>
+                $request->responsible_person[$index]
+                ?? null,
+
+            'priority' =>
+                $request->issue_priority[$index]
+                ?? 'Medium',
+
+            'status' =>
+                $request->issue_status[$index]
+                ?? 'Open',
+
+            'remarks' =>
+                $request->issue_remarks[$index]
+                ?? null
+
+        ]);
+    }
+}
+
+// Tomorrow Plans
+if($request->plan_activity_id)
+{
+    foreach(
+        $request->plan_activity_id
+        as $index => $activityId
+    )
+    {
+        if(!$activityId)
+        {
+            continue;
+        }
+
+        TomorrowPlan::create([
+
+            'dpr_id' => $dpr->id,
+
+            'activity_id' => $activityId,
+
+            'planned_quantity' =>
+                $request->planned_quantity[$index]
+                ?? 0,
+
+            'unit' =>
+                $request->planned_unit[$index]
+                ?? null,
+
+            'planned_labour' =>
+                $request->planned_labour[$index]
+                ?? null,
+
+            'materials_required' =>
+                $request->planned_materials[$index]
+                ?? null,
+
+            'machinery_required' =>
+                $request->planned_machinery[$index]
+                ?? null,
+
+            'risks_constraints' =>
+                $request->planned_risks[$index]
+                ?? null
+
+        ]);
+    }
+}
+
         return redirect('/dprs')
     ->with('success', 'DPR submitted successfully.');
     }
 
-  
+
+
+
 public function pmoQueue()
 {
     $dprs = Dpr::with('project', 'user')
@@ -260,6 +521,7 @@ public function reject(Request $request, $id)
         ->with('success', 'DPR rejected successfully.');
 }
 
+// SHOW FUNCTION
 public function show($id)
 {
     $dpr = \App\Models\Dpr::with([
@@ -268,7 +530,14 @@ public function show($id)
         'workItems.activity',
         'workItems.contractor',
         'photos',
-        'labours.labourType'
+        'labours.labourType',
+        'materials.material',
+        'materialReceived.material',
+        'materialReceived.vendor',
+        'materialRequired.material',
+        'machineryTools.machineryTool',
+        'siteIssues',
+        'tomorrowPlans.activity'
     ])->findOrFail($id);
 
     return view('dprs.show', compact('dpr'));
@@ -341,7 +610,15 @@ public function downloadPdf($id)
         'workItems.activity',
         'workItems.contractor',
         'photos',
-        'labours.labourType'
+        'labours.labourType',
+        'materials.material',
+        'materialReceived.material',
+        'materialReceived.vendor',
+        'materialRequired.material',
+        'machineryTools.machineryTool',
+        'siteIssues',
+        'tomorrowPlans.activity'
+
     ])->findOrFail($id);
 
     $pdf = Pdf::loadView('dprs.pdf', compact('dpr'));
