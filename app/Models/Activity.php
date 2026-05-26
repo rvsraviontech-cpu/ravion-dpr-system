@@ -12,4 +12,9 @@ class Activity extends Model
         'work_stage',
         'is_active'
     ];
+
+    public function mapping()
+    {
+        return $this->hasOne(ActivityMapping::class);
+    }
 }

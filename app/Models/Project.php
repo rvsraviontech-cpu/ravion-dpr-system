@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
+use App\Models\ProjectBlock;
 
 class Project extends Model
 {
@@ -24,5 +25,25 @@ class Project extends Model
     public function dprs()
 {
     return $this->hasMany(Dpr::class);
+}
+public function blocks()
+{
+    return $this->hasMany(ProjectBlock::class);
+}
+public function floors()
+{
+    return $this->hasMany(ProjectFloor::class);
+}
+public function units()
+{
+    return $this->hasMany(ProjectUnit::class);
+}
+public function rooms()
+{
+    return $this->hasMany(ProjectRoom::class);
+}
+public function subspaces()
+{
+    return $this->hasMany(ProjectSubspace::class);
 }
 }

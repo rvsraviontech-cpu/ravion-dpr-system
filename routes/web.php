@@ -13,6 +13,7 @@ use App\Http\Controllers\LabourTypeController;
 use App\Http\Controllers\VendorController;
 use App\Http\Controllers\MachineryToolController;
 use App\Http\Controllers\WeeklyPlanController;
+use App\Http\Controllers\ActivityMappingController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -103,6 +104,13 @@ Route::get(
     'auth',
     'role:Admin,PMO,DGM'
 ]);
+Route::get('/activity-mappings', [ActivityMappingController::class, 'index'])
+    ->name('activity-mappings.index')
+    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+
+Route::post('/activity-mappings/import', [ActivityMappingController::class, 'import'])
+    ->name('activity-mappings.import')
+    ->middleware(['auth', 'role:Admin,PMO,DGM']);
 
     });
 
