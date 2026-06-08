@@ -7,21 +7,13 @@
 </h1>
 
 @if ($errors->any())
-
     <div class="bg-red-100 text-red-700 p-4 rounded mb-6">
-
         <ul>
-
             @foreach ($errors->all() as $error)
-
                 <li>{{ $error }}</li>
-
             @endforeach
-
         </ul>
-
     </div>
-
 @endif
 
 <form action="{{ route('dprs.store') }}"
@@ -32,373 +24,376 @@
 
     <div class="bg-white rounded shadow p-6 mb-6">
 
+        <h2 class="text-2xl font-bold mb-4">
+            Basic Details
+        </h2>
+
         <div class="mb-4">
-
-            <label class="block mb-2 font-bold">
-                DPR Date
-            </label>
-
+            <label class="block mb-2 font-bold">DPR Date</label>
             <input type="date"
                    name="dpr_date"
-                   class="border p-2 rounded w-full">
-
+                   class="border p-2 rounded w-full"
+                   required>
         </div>
 
         <div class="mb-4">
-
-            <label class="block mb-2 font-bold">
-                Project
-            </label>
-
+            <label class="block mb-2 font-bold">Project</label>
             <select name="project_id"
-                    class="border p-2 rounded w-full">
-
+                    class="border p-2 rounded w-full"
+                    required>
+                <option value="">Select Project</option>
                 @foreach($projects as $project)
-
                     <option value="{{ $project->id }}">
                         {{ $project->project_name }}
                     </option>
-
                 @endforeach
-
             </select>
-
         </div>
-
-    </div>
-
-    <h2 class="text-2xl font-bold mb-4">
-        Work Items
-    </h2>
-
-    <div id="work-items">
-
-        <div class="work-item bg-white rounded shadow p-6 mb-4">
-
-            <div class="mb-4">
-
-                <label class="block mb-2 font-bold">
-                    Activity
-                </label>
-
-                <select name="activity_id[]"
-                        class="border p-2 rounded w-full">
-
-                    @foreach($activities as $activity)
-
-                        <option value="{{ $activity->id }}">
-                            {{ $activity->activity_name }}
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div class="mb-4">
-
-                <label class="block mb-2 font-bold">
-                    Contractor
-                </label>
-
-                <select name="contractor_id[]"
-                        class="border p-2 rounded w-full">
-
-                    @foreach($contractors as $contractor)
-
-                        <option value="{{ $contractor->id }}">
-                            {{ $contractor->contractor_name }}
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div class="mb-4">
-
-                <label class="block mb-2 font-bold">
-                    Quantity Completed
-                </label>
-
-                <input type="number"
-                       step="0.01"
-                       name="quantity_completed[]"
-                       class="border p-2 rounded w-full">
-
-            </div>
-
-            <div class="mb-4">
-
-                <label class="block mb-2 font-bold">
-                    Work Remarks
-                </label>
-
-                <textarea name="work_remarks[]"
-                          class="border p-2 rounded w-full"></textarea>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <button type="button"
-            onclick="addWorkItem()"
-            class="bg-green-500 text-white px-4 py-2 rounded mb-6">
-
-        Add More Work
-
-    </button>
-
-    <div class="bg-white rounded shadow p-6 mb-6">
 
         <div class="mb-4">
-
-            <label class="block mb-2 font-bold">
-                Weather
-            </label>
-
+            <label class="block mb-2 font-bold">Weather</label>
             <input type="text"
                    name="weather"
                    class="border p-2 rounded w-full">
-
         </div>
 
         <div class="mb-4">
-
-            <label class="block mb-2 font-bold">
-                Remarks
-            </label>
-
+            <label class="block mb-2 font-bold">General Remarks</label>
             <textarea name="remarks"
                       class="border p-2 rounded w-full"></textarea>
-
         </div>
 
     </div>
 
-    <!-- Labour Details -->
+    <div class="bg-white rounded shadow p-6 mb-6">
 
-<div class="bg-white rounded shadow p-6 mt-8">
+        <h2 class="text-2xl font-bold mb-4">
+            Work Completed Today
+        </h2>
 
-    <h2 class="text-2xl font-bold mb-6">
-        Labour Details
-    </h2>
+        <div id="work-items">
 
-    <div id="labour-container">
+            <div class="work-item border rounded p-4 mb-4">
 
-        <div class="grid grid-cols-5 gap-4 mb-4 labour-row">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            <div>
-
-                <label class="font-semibold">
-                    Labour Type
-                </label>
-
-                <select name="labour_type[]"
-        class="w-full border rounded p-2">
-
-    <option value="">
-        Select Labour Type
-    </option>
-
-    @foreach($labourTypes as $type)
-
-        <option value="{{ $type->id }}">
-
-            {{ $type->labour_type_name }}
-
-        </option>
-
-    @endforeach
-
-</select>
-
-            </div>
-            
-
-            <div>
-
-                <label class="font-semibold">
-                    Male
-                </label>
-
-                <input type="number"
-                       name="male_count[]"
-                       value="0"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="font-semibold">
-                    Female
-                </label>
-
-                <input type="number"
-                       name="female_count[]"
-                       value="0"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="font-semibold">
-                    Local
-                </label>
-
-                <input type="number"
-                       name="local_count[]"
-                       value="0"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="font-semibold">
-                    Non Local
-                </label>
-
-                <input type="number"
-                       name="non_local_count[]"
-                       value="0"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-        </div>
-
-    </div>
-
-    <button type="button"
-            onclick="addLabourRow()"
-            class="bg-blue-600 text-white px-4 py-2 rounded mt-4">
-
-        Add Labour Row
-
-    </button>
-
+                    
+                        <div>
+    <label class="block mb-2 font-bold">Activity Division</label>
+    <select name="activity_division_id[]"
+            class="activity-division-select border p-2 rounded w-full">
+        <option value="">Select Activity Division</option>
+        @foreach($activityDivisions as $division)
+            <option value="{{ $division->id }}">
+                {{ $division->name }}
+            </option>
+        @endforeach
+    </select>
 </div>
-   
+                        <div>
+    <label class="block mb-2 font-bold">Activity</label>
+    <select name="activity_mapping_id[]"
+            class="activity-mapping-select border p-2 rounded w-full">
+        <option value="">Select Activity</option>
 
-<!-- Material Received -->
+        @foreach($activityMappings as $mapping)
+            <option value="{{ $mapping->id }}"
+                    data-division="{{ $mapping->activity_division_id }}">
+                {{ $mapping->activity_name }} ({{ $mapping->unit }})
+            </option>
+        @endforeach
+    </select>
+</div>
 
-<div class="bg-white rounded shadow p-6 mb-6">
+                    <div>
+                        <label class="block mb-2 font-bold">Old Activity</label>
+                        <select name="activity_id[]"
+                                class="border p-2 rounded w-full"
+                                required>
+                            <option value="">Select Activity</option>
+                            @foreach($activities as $activity)
+                                <option value="{{ $activity->id }}">
+                                    {{ $activity->activity_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-    <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <label class="block mb-2 font-bold">Block / Building</label>
+                        <select name="project_block_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Block / Building</option>
+                            @foreach($projectBlocks as $block)
+                                <option value="{{ $block->id }}">
+                                    {{ $block->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-        <h2 class="text-2xl font-bold">
+                    <div>
+                        <label class="block mb-2 font-bold">Floor</label>
+                        <select name="project_floor_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Floor</option>
+                            @foreach($projectFloors as $floor)
+                                <option value="{{ $floor->id }}">
+                                    {{ $floor->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Unit / Flat / Villa</label>
+                        <select name="project_unit_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Unit</option>
+                            @foreach($projectUnits as $unit)
+                                <option value="{{ $unit->id }}">
+                                    {{ $unit->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Room / Space</label>
+                        <select name="project_room_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Room</option>
+                            @foreach($projectRooms as $room)
+                                <option value="{{ $room->id }}">
+                                    {{ $room->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Sub-space / Element</label>
+                        <select name="project_subspace_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Sub-space</option>
+                            @foreach($projectSubspaces as $subspace)
+                                <option value="{{ $subspace->id }}">
+                                    {{ $subspace->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Contractor</label>
+                        <select name="contractor_id[]"
+                                class="border p-2 rounded w-full"
+                                required>
+                            <option value="">Select Contractor</option>
+                            @foreach($contractors as $contractor)
+                                <option value="{{ $contractor->id }}">
+                                    {{ $contractor->contractor_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Quantity Completed</label>
+                        <input type="number"
+                               step="0.01"
+                               name="quantity_completed[]"
+                               class="border p-2 rounded w-full"
+                               required>
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block mb-2 font-bold">Work Remarks</label>
+                        <textarea name="work_remarks[]"
+                                  class="border p-2 rounded w-full"></textarea>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <button type="button"
+                onclick="addWorkItem()"
+                class="bg-green-600 text-white px-4 py-2 rounded">
+            Add More Work
+        </button>
+
+    </div>
+
+    <div class="bg-white rounded shadow p-6 mb-6">
+
+        <h2 class="text-2xl font-bold mb-4">
+            Labour Details
+        </h2>
+
+        <div id="labour-items">
+
+            <div class="labour-item border rounded p-4 mb-4">
+
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+                    <div>
+                        <label class="block mb-2 font-bold">Labour Type</label>
+                        <select name="labour_type[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Labour Type</option>
+                            @foreach($labourTypes as $labourType)
+                                <option value="{{ $labourType->id }}">
+                                    {{ $labourType->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Male</label>
+                        <input type="number"
+                               name="male_count[]"
+                               class="border p-2 rounded w-full"
+                               value="0">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Female</label>
+                        <input type="number"
+                               name="female_count[]"
+                               class="border p-2 rounded w-full"
+                               value="0">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Local</label>
+                        <input type="number"
+                               name="local_count[]"
+                               class="border p-2 rounded w-full"
+                               value="0">
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Non-local</label>
+                        <input type="number"
+                               name="non_local_count[]"
+                               class="border p-2 rounded w-full"
+                               value="0">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="bg-white rounded shadow p-6 mb-6">
+
+        <h2 class="text-2xl font-bold mb-4">
+            Material Used
+        </h2>
+
+        <div id="material-used-items">
+
+            <div class="material-used-item border rounded p-4 mb-4">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div>
+                        <label class="block mb-2 font-bold">Material</label>
+                        <select name="material_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Material</option>
+                            @foreach($materials as $material)
+                                <option value="{{ $material->id }}">
+                                    {{ $material->material_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-2 font-bold">Quantity Used</label>
+                        <input type="number"
+                               step="0.01"
+                               name="quantity_used[]"
+                               class="border p-2 rounded w-full">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="bg-white rounded shadow p-6 mb-6">
+
+        <h2 class="text-2xl font-bold mb-4">
             Material Received
         </h2>
 
-        <button type="button"
-                onclick="addMaterialReceivedRow()"
-                class="bg-green-600 text-white px-4 py-2 rounded">
+        <div id="material-received-items">
 
-            + Add Received Material
+            <div class="material-received-item border rounded p-4 mb-4">
 
-        </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-    </div>
+                    <div>
+                        <label class="block mb-2 font-bold">Material</label>
+                        <select name="received_material_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Material</option>
+                            @foreach($materials as $material)
+                                <option value="{{ $material->id }}">
+                                    {{ $material->material_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-    <div id="material-received-container">
+                    <div>
+                        <label class="block mb-2 font-bold">Vendor</label>
+                        <select name="vendor_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Vendor</option>
+                            @foreach($vendors as $vendor)
+                                <option value="{{ $vendor->id }}">
+                                    {{ $vendor->vendor_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-        <div class="grid grid-cols-5 gap-4 mb-4 material-received-row">
+                    <div>
+                        <label class="block mb-2 font-bold">Quantity Received</label>
+                        <input type="number"
+                               step="0.01"
+                               name="quantity_received[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-            <div>
+                    <div>
+                        <label class="block mb-2 font-bold">Challan Number</label>
+                        <input type="text"
+                               name="challan_number[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                <label class="block mb-2">
-                    Material
-                </label>
+                    <div>
+                        <label class="block mb-2 font-bold">Bill Number</label>
+                        <input type="text"
+                               name="bill_number[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                <select name="received_material_id[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="">
-                        Select Material
-                    </option>
-
-                    @foreach($materials as $material)
-
-                        <option value="{{ $material->id }}">
-
-                            {{ $material->material_name }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Vendor
-                </label>
-
-                <select name="vendor_id[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="">
-                        Select Vendor
-                    </option>
-
-                    @foreach($vendors as $vendor)
-
-                        <option value="{{ $vendor->id }}">
-
-                            {{ $vendor->vendor_name }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Qty Received
-                </label>
-
-                <input type="number"
-                       step="0.01"
-                       name="quantity_received[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Challan No
-                </label>
-
-                <input type="text"
-                       name="challan_number[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Bill No
-                </label>
-
-                <input type="text"
-                       name="bill_number[]"
-                       class="w-full border rounded p-2">
+                </div>
 
             </div>
 
@@ -406,199 +401,71 @@
 
     </div>
 
-</div>
-<!-- Material Consumption -->
+    <div class="bg-white rounded shadow p-6 mb-6">
 
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <div class="flex justify-between items-center mb-6">
-
-        <h2 class="text-2xl font-bold">
-            Material Consumption
-        </h2>
-
-        <button type="button"
-                onclick="addMaterialRow()"
-                class="bg-blue-600 text-white px-4 py-2 rounded">
-
-            + Add Material
-
-        </button>
-
-    </div>
-
-    <div id="material-container">
-
-        <div class="grid grid-cols-3 gap-4 mb-4 material-row">
-
-            <div>
-
-                <label class="block mb-2">
-                    Material
-                </label>
-
-                <select name="material_id[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="">
-                        Select Material
-                    </option>
-
-                    @foreach($materials as $material)
-
-                        <option value="{{ $material->id }}">
-
-                            {{ $material->material_name }}
-                            ({{ $material->unit }})
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Quantity Used
-                </label>
-
-                <input type="number"
-                       step="0.01"
-                       name="quantity_used[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-<!-- Material Required -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <div class="flex justify-between items-center mb-6">
-
-        <h2 class="text-2xl font-bold">
+        <h2 class="text-2xl font-bold mb-4">
             Material Required
         </h2>
 
-        <button type="button"
-                onclick="addMaterialRequiredRow()"
-                class="bg-red-600 text-white px-4 py-2 rounded">
+        <div id="material-required-items">
 
-            + Add Required Material
+            <div class="material-required-item border rounded p-4 mb-4">
 
-        </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-    </div>
+                    <div>
+                        <label class="block mb-2 font-bold">Material</label>
+                        <select name="required_material_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Material</option>
+                            @foreach($materials as $material)
+                                <option value="{{ $material->id }}">
+                                    {{ $material->material_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-    <div id="material-required-container">
+                    <div>
+                        <label class="block mb-2 font-bold">Required Quantity</label>
+                        <input type="number"
+                               step="0.01"
+                               name="required_quantity[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-        <div class="grid grid-cols-6 gap-4 mb-4 material-required-row">
+                    <div>
+                        <label class="block mb-2 font-bold">Required Date</label>
+                        <input type="date"
+                               name="required_date[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-            <div>
+                    <div>
+                        <label class="block mb-2 font-bold">Priority</label>
+                        <select name="priority[]"
+                                class="border p-2 rounded w-full">
+                            <option value="Normal">Normal</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
 
-                <label class="block mb-2">
-                    Material
-                </label>
+                    <div>
+                        <label class="block mb-2 font-bold">Reason</label>
+                        <input type="text"
+                               name="reason[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                <select name="required_material_id[]"
-                        class="w-full border rounded p-2">
+                    <div>
+                        <label class="block mb-2 font-bold">Remarks</label>
+                        <input type="text"
+                               name="required_remarks[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                    <option value="">
-                        Select Material
-                    </option>
-
-                    @foreach($materials as $material)
-
-                        <option value="{{ $material->id }}">
-
-                            {{ $material->material_name }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Required Qty
-                </label>
-
-                <input type="number"
-                       step="0.01"
-                       name="required_quantity[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Required Date
-                </label>
-
-                <input type="date"
-                       name="required_date[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Priority
-                </label>
-
-                <select name="priority[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="Normal">
-                        Normal
-                    </option>
-
-                    <option value="Urgent">
-                        Urgent
-                    </option>
-
-                    <option value="Critical">
-                        Critical
-                    </option>
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Reason
-                </label>
-
-                <input type="text"
-                       name="reason[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Remarks
-                </label>
-
-                <input type="text"
-                       name="required_remarks[]"
-                       class="w-full border rounded p-2">
+                </div>
 
             </div>
 
@@ -606,118 +473,68 @@
 
     </div>
 
-</div>
-<!-- Machinery / Tools -->
+    <div class="bg-white rounded shadow p-6 mb-6">
 
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <div class="flex justify-between items-center mb-6">
-
-        <h2 class="text-2xl font-bold">
+        <h2 class="text-2xl font-bold mb-4">
             Machinery / Tools Used
         </h2>
 
-        <button type="button"
-                onclick="addMachineryRow()"
-                class="bg-indigo-600 text-white px-4 py-2 rounded">
+        @php
+            $machineList = $machineryTools ?? $machineries ?? collect();
+        @endphp
 
-            + Add Machinery
+        <div id="machinery-items">
 
-        </button>
+            <div class="machinery-item border rounded p-4 mb-4">
 
-    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-    <div id="machinery-container">
+                    <div>
+                        <label class="block mb-2 font-bold">Machinery / Tool</label>
+                        <select name="machinery_tool_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Machinery / Tool</option>
+                            @foreach($machineList as $machine)
+                                <option value="{{ $machine->id }}">
+                                    {{ $machine->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-        <div class="grid grid-cols-5 gap-4 mb-4 machinery-row">
+                    <div>
+                        <label class="block mb-2 font-bold">Quantity</label>
+                        <input type="number"
+                               name="machine_quantity[]"
+                               class="border p-2 rounded w-full"
+                               value="1">
+                    </div>
 
-            <div>
+                    <div>
+                        <label class="block mb-2 font-bold">Usage Hours</label>
+                        <input type="number"
+                               step="0.01"
+                               name="usage_hours[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                <label class="block mb-2">
-                    Machine
-                </label>
+                    <div>
+                        <label class="block mb-2 font-bold">Working Condition</label>
+                        <select name="working_condition[]"
+                                class="border p-2 rounded w-full">
+                            <option value="Working">Working</option>
+                            <option value="Breakdown">Breakdown</option>
+                            <option value="Idle">Idle</option>
+                        </select>
+                    </div>
 
-                <select name="machinery_tool_id[]"
-                        class="w-full border rounded p-2">
+                    <div class="md:col-span-2">
+                        <label class="block mb-2 font-bold">Remarks</label>
+                        <textarea name="machine_remarks[]"
+                                  class="border p-2 rounded w-full"></textarea>
+                    </div>
 
-                    <option value="">
-                        Select Machine
-                    </option>
-
-                    @foreach($machineries as $machine)
-
-                        <option value="{{ $machine->id }}">
-
-                            {{ $machine->machine_name }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Quantity
-                </label>
-
-                <input type="number"
-                       name="machine_quantity[]"
-                       value="1"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Usage Hours
-                </label>
-
-                <input type="number"
-                       step="0.01"
-                       name="usage_hours[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Working Condition
-                </label>
-
-                <select name="working_condition[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="Working">
-                        Working
-                    </option>
-
-                    <option value="Breakdown">
-                        Breakdown
-                    </option>
-
-                    <option value="Maintenance">
-                        Maintenance
-                    </option>
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Remarks
-                </label>
-
-                <input type="text"
-                       name="machine_remarks[]"
-                       class="w-full border rounded p-2">
+                </div>
 
             </div>
 
@@ -725,145 +542,73 @@
 
     </div>
 
-</div>
+    <div class="bg-white rounded shadow p-6 mb-6">
 
-
-
-<!-- Issues / Delays -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <div class="flex justify-between items-center mb-6">
-
-        <h2 class="text-2xl font-bold">
+        <h2 class="text-2xl font-bold mb-4">
             Issues / Delays
         </h2>
 
-        <button type="button"
-                onclick="addIssueRow()"
-                class="bg-red-700 text-white px-4 py-2 rounded">
+        <div id="issue-items">
 
-            + Add Issue
+            <div class="issue-item border rounded p-4 mb-4">
 
-        </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-    </div>
+                    <div>
+                        <label class="block mb-2 font-bold">Issue Type</label>
+                        <input type="text"
+                               name="issue_type[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-    <div id="issue-container">
+                    <div>
+                        <label class="block mb-2 font-bold">Related Activity</label>
+                        <input type="text"
+                               name="related_activity[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-        <div class="grid grid-cols-7 gap-4 mb-4 issue-row">
+                    <div>
+                        <label class="block mb-2 font-bold">Responsible Person</label>
+                        <input type="text"
+                               name="responsible_person[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-            <div>
+                    <div>
+                        <label class="block mb-2 font-bold">Priority</label>
+                        <select name="issue_priority[]"
+                                class="border p-2 rounded w-full">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                        </select>
+                    </div>
 
-                <label class="block mb-2">
-                    Issue Type
-                </label>
+                    <div>
+                        <label class="block mb-2 font-bold">Status</label>
+                        <select name="issue_status[]"
+                                class="border p-2 rounded w-full">
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
 
-                <input type="text"
-                       name="issue_type[]"
-                       class="w-full border rounded p-2">
+                    <div class="md:col-span-2">
+                        <label class="block mb-2 font-bold">Description</label>
+                        <textarea name="issue_description[]"
+                                  class="border p-2 rounded w-full"></textarea>
+                    </div>
 
-            </div>
+                    <div class="md:col-span-2">
+                        <label class="block mb-2 font-bold">Remarks</label>
+                        <textarea name="issue_remarks[]"
+                                  class="border p-2 rounded w-full"></textarea>
+                    </div>
 
-            <div>
-
-                <label class="block mb-2">
-                    Related Activity
-                </label>
-
-                <input type="text"
-                       name="related_activity[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Description
-                </label>
-
-                <input type="text"
-                       name="issue_description[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Responsible Person
-                </label>
-
-                <input type="text"
-                       name="responsible_person[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Priority
-                </label>
-
-                <select name="issue_priority[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="Low">
-                        Low
-                    </option>
-
-                    <option value="Medium">
-                        Medium
-                    </option>
-
-                    <option value="High">
-                        High
-                    </option>
-
-                    <option value="Critical">
-                        Critical
-                    </option>
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Status
-                </label>
-
-                <select name="issue_status[]"
-                        class="w-full border rounded p-2">
-
-                    <option value="Open">
-                        Open
-                    </option>
-
-                    <option value="In Progress">
-                        In Progress
-                    </option>
-
-                    <option value="Resolved">
-                        Resolved
-                    </option>
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Remarks
-                </label>
-
-                <input type="text"
-                       name="issue_remarks[]"
-                       class="w-full border rounded p-2">
+                </div>
 
             </div>
 
@@ -871,129 +616,74 @@
 
     </div>
 
-</div>
+    <div class="bg-white rounded shadow p-6 mb-6">
 
-<!-- Tomorrow Plan -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <div class="flex justify-between items-center mb-6">
-
-        <h2 class="text-2xl font-bold">
+        <h2 class="text-2xl font-bold mb-4">
             Tomorrow Plan
         </h2>
 
-        <button type="button"
-                onclick="addTomorrowPlanRow()"
-                class="bg-teal-600 text-white px-4 py-2 rounded">
+        <div id="tomorrow-plan-items">
 
-            + Add Tomorrow Plan
+            <div class="tomorrow-plan-item border rounded p-4 mb-4">
 
-        </button>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-    </div>
+                    <div>
+                        <label class="block mb-2 font-bold">Planned Activity</label>
+                        <select name="plan_activity_id[]"
+                                class="border p-2 rounded w-full">
+                            <option value="">Select Activity</option>
+                            @foreach($activities as $activity)
+                                <option value="{{ $activity->id }}">
+                                    {{ $activity->activity_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-    <div id="tomorrow-plan-container">
+                    <div>
+                        <label class="block mb-2 font-bold">Planned Quantity</label>
+                        <input type="number"
+                               step="0.01"
+                               name="planned_quantity[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-        <div class="grid grid-cols-7 gap-4 mb-4 tomorrow-plan-row">
+                    <div>
+                        <label class="block mb-2 font-bold">Unit</label>
+                        <input type="text"
+                               name="planned_unit[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-            <div>
+                    <div>
+                        <label class="block mb-2 font-bold">Planned Labour</label>
+                        <input type="number"
+                               name="planned_labour[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                <label class="block mb-2">
-                    Activity
-                </label>
+                    <div>
+                        <label class="block mb-2 font-bold">Materials Required</label>
+                        <input type="text"
+                               name="planned_materials[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                <select name="plan_activity_id[]"
-                        class="w-full border rounded p-2">
+                    <div>
+                        <label class="block mb-2 font-bold">Machinery Required</label>
+                        <input type="text"
+                               name="planned_machinery[]"
+                               class="border p-2 rounded w-full">
+                    </div>
 
-                    <option value="">
-                        Select Activity
-                    </option>
+                    <div class="md:col-span-2">
+                        <label class="block mb-2 font-bold">Risks / Constraints</label>
+                        <textarea name="planned_risks[]"
+                                  class="border p-2 rounded w-full"></textarea>
+                    </div>
 
-                    @foreach($activities as $activity)
-
-                        <option value="{{ $activity->id }}">
-
-                            {{ $activity->activity_name }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Planned Qty
-                </label>
-
-                <input type="number"
-                       step="0.01"
-                       name="planned_quantity[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Unit
-                </label>
-
-                <input type="text"
-                       name="planned_unit[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Planned Labour
-                </label>
-
-                <input type="number"
-                       name="planned_labour[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Materials Required
-                </label>
-
-                <input type="text"
-                       name="planned_materials[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Machinery Required
-                </label>
-
-                <input type="text"
-                       name="planned_machinery[]"
-                       class="w-full border rounded p-2">
-
-            </div>
-
-            <div>
-
-                <label class="block mb-2">
-                    Risks / Constraints
-                </label>
-
-                <input type="text"
-                       name="planned_risks[]"
-                       class="w-full border rounded p-2">
+                </div>
 
             </div>
 
@@ -1001,288 +691,162 @@
 
     </div>
 
-</div>
+    <div class="bg-white rounded shadow p-6 mb-6">
 
-<!-- Site Photos -->
-<div class="mt-6">
+        <h2 class="text-2xl font-bold mb-4">
+            Photos
+        </h2>
 
-    <label class="block mb-2 font-bold">
-        Site Photos
-    </label>
+        <input type="file"
+               name="photos[]"
+               multiple
+               accept="image/*"
+               class="border p-2 rounded w-full">
 
-    <input type="file"
-           name="photos[]"
-           multiple
-           class="w-full border rounded px-4 py-2">
-
-    <p class="text-sm text-gray-500 mt-2">
-        You can upload multiple progress photos.
-    </p>
-
-</div>
+    </div>
 
     <button type="submit"
-            class="bg-blue-500 text-white px-6 py-3 rounded">
-
-        Save DPR
-
+            class="bg-blue-600 text-white px-6 py-3 rounded">
+        Submit DPR
     </button>
 
 </form>
 
 <script>
+function addWorkItem() {
+    const container = document.getElementById('work-items');
+    const item = container.querySelector('.work-item');
+    const clone = item.cloneNode(true);
 
-function addWorkItem()
-{
-    let container = document.getElementById('work-items');
-
-    let item = document.querySelector('.work-item').cloneNode(true);
-
-    item.querySelectorAll('input').forEach(input => {
-        input.value = '';
-    });
-
-    item.querySelectorAll('textarea').forEach(textarea => {
-        textarea.value = '';
-    });
-
-    container.appendChild(item);
-}
-
-</script>
-<script>
-
-function addLabourRow()
-{
-    let html = `
-
-    <div class="grid grid-cols-5 gap-4 mb-4 labour-row">
-
-        <div>
-            <input type="text"
-                   name="labour_type[]"
-                   placeholder="Mason / Helper"
-                   class="w-full border rounded p-2">
-        </div>
-
-        <div>
-            <input type="number"
-                   name="male_count[]"
-                   value="0"
-                   class="w-full border rounded p-2">
-        </div>
-
-        <div>
-            <input type="number"
-                   name="female_count[]"
-                   value="0"
-                   class="w-full border rounded p-2">
-        </div>
-
-        <div>
-            <input type="number"
-                   name="local_count[]"
-                   value="0"
-                   class="w-full border rounded p-2">
-        </div>
-
-        <div>
-            <input type="number"
-                   name="non_local_count[]"
-                   value="0"
-                   class="w-full border rounded p-2">
-        </div>
-
-    </div>
-    `;
-
-    document.getElementById('labour-container')
-        .insertAdjacentHTML('beforeend', html);
-}
-
-</script>
-<script>
-
-function addMaterialRow()
-{
-    let row = document.querySelector('.material-row');
-
-    let clone = row.cloneNode(true);
-
-    clone.querySelectorAll('input').forEach(input => {
-
-        input.value = '';
-
-    });
-
-    clone.querySelectorAll('select').forEach(select => {
-
-        select.selectedIndex = 0;
-
-    });
-
-    document
-        .getElementById('material-container')
-        .appendChild(clone);
-}
-
-</script>
-<script>
-
-function addMaterialReceivedRow()
-{
-    let row = document.querySelector(
-        '.material-received-row'
-    );
-
-    let clone = row.cloneNode(true);
-
-    clone.querySelectorAll('input').forEach(input => {
-
-        input.value = '';
-
-    });
-
-    clone.querySelectorAll('select').forEach(select => {
-
-        select.selectedIndex = 0;
-
-    });
-
-    document
-        .getElementById(
-            'material-received-container'
-        )
-        .appendChild(clone);
-}
-
-</script>
-<script>
-
-function addMaterialRequiredRow()
-{
-    let row = document.querySelector(
-        '.material-required-row'
-    );
-
-    let clone = row.cloneNode(true);
-
-    clone.querySelectorAll('input').forEach(input => {
-
-        input.value = '';
-
-    });
-
-    clone.querySelectorAll('select').forEach(select => {
-
-        select.selectedIndex = 0;
-
-    });
-
-    document
-        .getElementById(
-            'material-required-container'
-        )
-        .appendChild(clone);
-}
-
-</script>
-<script>
-
-function addMachineryRow()
-{
-    let row = document.querySelector(
-        '.machinery-row'
-    );
-
-    let clone = row.cloneNode(true);
-
-    clone.querySelectorAll('input').forEach(input => {
-
-        if(input.type === 'number')
-        {
-            input.value = '';
+    clone.querySelectorAll('input, textarea, select').forEach(function(field) {
+        if (field.tagName === 'SELECT') {
+            field.selectedIndex = 0;
+        } else {
+            field.value = '';
         }
-        else
-        {
-            input.value = '';
-        }
-
     });
 
-    clone.querySelectorAll('select').forEach(select => {
+    container.appendChild(clone);
 
-        select.selectedIndex = 0;
-
-    });
-
-    document
-        .getElementById(
-            'machinery-container'
-        )
-        .appendChild(clone);
+    bindActivityDivisionFilter(clone);
+    bindLocationDropdowns(clone);
 }
-
 </script>
 <script>
+    function bindActivityDivisionFilter(scope) {
+    const divisionSelect = scope.querySelector('.activity-division-select');
+    const activitySelect = scope.querySelector('.activity-mapping-select');
 
-function addIssueRow()
-{
-    let row = document.querySelector(
-        '.issue-row'
-    );
+    if (!divisionSelect || !activitySelect) {
+        return;
+    }
 
-    let clone = row.cloneNode(true);
+    const allOptions = Array.from(activitySelect.options);
 
-    clone.querySelectorAll('input').forEach(input => {
+    divisionSelect.addEventListener('change', function () {
+        const selectedDivision = this.value;
 
-        input.value = '';
+        activitySelect.innerHTML = '';
 
+        allOptions.forEach(function (option) {
+            if (
+                option.value === '' ||
+                option.dataset.division === selectedDivision
+            ) {
+                activitySelect.appendChild(option.cloneNode(true));
+            }
+        });
+
+        activitySelect.value = '';
     });
-
-    clone.querySelectorAll('select').forEach(select => {
-
-        select.selectedIndex = 0;
-
-    });
-
-    document
-        .getElementById(
-            'issue-container'
-        )
-        .appendChild(clone);
 }
 
-</script>
-<script>
+document.querySelectorAll('.work-item').forEach(function (item) {
+    bindActivityDivisionFilter(item);
+});
 
-function addTomorrowPlanRow()
-{
-    let row = document.querySelector(
-        '.tomorrow-plan-row'
-    );
+function bindLocationDropdowns(scope) {
+    const blockSelect = scope.querySelector('select[name="project_block_id[]"]');
+    const floorSelect = scope.querySelector('select[name="project_floor_id[]"]');
+    const unitSelect = scope.querySelector('select[name="project_unit_id[]"]');
+    const roomSelect = scope.querySelector('select[name="project_room_id[]"]');
+    const subspaceSelect = scope.querySelector('select[name="project_subspace_id[]"]');
 
-    let clone = row.cloneNode(true);
+    if (!blockSelect || !floorSelect || !unitSelect || !roomSelect || !subspaceSelect) {
+        return;
+    }
 
-    clone.querySelectorAll('input').forEach(input => {
+    blockSelect.addEventListener('change', function () {
+        resetSelect(floorSelect, 'Select Floor');
+        resetSelect(unitSelect, 'Select Unit');
+        resetSelect(roomSelect, 'Select Room');
+        resetSelect(subspaceSelect, 'Select Sub-space');
 
-        input.value = '';
+        if (!this.value) return;
 
+        fetch(`/location/floors/${this.value}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    floorSelect.add(new Option(item.name, item.id));
+                });
+            });
     });
 
-    clone.querySelectorAll('select').forEach(select => {
+    floorSelect.addEventListener('change', function () {
+        resetSelect(unitSelect, 'Select Unit');
+        resetSelect(roomSelect, 'Select Room');
+        resetSelect(subspaceSelect, 'Select Sub-space');
 
-        select.selectedIndex = 0;
+        if (!this.value) return;
 
+        fetch(`/location/units/${this.value}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    unitSelect.add(new Option(item.name, item.id));
+                });
+            });
     });
 
-    document
-        .getElementById(
-            'tomorrow-plan-container'
-        )
-        .appendChild(clone);
+    unitSelect.addEventListener('change', function () {
+        resetSelect(roomSelect, 'Select Room');
+        resetSelect(subspaceSelect, 'Select Sub-space');
+
+        if (!this.value) return;
+
+        fetch(`/location/rooms/${this.value}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    roomSelect.add(new Option(item.name, item.id));
+                });
+            });
+    });
+
+    roomSelect.addEventListener('change', function () {
+        resetSelect(subspaceSelect, 'Select Sub-space');
+
+        if (!this.value) return;
+
+        fetch(`/location/subspaces/${this.value}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(item => {
+                    subspaceSelect.add(new Option(item.name, item.id));
+                });
+            });
+    });
 }
 
+function resetSelect(select, placeholder) {
+    select.innerHTML = '';
+    select.add(new Option(placeholder, ''));
+}
+
+document.querySelectorAll('.work-item').forEach(function (item) {
+    bindLocationDropdowns(item);
+});
 </script>
 
 @endsection

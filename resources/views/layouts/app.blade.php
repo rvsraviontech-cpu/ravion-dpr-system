@@ -1,334 +1,297 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-    <title>Ravion DPR System</title>
+    <meta charset="UTF-8">
+    <title>Ravion DPR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-
 </head>
 
 <body class="bg-gray-100">
 
-    <div class="flex min-h-screen">
+<div class="flex min-h-screen">
 
-        <!-- Sidebar -->
+    {{-- SIDEBAR --}}
+    <aside class="w-64 bg-gray-900 text-white min-h-screen">
 
-        <div class="w-64 bg-gray-900 text-white p-5">
-
-            <h1 class="text-2xl font-bold mb-8">
-                Ravion DPR
-            </h1>
-
-            <ul class="space-y-4">
-                @php
-                 $role = auth()->user()->role->name;
-                @endphp
-
-    @if($role == 'Admin')
-
-<li>
-    <a href="/admin-dashboard"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Dashboard
-
-    </a>
-</li>
-
-<li>
-    <a href="/projects"
-       class="block py-2 px-4 rounded
-{{ request()->is('projects*')
-    ? 'bg-blue-600'
-    : 'hover:bg-gray-700' }}">
-
-        Projects
-
-    </a>
-</li>
-
-<li>
-    <a href="/activities"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Activities
-
-    </a>
-</li>
-
-<li>
-    <a href="/contractors"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Contractors
-
-    </a>
-</li>
-
-<li>
-    <a href="/users"
-   class="block py-2 px-4 rounded
-   {{ request()->is('users*')
-       ? 'bg-blue-600'
-       : 'hover:bg-gray-700' }}">
-
-    Users
-
-</a>
-</li>
-
-<li>
-    <a href="/dprs"
-   class="block py-2 px-4 rounded
-   {{ request()->is('dprs*')
-       ? 'bg-blue-600'
-       : 'hover:bg-gray-700' }}">
-
-    DPR Entries
-
-</a>
-</li>
-<li>
-    <a href="/project-progress"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Project Progress
-
-    </a>
-</li>
-<li>
-    <a href="/engineer-productivity"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Engineer Productivity
-
-    </a>
-</li>
-<li>
-
-    <a href="{{ route('labour-types.index') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Labour Types
-
-    </a>
-
-</li>
-
-<li>
-
-    <a href="{{ route('materials.index') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Materials
-
-    </a>
-
-</li>
-<li>
-
-    <a href="{{ route('vendors.index') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Vendors
-
-    </a>
-
-</li>
-<li>
-
-    <a href="{{ route('machinery-tools.index') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Machinery & Tools
-
-    </a>
-
-</li>
-<li>
-
-    <a href="{{ route('weekly-plans.index') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Weekly Plans
-
-    </a>
-
-</li>
-<li>
-
-    <a href="{{ route('weekly-plans.progress-dashboard') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Weekly Progress Dasboard
-
-    </a>
-
-</li>
-
-@endif
-
-    @if($role == 'Engineer')
-
-<li>
-    <a href="/engineer-dashboard"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Engineer Dashboard
-
-    </a>
-</li>
-
-<li>
-    <a href="/dprs"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        DPR Entries
-
-    </a>
-</li>
-
-@endif
-@if($role == 'PMO')
-
-<li>
-    <a href="/pmo-dashboard"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        PMO Dashboard
-
-    </a>
-</li>
-
-<li>
-    <a href="/pmo/dprs"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        DPR Review Queue
-
-    </a>
-</li>
-<li>
-    <a href="/project-progress"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Project Progress
-
-    </a>
-</li>
-<li>
-    <a href="/engineer-productivity"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Engineer Productivity
-
-    </a>
-</li>
-<li>
-
-    <a href="{{ route('weekly-plans.index') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Weekly Plans
-
-    </a>
-
-</li>
-<li>
-
-    <a href="{{ route('weekly-plans.progress-dashboard') }}"
-       class="block px-4 py-2 hover:bg-gray-700">
-
-        Weekly Progress Dasboard
-
-    </a>
-
-</li>
-
-@endif
-@if($role == 'CEO')
-
-<li>
-    <a href="/ceo-dashboard"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        CEO Dashboard
-
-    </a>
-</li>
-<li>
-    <a href="/project-progress"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Project Progress
-
-    </a>
-</li>
-<li>
-    <a href="/engineer-productivity"
-       class="block py-2 px-4 hover:bg-gray-700 rounded">
-
-        Engineer Productivity
-
-    </a>
-</li>
-@endif
-</ul>
-
+        <div class="p-4 text-2xl font-bold border-b border-gray-700">
+            Ravion ERP
         </div>
 
-        <!-- Main Content -->
+        <ul class="py-4 space-y-1">
 
-        <div class="flex-1">
+            {{-- DASHBOARD --}}
+            <div class="px-4 py-2 text-xs font-bold text-gray-400 uppercase">
+                Dashboard
+            </div>
 
-            <!-- Top Navbar -->
+            <li>
+                <a href="{{ Route::has('dashboard') ? route('dashboard') : '#' }}"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Dashboard
+                </a>
+            </li>
 
-            <div class="bg-white shadow p-4 flex justify-between">
 
-                <div>
-                    Welcome,
-                    {{ auth()->user()->name }}
-                </div>
+            {{-- MASTERS --}}
+            @auth
+                @if(in_array(auth()->user()->role->name, ['Admin', 'PMO', 'DGM']))
 
-                <div>
+                    <div class="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                        Masters
+                    </div>
+
+                    <li>
+                        <a href="{{ Route::has('projects.index') ? route('projects.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Projects
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('location-masters.index') ? route('location-masters.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Location Masters
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('project-locations.index') ? route('project-locations.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Project Locations
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('activity-mappings.index') ? route('activity-mappings.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Activity Mappings
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('materials.index') ? route('materials.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Materials
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('contractors.index') ? route('contractors.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Contractors
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('vendors.index') ? route('vendors.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Vendors
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="{{ Route::has('machinery-tools.index') ? route('machinery-tools.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Machinery / Tools
+                        </a>
+                    </li>
+
+                @endif
+            @endauth
+
+
+            {{-- DAILY EXECUTION --}}
+            <div class="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                Daily Execution
+            </div>
+
+            <li>
+                <a href="{{ Route::has('dprs.index') ? route('dprs.index') : '#' }}"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    DPR Entries
+                </a>
+            </li>
+
+            <li>
+                <a href="{{ Route::has('labour-reports.index') ? route('labour-reports.index') : '#' }}"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Labour Reporting
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Material Received
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Material Consumed
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Material Required
+                </a>
+            </li>
+
+
+            {{-- PLANNING --}}
+            <div class="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                Planning & Controls
+            </div>
+
+            <li>
+                <a href="{{ Route::has('weekly-plans.index') ? route('weekly-plans.index') : '#' }}"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Weekly Plans
+                </a>
+            </li>
+
+            <li>
+                <a href="{{ Route::has('weekly-plans.progress-dashboard') ? route('weekly-plans.progress-dashboard') : '#' }}"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Weekly Progress
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Monthly Plans
+                </a>
+            </li>
+
+
+            {{-- PMO --}}
+            @auth
+                @if(in_array(auth()->user()->role->name, ['Admin', 'PMO', 'DGM']))
+                    <div class="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                        PMO & Verification
+                    </div>
+
+                    <li>
+                        <a href="#"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            DPR Reviews
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Material Verification
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Mapping Pending Queue
+                        </a>
+                    </li>
+                @endif
+            @endauth
+
+
+            {{-- REPORTS --}}
+            <div class="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                Reports
+            </div>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    DPR Reports
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Labour Reports
+                </a>
+            </li>
+
+            <li>
+                <a href="#"
+                   class="block px-4 py-2 hover:bg-gray-700">
+                    Material Reports
+                </a>
+            </li>
+
+
+            {{-- ADMINISTRATION --}}
+            @auth
+                @if(auth()->user()->role->name === 'Admin')
+                    <div class="px-4 py-3 text-xs font-bold text-gray-400 uppercase">
+                        Administration
+                    </div>
+
+                    <li>
+                        <a href="{{ Route::has('users.index') ? route('users.index') : '#' }}"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Users
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="#"
+                           class="block px-4 py-2 hover:bg-gray-700">
+                            Audit Trail
+                        </a>
+                    </li>
+                @endif
+            @endauth
+
+        </ul>
+    </aside>
+
+
+    {{-- MAIN CONTENT --}}
+    <main class="flex-1 p-6">
+
+        {{-- TOP BAR --}}
+        <div class="bg-white rounded shadow p-4 mb-6 flex justify-between items-center">
+
+            <div class="font-bold">
+                Ravion DPR System
+            </div>
+
+            <div class="flex items-center gap-4">
+
+                @auth
+                    <span>
+                        {{ auth()->user()->name }}
+                        ({{ auth()->user()->role->name ?? '' }})
+                    </span>
 
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
 
                         <button type="submit"
-                            class="bg-red-500 text-white px-4 py-2 rounded">
-
+                                class="bg-red-600 text-white px-3 py-1 rounded">
                             Logout
-
                         </button>
-
                     </form>
-
-                </div>
-
-            </div>
-
-            <!-- Page Content -->
-
-            <div class="p-6">
-                @if(session('success'))
-
-    <div class="bg-green-100 border border-green-400
-                text-green-700 px-4 py-3 rounded mb-6">
-
-        {{ session('success') }}
-
-    </div>
-
-@endif
-                @yield('content')
+                @endauth
 
             </div>
 
         </div>
 
-    </div>
+        @yield('content')
+
+    </main>
+
+</div>
 
 </body>
 </html>

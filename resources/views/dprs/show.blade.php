@@ -109,60 +109,63 @@
     </h2>
 
     <table class="w-full border">
+    <thead class="bg-gray-200">
+        <tr>
+            <th class="p-3 text-left border">Division</th>
+            <th class="p-3 text-left border">Activity</th>
+            <th class="p-3 text-left border">Block</th>
+            <th class="p-3 text-left border">Floor</th>
+            <th class="p-3 text-left border">Unit</th>
+            <th class="p-3 text-left border">Room</th>
+            <th class="p-3 text-left border">Sub-space</th>
+            <th class="p-3 text-left border">Qty</th>
+            <th class="p-3 text-left border">Remarks</th>
+        </tr>
+    </thead>
 
-        <thead class="bg-gray-200">
-
-            <tr>
-
-                <th class="p-4 text-left border">
-                    Activity
-                </th>
-
-                <th class="p-4 text-left border">
-                    Contractor
-                </th>
-
-                <th class="p-4 text-left border">
-                    Quantity
-                </th>
-
-                <th class="p-4 text-left border">
-                    Remarks
-                </th>
-
-            </tr>
-
-        </thead>
-
-        <tbody>
-
-            @foreach($dpr->workItems as $item)
-
+    <tbody>
+        @foreach($dpr->workItems as $item)
             <tr class="border-t">
-
-                <td class="p-4 border">
-                    {{ $item->activity->activity_name }}
+                <td class="p-3 border">
+                    {{ $item->activityMapping?->division?->name ?? '-' }}
                 </td>
 
-                <td class="p-4 border">
-                    {{ $item->contractor->contractor_name }}
+                <td class="p-3 border">
+                    {{ $item->activityMapping?->activity_name ?? $item->activity?->activity_name ?? '-' }}
                 </td>
 
-                <td class="p-4 border">
+                <td class="p-3 border">
+                    {{ $item->block?->name ?? '-' }}
+                </td>
+
+                <td class="p-3 border">
+                    {{ $item->floor?->name ?? '-' }}
+                </td>
+
+                <td class="p-3 border">
+                    {{ $item->unit?->name ?? '-' }}
+                </td>
+
+                <td class="p-3 border">
+                    {{ $item->room?->name ?? '-' }}
+                </td>
+
+                <td class="p-3 border">
+                    {{ $item->subspace?->name ?? '-' }}
+                </td>
+
+                <td class="p-3 border">
                     {{ $item->quantity_completed }}
+                    {{ $item->activityMapping?->unit ?? '' }}
                 </td>
 
-                <td class="p-4 border">
-                    {{ $item->work_remarks }}
+                <td class="p-3 border">
+                    {{ $item->remarks ?? '-' }}
                 </td>
-
             </tr>
-
-            @endforeach
-
-        </tbody>
-
-    </table>
+        @endforeach
+    </tbody>
+</table>
 
 </div>
 

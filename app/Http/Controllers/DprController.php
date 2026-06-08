@@ -20,6 +20,7 @@ use App\Models\DprMaterialRequired;
 use App\Models\MachineryTool;
 use App\Models\DprMachineryTool;
 use App\Models\TomorrowPlan;
+use App\Models\SiteIssue;
 
 class DprController extends Controller
 {
@@ -114,6 +115,20 @@ else
         $vendors = Vendor::all();
         $machineries = MachineryTool::all();
 
+        $projectBlocks = \App\Models\ProjectBlock::where('is_active', true)->get();
+        $projectFloors = \App\Models\ProjectFloor::where('is_active', true)->get();
+        $projectUnits = \App\Models\ProjectUnit::where('is_active', true)->get();
+        $projectRooms = \App\Models\ProjectRoom::where('is_active', true)->get();
+        $projectSubspaces = \App\Models\ProjectSubspace::where('is_active', true)->get();
+        $activityMappings = \App\Models\ActivityMapping::with('division')
+    ->where('is_active', true)
+    ->orderBy('activity_name')
+    ->get();
+
+        $activityDivisions = \App\Models\ActivityDivision::where('is_active', true)
+    ->orderBy('sequence')
+    ->get();
+
         
 
         return view('dprs.create', compact(
@@ -123,7 +138,14 @@ else
             'labourTypes',
             'materials',
             'vendors',
-            'machineries'
+            'machineries',
+            'projectBlocks',
+            'projectFloors',
+            'projectUnits',
+            'projectRooms',
+            'projectSubspaces',
+            'activityMappings',
+            'activityDivisions'
         ));
     }
 
@@ -163,19 +185,38 @@ else
 {
     DprWorkItem::create([
 
-        'dpr_id' => $dpr->id,
+    'dpr_id' => $dpr->id,
 
-        'activity_id' => $activityId,
+    'activity_id' => $activityId,
 
-        'contractor_id' => $request->contractor_id[$index],
+    'activity_mapping_id' =>
+        $request->activity_mapping_id[$index] ?? null,
 
-        'quantity_completed' =>
-            $request->quantity_completed[$index],
+    'project_block_id' =>
+        $request->project_block_id[$index] ?? null,
 
-        'remarks' =>
-            $request->work_remarks[$index],
+    'project_floor_id' =>
+        $request->project_floor_id[$index] ?? null,
 
-    ]);
+    'project_unit_id' =>
+        $request->project_unit_id[$index] ?? null,
+
+    'project_room_id' =>
+        $request->project_room_id[$index] ?? null,
+
+    'project_subspace_id' =>
+        $request->project_subspace_id[$index] ?? null,
+
+    'contractor_id' =>
+        $request->contractor_id[$index],
+
+    'quantity_completed' =>
+        $request->quantity_completed[$index],
+
+    'remarks' =>
+        $request->work_remarks[$index] ?? null,
+
+]);
 }
 
 if($request->hasFile('photos'))
@@ -537,7 +578,13 @@ public function show($id)
         'materialRequired.material',
         'machineryTools.machineryTool',
         'siteIssues',
-        'tomorrowPlans.activity'
+        'tomorrowPlans.activity',
+        'workItems.block',
+        'workItems.floor',
+        'workItems.unit',
+        'workItems.room',
+        'workItems.subspace',
+        'workItems.activityMapping.division'
     ])->findOrFail($id);
 
     return view('dprs.show', compact('dpr'));
@@ -617,7 +664,13 @@ public function downloadPdf($id)
         'materialRequired.material',
         'machineryTools.machineryTool',
         'siteIssues',
-        'tomorrowPlans.activity'
+        'tomorrowPlans.activity',
+        'workItems.block',
+        'workItems.floor',
+        'workItems.unit',
+        'workItems.room',
+        'workItems.subspace',
+        'workItems.activityMapping.division',
 
     ])->findOrFail($id);
 
@@ -635,5 +688,45 @@ $fileName =
     '.pdf';
 
 return $pdf->download($fileName);
+}
+
+public function getFloors($block)
+{
+    return response()->json(
+        \App\Models\ProjectFloor::where('project_block_id', $block)
+            ->where('is_active', true)
+            ->orderBy('sequence')
+            ->get(['id', 'name'])
+    );
+}
+
+public function getUnits($floor)
+{
+    return response()->json(
+        \App\Models\ProjectUnit::where('project_floor_id', $floor)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
+
+public function getRooms($unit)
+{
+    return response()->json(
+        \App\Models\ProjectRoom::where('project_unit_id', $unit)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
+
+public function getSubspaces($room)
+{
+    return response()->json(
+        \App\Models\ProjectSubspace::where('project_room_id', $room)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
 }
 }

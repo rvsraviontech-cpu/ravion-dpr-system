@@ -46,4 +46,5 @@ public function subspaces()
 {
     return $this->hasMany(ProjectSubspace::class);
 }
+
 }

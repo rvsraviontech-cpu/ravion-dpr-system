@@ -68,52 +68,49 @@
     Work Progress Details
 </h2>
 
-<table>
-
+<table width="100%" border="1" cellspacing="0" cellpadding="5">
     <thead>
-
         <tr>
-
+            <th>Division</th>
             <th>Activity</th>
-
-            <th>Contractor</th>
-
-            <th>Quantity</th>
-
+            <th>Block</th>
+            <th>Floor</th>
+            <th>Unit</th>
+            <th>Room</th>
+            <th>Sub-space</th>
+            <th>Qty</th>
             <th>Remarks</th>
-
         </tr>
-
     </thead>
 
     <tbody>
-
         @foreach($dpr->workItems as $item)
+            <tr>
+                <td>{{ $item->activityMapping?->division?->name ?? '-' }}</td>
 
-        <tr>
+                <td>
+                    {{ $item->activityMapping?->activity_name ?? $item->activity?->activity_name ?? '-' }}
+                </td>
 
-            <td>
-                {{ $item->activity->activity_name }}
-            </td>
+                <td>{{ $item->block?->name ?? '-' }}</td>
 
-            <td>
-                {{ $item->contractor->contractor_name }}
-            </td>
+                <td>{{ $item->floor?->name ?? '-' }}</td>
 
-            <td>
-                {{ $item->quantity_completed }}
-            </td>
+                <td>{{ $item->unit?->name ?? '-' }}</td>
 
-            <td>
-                {{ $item->work_remarks }}
-            </td>
+                <td>{{ $item->room?->name ?? '-' }}</td>
 
-        </tr>
+                <td>{{ $item->subspace?->name ?? '-' }}</td>
 
+                <td>
+                    {{ $item->quantity_completed }}
+                    {{ $item->activityMapping?->unit ?? '' }}
+                </td>
+
+                <td>{{ $item->remarks ?? '-' }}</td>
+            </tr>
         @endforeach
-
     </tbody>
-
 </table>
 <h2>
     Labour Details

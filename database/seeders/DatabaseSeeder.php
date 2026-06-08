@@ -17,10 +17,11 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RoleSeeder::class);
         // User::factory(10)->create();
-
+        $this->call(ActivityDivisionSeeder::class);
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+        
     }
 }

@@ -28,10 +28,18 @@ class ActivityMapping extends Model
         'procurement_mode',
         'is_active',
         'remarks',
+        'activity_division_id'
     ];
 
     public function activity()
     {
         return $this->belongsTo(Activity::class);
     }
+    public function division()
+{
+    return $this->belongsTo(
+        ActivityDivision::class,
+        'activity_division_id'
+    );
+}
 }

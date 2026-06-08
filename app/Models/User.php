@@ -42,4 +42,9 @@ public function dprs()
     return $this->hasMany(Dpr::class);
 }
 
+public function users()
+{
+    return $this->belongsToMany(User::class);
+}
+
 }
