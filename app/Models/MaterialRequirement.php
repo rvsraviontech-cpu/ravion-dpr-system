@@ -20,6 +20,7 @@ class MaterialRequirement extends Model
         'created_by',
         'approved_by',
         'approved_at',
+        'fulfilled_quantity'
     ];
 
     public function project()

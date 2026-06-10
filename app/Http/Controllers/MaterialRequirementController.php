@@ -81,6 +81,7 @@ class MaterialRequirementController extends Controller
             'status' => 'Draft',
             'remarks' => $request->remarks,
             'created_by' => auth()->id(),
+            'fulfilled_quantity' => 0,
         ]);
 
         return redirect()

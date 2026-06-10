@@ -28,6 +28,7 @@ use App\Http\Controllers\MaterialConsumedController;
 use App\Http\Controllers\StockRegisterController;
 use App\Http\Controllers\MaterialLedgerController;
 use App\Http\Controllers\MaterialRequirementController;
+use App\Http\Controllers\MaterialShortageReportController;
 
 
 Route::get('/', function () {
@@ -394,6 +395,9 @@ Route::patch('/material-requirements/{materialRequirement}/submit',
 Route::patch('/material-requirements/{materialRequirement}/approve',
     [MaterialRequirementController::class, 'approve'])
     ->name('material-requirements.approve');
+
+    Route::get('/material-shortage-report', [MaterialShortageReportController::class, 'index'])
+    ->name('material-shortage-report.index');
 });
 
 

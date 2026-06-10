@@ -1445,3 +1445,16 @@ Balance Stock =
 Total Material Received
 -
 Total Material Consumed
+
+## Material Requirement Module
+
+Status: Completed
+
+Features:
+- Create Requirement
+- Draft Workflow
+- Submit Workflow
+- Approval Workflow
+- Project-wise Requirement Tracking
+- Priority Management
+- Requirement Date Tracking
