@@ -1458,3 +1458,41 @@ Features:
 - Project-wise Requirement Tracking
 - Priority Management
 - Requirement Date Tracking
+
+## Material Requirement Module
+
+Status: Completed
+
+Features:
+- Requirement Planning
+- Priority Management
+- Draft Workflow
+- Submission Workflow
+- Approval Workflow
+- Requirement Tracking
+
+---
+
+## Material Shortage Report
+
+Status: Completed
+
+Formula:
+
+Open Requirement
+=
+Required Quantity
+-
+Fulfilled Quantity
+
+Shortage
+=
+Open Requirement
+-
+Available Stock
+
+Features:
+- Project Filter
+- Block Filter
+- Procurement Planning
+- Shortage Identification
