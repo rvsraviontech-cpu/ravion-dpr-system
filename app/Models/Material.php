@@ -7,7 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 class Material extends Model
 {
     protected $fillable = [
+        'material_category_id',
+        'material_code',
         'material_name',
-        'unit'
+        'specification',
+        'brand',
+        'unit',
+        'minimum_stock_level',
+        'is_active',
+        'remarks',
     ];
+
+    public function category()
+    {
+        return $this->belongsTo(MaterialCategory::class, 'material_category_id');
+    }
 }

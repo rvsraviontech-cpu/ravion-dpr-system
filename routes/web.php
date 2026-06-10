@@ -22,6 +22,9 @@ use App\Http\Controllers\LocationRoomMasterController;
 use App\Http\Controllers\LocationSubspaceMasterController;
 use App\Http\Controllers\LocationMasterController;
 use App\Http\Controllers\LabourReportController;
+use App\Http\Controllers\MaterialReceivedController;
+use App\Http\Controllers\MaterialCategoryController;
+use App\Http\Controllers\MaterialConsumedController;
 
 
 Route::get('/', function () {
@@ -350,6 +353,30 @@ Route::patch('/project-locations/subspaces/{projectSubspace}/toggle-status', [Pr
     Route::patch('/labour-reports/{labourReport}/approve', [LabourReportController::class, 'approve'])
     ->name('labour-reports.approve')
     ->middleware(['auth', 'role:Admin,PMO,DGM']);
+
+    Route::middleware(['auth'])->group(function () {
+
+    Route::resource('material-received', MaterialReceivedController::class);
+
+    Route::patch('/material-received/{materialReceived}/submit', [MaterialReceivedController::class, 'submit'])
+        ->name('material-received.submit');
+
+    Route::patch('/material-received/{materialReceived}/approve', [MaterialReceivedController::class, 'approve'])
+        ->name('material-received.approve')
+        ->middleware(['role:Admin,PMO,DGM']);
+
+        Route::resource('material-categories', MaterialCategoryController::class)
+    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+
+    Route::resource('material-consumed', MaterialConsumedController::class);
+
+Route::patch('/material-consumed/{materialConsumed}/submit', [MaterialConsumedController::class, 'submit'])
+    ->name('material-consumed.submit');
+
+Route::patch('/material-consumed/{materialConsumed}/approve', [MaterialConsumedController::class, 'approve'])
+    ->name('material-consumed.approve')
+    ->middleware(['role:Admin,PMO,DGM']);
+});
 
 
 });

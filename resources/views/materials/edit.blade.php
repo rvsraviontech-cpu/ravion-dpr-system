@@ -3,7 +3,7 @@
 @section('content')
 
 <h1 class="text-3xl font-bold mb-6">
-    Add Material
+    Edit Material
 </h1>
 
 @if($errors->any())
@@ -15,123 +15,111 @@
 @endif
 
 <form method="POST"
-      action="{{ route('materials.store') }}"
+      action="{{ route('materials.update', $material) }}"
       class="bg-white p-6 rounded shadow">
 
     @csrf
+    @method('PUT')
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
         <div>
-            <label class="block font-semibold mb-1">
-                Material Category
-            </label>
-
+            <label class="block font-semibold mb-1">Material Category</label>
             <select name="material_category_id"
                     class="border p-2 rounded w-full">
-
-                <option value="">
-                    Select Category
-                </option>
-
+                <option value="">Select Category</option>
                 @foreach($categories as $category)
-                    <option value="{{ $category->id }}">
+                    <option value="{{ $category->id }}"
+                        {{ $material->material_category_id == $category->id ? 'selected' : '' }}>
                         {{ $category->category_name }}
                     </option>
                 @endforeach
-
             </select>
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Material Code
-            </label>
-
+            <label class="block font-semibold mb-1">Material Code</label>
             <input type="text"
                    name="material_code"
+                   value="{{ old('material_code', $material->material_code) }}"
                    class="border p-2 rounded w-full">
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Material Name
-            </label>
-
+            <label class="block font-semibold mb-1">Material Name</label>
             <input type="text"
                    name="material_name"
+                   value="{{ old('material_name', $material->material_name) }}"
                    class="border p-2 rounded w-full"
                    required>
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Specification
-            </label>
-
+            <label class="block font-semibold mb-1">Specification</label>
             <input type="text"
                    name="specification"
+                   value="{{ old('specification', $material->specification) }}"
                    class="border p-2 rounded w-full">
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Brand
-            </label>
-
+            <label class="block font-semibold mb-1">Brand</label>
             <input type="text"
                    name="brand"
+                   value="{{ old('brand', $material->brand) }}"
                    class="border p-2 rounded w-full">
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Unit
-            </label>
-
+            <label class="block font-semibold mb-1">Unit</label>
             <input type="text"
                    name="unit"
-                   placeholder="Bag, Kg, MT, Nos, Ltr..."
+                   value="{{ old('unit', $material->unit) }}"
                    class="border p-2 rounded w-full"
                    required>
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Minimum Stock Level
-            </label>
-
+            <label class="block font-semibold mb-1">Minimum Stock Level</label>
             <input type="number"
                    step="0.01"
                    name="minimum_stock_level"
-                   value="0"
+                   value="{{ old('minimum_stock_level', $material->minimum_stock_level) }}"
                    class="border p-2 rounded w-full">
         </div>
 
-        <div class="md:col-span-2">
-            <label class="block font-semibold mb-1">
-                Remarks
-            </label>
+        <div>
+            <label class="block font-semibold mb-1">Status</label>
+            <select name="is_active"
+                    class="border p-2 rounded w-full">
+                <option value="1" {{ $material->is_active ? 'selected' : '' }}>
+                    Active
+                </option>
+                <option value="0" {{ !$material->is_active ? 'selected' : '' }}>
+                    Inactive
+                </option>
+            </select>
+        </div>
 
+        <div class="md:col-span-2">
+            <label class="block font-semibold mb-1">Remarks</label>
             <textarea name="remarks"
                       rows="3"
-                      class="border p-2 rounded w-full"></textarea>
+                      class="border p-2 rounded w-full">{{ old('remarks', $material->remarks) }}</textarea>
         </div>
 
     </div>
 
     <div class="mt-6 flex gap-3">
-
         <button type="submit"
                 class="bg-blue-600 text-white px-4 py-2 rounded">
-            Save Material
+            Update Material
         </button>
 
         <a href="{{ route('materials.index') }}"
            class="bg-gray-500 text-white px-4 py-2 rounded">
             Back
         </a>
-
     </div>
 
 </form>
