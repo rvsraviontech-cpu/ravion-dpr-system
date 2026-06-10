@@ -27,6 +27,7 @@ use App\Http\Controllers\MaterialCategoryController;
 use App\Http\Controllers\MaterialConsumedController;
 use App\Http\Controllers\StockRegisterController;
 use App\Http\Controllers\MaterialLedgerController;
+use App\Http\Controllers\MaterialRequirementController;
 
 
 Route::get('/', function () {
@@ -383,6 +384,16 @@ Route::patch('/material-consumed/{materialConsumed}/approve', [MaterialConsumedC
 
     Route::get('/material-ledger', [MaterialLedgerController::class, 'index'])
     ->name('material-ledger.index');
+
+    Route::resource('material-requirements', MaterialRequirementController::class);
+
+Route::patch('/material-requirements/{materialRequirement}/submit',
+    [MaterialRequirementController::class, 'submit'])
+    ->name('material-requirements.submit');
+
+Route::patch('/material-requirements/{materialRequirement}/approve',
+    [MaterialRequirementController::class, 'approve'])
+    ->name('material-requirements.approve');
 });
 
 
