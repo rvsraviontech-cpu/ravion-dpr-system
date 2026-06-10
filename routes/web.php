@@ -25,6 +25,7 @@ use App\Http\Controllers\LabourReportController;
 use App\Http\Controllers\MaterialReceivedController;
 use App\Http\Controllers\MaterialCategoryController;
 use App\Http\Controllers\MaterialConsumedController;
+use App\Http\Controllers\StockRegisterController;
 
 
 Route::get('/', function () {
@@ -376,6 +377,8 @@ Route::patch('/material-consumed/{materialConsumed}/submit', [MaterialConsumedCo
 Route::patch('/material-consumed/{materialConsumed}/approve', [MaterialConsumedController::class, 'approve'])
     ->name('material-consumed.approve')
     ->middleware(['role:Admin,PMO,DGM']);
+    Route::get('/stock-register', [StockRegisterController::class, 'index'])
+    ->name('stock-register.index');
 });
 
 
