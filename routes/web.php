@@ -26,6 +26,7 @@ use App\Http\Controllers\MaterialReceivedController;
 use App\Http\Controllers\MaterialCategoryController;
 use App\Http\Controllers\MaterialConsumedController;
 use App\Http\Controllers\StockRegisterController;
+use App\Http\Controllers\MaterialLedgerController;
 
 
 Route::get('/', function () {
@@ -379,7 +380,11 @@ Route::patch('/material-consumed/{materialConsumed}/approve', [MaterialConsumedC
     ->middleware(['role:Admin,PMO,DGM']);
     Route::get('/stock-register', [StockRegisterController::class, 'index'])
     ->name('stock-register.index');
+
+    Route::get('/material-ledger', [MaterialLedgerController::class, 'index'])
+    ->name('material-ledger.index');
 });
+
 
 
 });

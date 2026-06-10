@@ -1424,3 +1424,24 @@ No cost-code exposure
 No leakage
 No miscommunication
 Complete visibility from Site Engineer to CEO
+
+## Inventory Management Module
+
+### Stock Register
+
+Status: Completed
+
+Features:
+- Material-wise stock tracking
+- Approved receipts aggregation
+- Approved consumption aggregation
+- Real-time balance calculation
+- Project filter
+- Project block filter
+
+Formula:
+
+Balance Stock =
+Total Material Received
+-
+Total Material Consumed
