@@ -30,6 +30,7 @@ use App\Http\Controllers\MaterialLedgerController;
 use App\Http\Controllers\MaterialRequirementController;
 use App\Http\Controllers\MaterialShortageReportController;
 use App\Http\Controllers\TomorrowPlanController;
+use App\Http\Controllers\SiteIssueController;
 
 
 Route::get('/', function () {
@@ -411,7 +412,7 @@ Route::patch('/tomorrow-plans/{tomorrowPlan}/approve',
     ->name('tomorrow-plans.approve');
 });
 
-
+Route::resource('site-issues', SiteIssueController::class);
 
 });
 
