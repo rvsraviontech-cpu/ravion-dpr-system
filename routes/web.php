@@ -31,6 +31,7 @@ use App\Http\Controllers\MaterialRequirementController;
 use App\Http\Controllers\MaterialShortageReportController;
 use App\Http\Controllers\TomorrowPlanController;
 use App\Http\Controllers\SiteIssueController;
+use App\Http\Controllers\PlanVsActualController;
 
 
 Route::get('/', function () {
@@ -413,6 +414,8 @@ Route::patch('/tomorrow-plans/{tomorrowPlan}/approve',
 });
 
 Route::resource('site-issues', SiteIssueController::class);
+Route::get('/plan-vs-actual', [PlanVsActualController::class, 'index'])
+    ->name('plan-vs-actual.index');
 
 });
 
