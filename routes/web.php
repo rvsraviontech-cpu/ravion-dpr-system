@@ -77,13 +77,15 @@ Route::resource('dprs', DprController::class)
     ->middleware(['auth']);
 
 Route::get('/pmo/dprs', [DprController::class, 'pmoQueue'])
-    ->middleware(['auth', 'role:PMO']);
+    ->middleware(['auth', 'role:Admin,PMO,DGM']);
 
-    Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
-    ->middleware(['auth', 'role:PMO']);
+Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
+    ->middleware(['auth', 'role:Admin,PMO,DGM']);
 
 Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
-    ->middleware(['auth', 'role:PMO']);
+    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+
+
     Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf']);
     Route::middleware(['auth', 'role:Admin'])->group(function () {
 
