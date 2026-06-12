@@ -1496,3 +1496,188 @@ Features:
 - Block Filter
 - Procurement Planning
 - Shortage Identification
+
+# Ravion DPR System – Development Update
+
+## Date
+
+June 2026
+
+---
+
+# Completed Modules
+
+## Tomorrow Plan Module ✅
+
+### Features Implemented
+
+* Tomorrow Plan Create
+* Tomorrow Plan Edit
+* Tomorrow Plan View
+* Tomorrow Plan Listing
+* Draft Workflow
+* Submit Workflow
+* Approval Workflow
+* Project Hierarchy Integration
+
+  * Block
+  * Floor
+  * Unit
+  * Room
+  * Subspace
+* Activity Division → Activity dependent dropdown
+* Labour Planning
+* Material Requirement Planning
+* Machinery Requirement Planning
+* Risk & Constraints Tracking
+* Priority Management
+* Responsible Person Assignment
+
+### Workflow
+
+Draft → Submitted → Approved
+
+---
+
+## Site Issues / Delays Module ✅
+
+### Features Implemented
+
+* Site Issue Create
+* Site Issue Edit
+* Site Issue View
+* Site Issue Listing
+* Issue Filtering
+* Project Hierarchy Integration
+* Activity Division → Activity dependency
+* Issue Types
+
+  * Material Shortage
+  * Drawing Pending
+  * Client Approval Pending
+  * Labour Shortage
+  * Contractor Delay
+  * Machinery Breakdown
+  * Safety Issue
+  * Quality Issue
+  * Other
+* Priority Tracking
+
+  * Low
+  * Medium
+  * High
+  * Critical
+* Status Tracking
+
+  * Open
+  * In Progress
+  * Resolved
+* Root Cause Analysis
+* Resolution Tracking
+* Responsible Person Assignment
+* Target Closure Date
+* Actual Closure Date
+* PMO Escalation
+* Management Escalation
+
+---
+
+## Plan vs Actual Module ✅
+
+### Features Implemented
+
+* Plan vs Actual Report
+* Date Range Filtering
+* Project Filtering
+* Planned Quantity Calculation
+* Actual Quantity Calculation
+* Variance Calculation
+* Achievement Percentage Calculation
+* Status Identification
+
+### Status Logic
+
+* Not Started
+* Behind
+* On Track
+* Ahead
+
+### Data Sources
+
+* Tomorrow Plans (Approved Plans)
+* DPR Work Items (Actual Progress)
+
+### KPIs
+
+* Total Planned Quantity
+* Total Actual Quantity
+* Total Variance
+* Overall Achievement Percentage
+
+---
+
+# Database Enhancements
+
+## Site Issues Table
+
+Added:
+
+* project_id
+* project_block_id
+* project_floor_id
+* project_unit_id
+* project_room_id
+* project_subspace_id
+* activity_id
+* issue_date
+* title
+* root_cause
+* target_closure_date
+* actual_closure_date
+* escalated_to_pmo
+* escalated_to_management
+* resolution
+* created_by
+
+## Site Issues Improvements
+
+* dpr_id made nullable to support standalone issue tracking.
+
+---
+
+# Analytics Capability Added
+
+The system can now compare:
+
+Tomorrow Plan
+VS
+Actual DPR Execution
+
+to measure:
+
+* Planning Accuracy
+* Execution Performance
+* Productivity
+* Delay Identification
+* Achievement %
+
+---
+
+# Next Planned Module
+
+## Dashboard Module
+
+### Proposed Features
+
+* Today's DPR Count
+* Labour Summary
+* Material Consumption Summary
+* Open Issues
+* Critical Issues
+* Tomorrow Plans Pending
+* Plan Achievement %
+* Project Health Dashboard
+* PMO Dashboard
+* Management Dashboard
+
+Status: Planned
