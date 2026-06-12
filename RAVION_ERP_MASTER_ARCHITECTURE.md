@@ -1681,3 +1681,58 @@ to measure:
 * Management Dashboard
 
 Status: Planned
+
+## 2026-06-12 – Weekly Planning Module Completed
+
+### Weekly Plans
+- Weekly Plan create implemented
+- Weekly Plan edit implemented
+- Weekly Plan view implemented
+- Weekly Plan listing implemented
+- Engineer assignment added
+- Activity selection integrated
+- Resource planning fields added
+- Risk and constraints tracking added
+- Status workflow added
+
+### Weekly Progress Dashboard
+- Weekly target vs actual DPR quantity comparison
+- Achievement percentage calculation
+- Status indicators:
+  - Ahead / Completed
+  - On Track
+  - Behind
+  - Not Started
+- Engineer-wise weekly performance visibility
+
+### Routing Fix
+- Fixed route conflict between:
+  - weekly-plans/{weekly_plan}
+  - weekly-plans/progress-dashboard
+- Custom route moved above resource route
+
+
+
+## Monthly Planning Module Completed
+
+### Monthly Plans
+- Monthly Plan Creation
+- Monthly Plan Listing
+- Monthly Plan View
+- Monthly Plan Edit
+- Monthly Plan Filtering
+- Engineer Assignment
+- Activity Division Mapping
+- Resource Planning
+- Risk & Constraint Tracking
+
+### Monthly Progress Dashboard
+- Planned Quantity Tracking
+- Actual DPR Quantity Tracking
+- Achievement Percentage Calculation
+- Delayed Activity Identification
+- Completed Activity Identification
+- Management KPI Dashboard
+
+Status: Completed
+Date: 12-Jun-2026

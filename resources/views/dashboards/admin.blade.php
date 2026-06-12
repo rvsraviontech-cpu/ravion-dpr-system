@@ -2,347 +2,217 @@
 
 @section('content')
 
-<h1 class="text-3xl font-bold mb-6">
-    Admin Dashboard
-</h1>
-
-<div class="grid grid-cols-4 gap-6 mb-8">
-
-    <x-dashboard-card
-        title="Total Projects"
-        :value="$totalProjects" />
-
-    <x-dashboard-card
-        title="Total Users"
-        :value="$totalUsers" />
-
-    <x-dashboard-card
-        title="Total DPRs"
-        :value="$totalDprs" />
-
-    <x-dashboard-card
-        title="Pending DPRs"
-        :value="$pendingDprs" />
-
-    <x-dashboard-card
-        title="Delayed Projects"
-        :value="$delayedProjects" />
-
-    <x-dashboard-card
-    title="Overdue Engineers"
-    :value="$overdueEngineers" />
-
+<div class="mb-6">
+    <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+    <p class="text-gray-500 mt-1">
+        Ravion DPR execution control, planning, issue and approval overview.
+    </p>
 </div>
 
-<div class="bg-white rounded shadow p-6 mt-8">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 
-    <h2 class="text-2xl font-bold mb-6">
-        Operational Alerts
-    </h2>
+    <div class="bg-white rounded shadow p-5 border-l-4 border-blue-600">
+        <p class="text-gray-500 text-sm">Total Projects</p>
+        <p class="text-3xl font-bold text-blue-700">{{ $totalProjects }}</p>
+        <p class="text-xs text-gray-400 mt-1">Active: {{ $activeProjects }}</p>
+    </div>
 
-    <div class="space-y-4">
+    <div class="bg-white rounded shadow p-5 border-l-4 border-green-600">
+        <p class="text-gray-500 text-sm">DPR Submitted Today</p>
+        <p class="text-3xl font-bold text-green-700">{{ $todayDprs }}</p>
+        <p class="text-xs text-gray-400 mt-1">Total DPRs: {{ $totalDprs }}</p>
+    </div>
 
-        @if($pendingDprs > 0)
+    <div class="bg-white rounded shadow p-5 border-l-4 border-orange-500">
+        <p class="text-gray-500 text-sm">Pending DPRs</p>
+        <p class="text-3xl font-bold text-orange-600">{{ $pendingDprs }}</p>
+        <p class="text-xs text-gray-400 mt-1">Approved: {{ $approvedDprs }}</p>
+    </div>
 
-            <a href="/pmo/dprs"
-        class="block bg-yellow-100
-                border-l-4
-                border-yellow-500
-                p-4">
-
-                <p class="font-semibold text-yellow-800">
-
-                    {{ $pendingDprs }}
-                    DPRs are awaiting PMO approval.
-
-                </p>
-
-        </a>
-
-        @endif
-
-        @if($delayedProjects > 0)
-
-            <a href="/project-progress"
-        class="block bg-yellow-100
-                border-l-4
-                border-yellow-500
-                p-4">
-
-                <p class="font-semibold text-red-800">
-
-                    {{ $delayedProjects }}
-                    projects are delayed.
-
-                </p>
-
-</a>
-
-        @endif
-
-        @if($overdueEngineers > 0)
-
-            <a href="/engineer-productivity"
-        class="block bg-yellow-100
-                border-l-4
-                border-yellow-500
-                p-4">
-
-                <p class="font-semibold text-orange-800">
-
-                    {{ $overdueEngineers }}
-                    engineers have overdue DPR reporting.
-
-                </p>
-
-</a>
-
-        @endif
-
-        @if(
-            $pendingDprs == 0 &&
-            $delayedProjects == 0 &&
-            $overdueEngineers == 0
-        )
-
-            <div class="bg-green-100
-                        border-l-4
-                        border-green-500
-                        p-4">
-
-                <p class="font-semibold text-green-800">
-
-                    All operations are running normally.
-
-                </p>
-
-            </div>
-
-        @endif
-
+    <div class="bg-white rounded shadow p-5 border-l-4 border-red-600">
+        <p class="text-gray-500 text-sm">Critical Issues</p>
+        <p class="text-3xl font-bold text-red-700">{{ $criticalSiteIssues }}</p>
+        <p class="text-xs text-gray-400 mt-1">Open Issues: {{ $openSiteIssues }}</p>
     </div>
 
 </div>
 
-//Quick Actions & Summary
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 
-<div class="grid grid-cols-2 gap-6">
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Tomorrow Plans</p>
+        <p class="text-2xl font-bold text-blue-700">{{ $tomorrowPlans }}</p>
+        <p class="text-xs text-gray-400 mt-1">Planned for tomorrow</p>
+    </div>
 
-    <div class="bg-white rounded shadow p-6">
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Plan Approval Pending</p>
+        <p class="text-2xl font-bold text-orange-600">{{ $pendingTomorrowPlanApprovals }}</p>
+        <p class="text-xs text-gray-400 mt-1">Submitted plans</p>
+    </div>
 
-        <h2 class="text-2xl font-bold mb-4">
-            Quick Actions
-        </h2>
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Material Shortage Items</p>
+        <p class="text-2xl font-bold text-red-700">{{ $materialShortageItems }}</p>
+        <p class="text-xs text-gray-400 mt-1">Approved open requirements</p>
+    </div>
 
-        <div class="space-y-3">
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Management Escalations</p>
+        <p class="text-2xl font-bold text-red-700">{{ $managementEscalations }}</p>
+        <p class="text-xs text-gray-400 mt-1">PMO: {{ $pmoEscalations }}</p>
+    </div>
 
-            <a href="/projects/create"
-               class="block bg-blue-600 text-white px-4 py-2 rounded">
+</div>
 
-                Create Project
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
 
-            </a>
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Total Users</p>
+        <p class="text-2xl font-bold text-gray-800">{{ $totalUsers }}</p>
+    </div>
 
-            <a href="/users/create"
-               class="block bg-green-600 text-white px-4 py-2 rounded">
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Engineers</p>
+        <p class="text-2xl font-bold text-blue-700">{{ $totalEngineers }}</p>
+    </div>
 
-                Create User
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">PMO / DGM Users</p>
+        <p class="text-2xl font-bold text-purple-700">{{ $totalPmos }}</p>
+    </div>
 
-            </a>
+    <div class="bg-white rounded shadow p-5">
+        <p class="text-gray-500 text-sm">Accountants</p>
+        <p class="text-2xl font-bold text-green-700">{{ $totalAccountants }}</p>
+    </div>
 
-            <a href="/activities/create"
-               class="block bg-purple-600 text-white px-4 py-2 rounded">
+</div>
 
-                Create Activity
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
 
-            </a>
+    <div class="bg-white rounded shadow p-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Execution Risk Summary</h2>
+
+        <div class="space-y-4">
+
+            <div class="flex justify-between items-center border-b pb-3">
+                <span class="text-gray-600">Delayed Projects</span>
+                <span class="font-bold text-red-700">{{ $delayedProjects }}</span>
+            </div>
+
+            <div class="flex justify-between items-center border-b pb-3">
+                <span class="text-gray-600">Overdue Engineers</span>
+                <span class="font-bold text-orange-700">{{ $overdueEngineers }}</span>
+            </div>
+
+            <div class="flex justify-between items-center border-b pb-3">
+                <span class="text-gray-600">Open Site Issues</span>
+                <span class="font-bold text-red-700">{{ $openSiteIssues }}</span>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <span class="text-gray-600">Material Shortages</span>
+                <span class="font-bold text-red-700">{{ $materialShortageItems }}</span>
+            </div>
 
         </div>
-
     </div>
-    <div class="bg-white rounded shadow p-6">
 
-    <h2 class="text-2xl font-bold mb-4">
-        Organization Summary
-    </h2>
+    <div class="bg-white rounded shadow p-5">
+        <h2 class="text-xl font-bold text-gray-800 mb-4">Role Distribution</h2>
 
-    <table class="w-full">
+        <div class="grid grid-cols-2 gap-4">
 
-        <tbody>
-
-            <tr class="border-b">
-                <td class="py-2">Admins</td>
-                <td class="py-2 font-bold">{{ $totalAdmins }}</td>
-            </tr>
-
-            <tr class="border-b">
-                <td class="py-2">Engineers</td>
-                <td class="py-2 font-bold">{{ $totalEngineers }}</td>
-            </tr>
-
-            <tr class="border-b">
-                <td class="py-2">PMOs</td>
-                <td class="py-2 font-bold">{{ $totalPmos }}</td>
-            </tr>
-
-            <tr class="border-b">
-                <td class="py-2">CEOs</td>
-                <td class="py-2 font-bold">{{ $totalCeos }}</td>
-            </tr>
-
-            <tr>
-                <td class="py-2">Accountants</td>
-                <td class="py-2 font-bold">{{ $totalAccountants }}</td>
-            </tr>
-
-        </tbody>
-
-    </table>
-
-</div>
-
-    <div class="bg-white rounded shadow p-6">
-
-        <h2 class="text-2xl font-bold mb-4">
-            Recent DPRs
-        </h2>
-
-        <table class="w-full">
-
-            <thead class="bg-gray-100">
-
-<tr>
-
-    <th class="p-4 text-left">
-        Project
-    </th>
-
-    <th class="p-4 text-left">
-        Engineer
-    </th>
-
-    <th class="p-4 text-left">
-        Date
-    </th>
-
-    <th class="p-4 text-left">
-        Status
-    </th>
-
-</tr>
-
-</thead>
-
-            <tbody>
-
-                @foreach($recentDprs as $dpr)
-
-                <tr class="border-t">
-
-    <td class="p-4">
-        {{ $dpr->project->project_name }}
-    </td>
-
-    <td class="p-4">
-        {{ $dpr->user->name }}
-    </td>
-
-    <td class="p-4">
-        {{ $dpr->dpr_date }}
-    </td>
-
-    <td class="p-4">
-
-        @if($dpr->status == 'Approved')
-
-            <span class="bg-green-200 text-green-800 px-3 py-1 rounded">
-                Approved
-            </span>
-
-        @elseif($dpr->status == 'Rejected')
-
-            <span class="bg-red-200 text-red-800 px-3 py-1 rounded">
-                Rejected
-            </span>
-
-        @else
-
-            <span class="bg-yellow-200 text-yellow-800 px-3 py-1 rounded">
-                Pending
-            </span>
-
-        @endif
-
-    </td>
-
-</tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    </div>
-    <div class="bg-white rounded shadow p-6 mt-8">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Recent Activity Feed
-    </h2>
-
-    <div class="space-y-4">
-
-        @foreach($recentActivities as $activity)
-
-            <div class="border-b pb-4">
-
-                <p class="font-semibold">
-
-                    {{ $activity->user->name }}
-
-                    @if($activity->status == 'Pending')
-
-                        submitted a DPR
-
-                    @elseif($activity->status == 'Approved')
-
-                        received DPR approval
-
-                    @elseif($activity->status == 'Rejected')
-
-                        received DPR rejection
-
-                    @endif
-
-                    for project
-
-                    <span class="text-blue-600">
-
-                        {{ $activity->project->project_name }}
-
-                    </span>
-
-                </p>
-
-                <p class="text-sm text-gray-500 mt-1">
-
-                    DPR Date:
-                    {{ $activity->dpr_date }}
-
-                    •
-
-                    Status:
-                    {{ $activity->status }}
-
-                </p>
-
+            <div class="bg-gray-50 rounded p-4">
+                <p class="text-sm text-gray-500">Admins</p>
+                <p class="text-2xl font-bold">{{ $totalAdmins }}</p>
             </div>
 
-        @endforeach
+            <div class="bg-gray-50 rounded p-4">
+                <p class="text-sm text-gray-500">Engineers</p>
+                <p class="text-2xl font-bold">{{ $totalEngineers }}</p>
+            </div>
 
+            <div class="bg-gray-50 rounded p-4">
+                <p class="text-sm text-gray-500">PMO</p>
+                <p class="text-2xl font-bold">{{ $totalPmos }}</p>
+            </div>
+
+            <div class="bg-gray-50 rounded p-4">
+                <p class="text-sm text-gray-500">CEO</p>
+                <p class="text-2xl font-bold">{{ $totalCeos }}</p>
+            </div>
+
+        </div>
     </div>
 
 </div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+    <div class="bg-white rounded shadow overflow-hidden">
+        <div class="p-4 border-b">
+            <h2 class="font-bold text-gray-800">Recent DPRs</h2>
+        </div>
+
+        <div class="divide-y">
+            @forelse($recentDprs as $dpr)
+                <div class="p-4">
+                    <p class="font-semibold">{{ $dpr->project?->project_name ?? '-' }}</p>
+                    <p class="text-sm text-gray-500">
+                        Date: {{ $dpr->dpr_date ?? '-' }} | Status: {{ $dpr->status ?? '-' }}
+                    </p>
+                </div>
+            @empty
+                <div class="p-4 text-gray-500">No recent DPRs found.</div>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="bg-white rounded shadow overflow-hidden">
+        <div class="p-4 border-b">
+            <h2 class="font-bold text-gray-800">Recent Site Issues</h2>
+        </div>
+
+        <div class="divide-y">
+            @forelse($recentIssues as $issue)
+                <div class="p-4">
+                    <p class="font-semibold">{{ $issue->title ?? '-' }}</p>
+                    <p class="text-sm text-gray-500">
+                        {{ $issue->project?->project_name ?? '-' }} |
+                        {{ $issue->priority }} |
+                        {{ $issue->status }}
+                    </p>
+                </div>
+            @empty
+                <div class="p-4 text-gray-500">No recent issues found.</div>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="bg-white rounded shadow overflow-hidden">
+        <div class="p-4 border-b">
+            <h2 class="font-bold text-gray-800">Recent Tomorrow Plans</h2>
+        </div>
+
+        <div class="divide-y">
+            @forelse($recentTomorrowPlans as $plan)
+                <div class="p-4">
+                    <p class="font-semibold">
+                        {{ $plan->activity?->activity_name ?? '-' }}
+                    </p>
+                    <p class="text-sm text-gray-500">
+                        {{ $plan->project?->project_name ?? '-' }} |
+                        {{ $plan->planned_date ?? '-' }} |
+                        {{ $plan->status }}
+                    </p>
+                </div>
+            @empty
+                <div class="p-4 text-gray-500">No recent plans found.</div>
+            @endforelse
+        </div>
+    </div>
 
 </div>
 

@@ -3,17 +3,17 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\WeeklyPlan;
+use App\Models\MonthlyPlan;
 use App\Models\Project;
 use App\Models\Activity;
 use App\Models\ActivityDivision;
 use App\Models\User;
 
-class WeeklyPlanController extends Controller
+class MonthlyPlanController extends Controller
 {
     public function index(Request $request)
     {
-        $query = WeeklyPlan::with([
+        $query = MonthlyPlan::with([
             'project',
             'activity',
             'user'
@@ -23,26 +23,26 @@ class WeeklyPlanController extends Controller
             $query->where('project_id', $request->project_id);
         }
 
+        if ($request->filled('plan_month')) {
+            $query->where('plan_month', $request->plan_month);
+        }
+
+        if ($request->filled('plan_year')) {
+            $query->where('plan_year', $request->plan_year);
+        }
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        if ($request->filled('week_start_date')) {
-            $query->whereDate('week_start_date', '>=', $request->week_start_date);
-        }
-
-        if ($request->filled('week_end_date')) {
-            $query->whereDate('week_end_date', '<=', $request->week_end_date);
-        }
-
-        $weeklyPlans = $query->paginate(10);
+        $monthlyPlans = $query->paginate(10);
 
         $projects = Project::where('status', 'Active')
             ->orderBy('project_name')
             ->get();
 
-        return view('weekly-plans.index', compact(
-            'weeklyPlans',
+        return view('monthly-plans.index', compact(
+            'monthlyPlans',
             'projects'
         ));
     }
@@ -65,7 +65,7 @@ class WeeklyPlanController extends Controller
             $q->where('name', 'Engineer');
         })->orderBy('name')->get();
 
-        return view('weekly-plans.create', compact(
+        return view('monthly-plans.create', compact(
             'projects',
             'activityDivisions',
             'activities',
@@ -79,24 +79,28 @@ class WeeklyPlanController extends Controller
             'project_id' => 'required|exists:projects,id',
             'activity_id' => 'required|exists:activities,id',
             'user_id' => 'nullable|exists:users,id',
-            'week_start_date' => 'required|date',
-            'week_end_date' => 'required|date|after_or_equal:week_start_date',
+            'plan_month' => 'required|integer|min:1|max:12',
+            'plan_year' => 'required|integer|min:2024|max:2100',
+            'month_start_date' => 'required|date',
+            'month_end_date' => 'required|date|after_or_equal:month_start_date',
             'planned_quantity' => 'required|numeric|min:0.01',
             'unit' => 'nullable|string|max:50',
             'planned_labour' => 'nullable|integer|min:0',
             'materials_required' => 'nullable|string',
             'machinery_required' => 'nullable|string',
             'risks_constraints' => 'nullable|string',
-            'status' => 'required|string|max:50',
+            'status' => 'required|in:Planned,In Progress,Completed,Delayed',
             'remarks' => 'nullable|string',
         ]);
 
-        WeeklyPlan::create([
+        MonthlyPlan::create([
             'project_id' => $request->project_id,
             'activity_id' => $request->activity_id,
             'user_id' => $request->user_id,
-            'week_start_date' => $request->week_start_date,
-            'week_end_date' => $request->week_end_date,
+            'plan_month' => $request->plan_month,
+            'plan_year' => $request->plan_year,
+            'month_start_date' => $request->month_start_date,
+            'month_end_date' => $request->month_end_date,
             'planned_quantity' => $request->planned_quantity,
             'unit' => $request->unit,
             'planned_labour' => $request->planned_labour ?? 0,
@@ -108,22 +112,22 @@ class WeeklyPlanController extends Controller
         ]);
 
         return redirect()
-            ->route('weekly-plans.index')
-            ->with('success', 'Weekly plan created successfully.');
+            ->route('monthly-plans.index')
+            ->with('success', 'Monthly plan created successfully.');
     }
 
-    public function show(WeeklyPlan $weeklyPlan)
+    public function show(MonthlyPlan $monthlyPlan)
     {
-        $weeklyPlan->load([
+        $monthlyPlan->load([
             'project',
             'activity',
             'user'
         ]);
 
-        return view('weekly-plans.show', compact('weeklyPlan'));
+        return view('monthly-plans.show', compact('monthlyPlan'));
     }
 
-    public function edit(WeeklyPlan $weeklyPlan)
+    public function edit(MonthlyPlan $monthlyPlan)
     {
         $projects = Project::where('status', 'Active')
             ->orderBy('project_name')
@@ -141,8 +145,8 @@ class WeeklyPlanController extends Controller
             $q->where('name', 'Engineer');
         })->orderBy('name')->get();
 
-        return view('weekly-plans.edit', compact(
-            'weeklyPlan',
+        return view('monthly-plans.edit', compact(
+            'monthlyPlan',
             'projects',
             'activityDivisions',
             'activities',
@@ -150,14 +154,16 @@ class WeeklyPlanController extends Controller
         ));
     }
 
-    public function update(Request $request, WeeklyPlan $weeklyPlan)
+    public function update(Request $request, MonthlyPlan $monthlyPlan)
     {
         $request->validate([
             'project_id' => 'required|exists:projects,id',
             'activity_id' => 'required|exists:activities,id',
             'user_id' => 'nullable|exists:users,id',
-            'week_start_date' => 'required|date',
-            'week_end_date' => 'required|date|after_or_equal:week_start_date',
+            'plan_month' => 'required|integer|min:1|max:12',
+            'plan_year' => 'required|integer|min:2024|max:2100',
+            'month_start_date' => 'required|date',
+            'month_end_date' => 'required|date|after_or_equal:month_start_date',
             'planned_quantity' => 'required|numeric|min:0.01',
             'unit' => 'nullable|string|max:50',
             'planned_labour' => 'nullable|integer|min:0',
@@ -168,12 +174,14 @@ class WeeklyPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        $weeklyPlan->update([
+        $monthlyPlan->update([
             'project_id' => $request->project_id,
             'activity_id' => $request->activity_id,
             'user_id' => $request->user_id,
-            'week_start_date' => $request->week_start_date,
-            'week_end_date' => $request->week_end_date,
+            'plan_month' => $request->plan_month,
+            'plan_year' => $request->plan_year,
+            'month_start_date' => $request->month_start_date,
+            'month_end_date' => $request->month_end_date,
             'planned_quantity' => $request->planned_quantity,
             'unit' => $request->unit,
             'planned_labour' => $request->planned_labour ?? 0,
@@ -185,18 +193,21 @@ class WeeklyPlanController extends Controller
         ]);
 
         return redirect()
-            ->route('weekly-plans.index')
-            ->with('success', 'Weekly plan updated successfully.');
+            ->route('monthly-plans.index')
+            ->with('success', 'Monthly plan updated successfully.');
     }
 
     public function progressDashboard()
-    {
-        $weeklyPlans = WeeklyPlan::with([
-            'project',
-            'activity',
-            'user'
-        ])->get();
+{
+    $monthlyPlans = MonthlyPlan::with([
+        'project',
+        'activity',
+        'user'
+    ])->get();
 
-        return view('weekly-plans.progress-dashboard', compact('weeklyPlans'));
-    }
+    return view(
+        'monthly-plans.progress-dashboard',
+        compact('monthlyPlans')
+    );
+}
 }

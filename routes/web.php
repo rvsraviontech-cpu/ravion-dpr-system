@@ -32,6 +32,7 @@ use App\Http\Controllers\MaterialShortageReportController;
 use App\Http\Controllers\TomorrowPlanController;
 use App\Http\Controllers\SiteIssueController;
 use App\Http\Controllers\PlanVsActualController;
+use App\Http\Controllers\MonthlyPlanController;
 
 
 Route::get('/', function () {
@@ -106,23 +107,14 @@ Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
     Route::resource( 'machinery-tools', MachineryToolController::class
 )->middleware(['auth', 'role:Admin']);
 
-Route::resource(
-    'weekly-plans',
-    WeeklyPlanController::class
-)->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
+Route::get( '/weekly-plans/progress-dashboard',  [WeeklyPlanController::class, 'progressDashboard']
+) ->name('weekly-plans.progress-dashboard') ->middleware([ 'auth', 'role:Admin,PMO,DGM' ]);
+
+Route::resource('weekly-plans', WeeklyPlanController::class )->middleware([ 'auth', 'role:Admin,PMO,DGM'
 ]);
 
-Route::get(
-    '/weekly-plan-progress',
-    [WeeklyPlanController::class, 'progressDashboard']
-)
-->name('weekly-plans.progress-dashboard')
-->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
+
+
 Route::get('/activity-mappings', [ActivityMappingController::class, 'index'])
     ->name('activity-mappings.index')
     ->middleware(['auth', 'role:Admin,PMO,DGM']);
@@ -416,6 +408,13 @@ Route::patch('/tomorrow-plans/{tomorrowPlan}/approve',
 Route::resource('site-issues', SiteIssueController::class);
 Route::get('/plan-vs-actual', [PlanVsActualController::class, 'index'])
     ->name('plan-vs-actual.index');
+
+    Route::get('/monthly-plans/progress-dashboard', [MonthlyPlanController::class, 'progressDashboard']
+)->name('monthly-plans.progress-dashboard') ->middleware(['auth', 'role:Admin,PMO,DGM']);
+
+Route::resource('monthly-plans', MonthlyPlanController::class) ->middleware([ 'auth', 
+        'role:Admin,PMO,DGM'
+    ]);
 
 });
 
