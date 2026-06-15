@@ -38,6 +38,7 @@ use App\Http\Controllers\MappingPendingQueueController;
 use App\Http\Controllers\ProjectProgressDashboardController;
 use App\Http\Controllers\ProjectDashboardController;
 use App\Http\Controllers\ActivityProgressController;
+use App\Http\Controllers\ProjectHealthDashboardController;
 
 
 Route::get('/', function () {
@@ -486,6 +487,11 @@ Route::get('/project-progress-dashboard', [ProjectProgressDashboardController::c
     '/projects/{project}/activity-progress',
     [ActivityProgressController::class, 'index']
 )->name('activity-progress.index');
+
+Route::get(
+    '/project-health-dashboard',
+    [ProjectHealthDashboardController::class, 'index']
+)->name('project-health-dashboard.index');
 
 });
 
