@@ -35,6 +35,9 @@ use App\Http\Controllers\PlanVsActualController;
 use App\Http\Controllers\MonthlyPlanController;
 use App\Http\Controllers\MaterialVerificationController;
 use App\Http\Controllers\MappingPendingQueueController;
+use App\Http\Controllers\ProjectProgressDashboardController;
+use App\Http\Controllers\ProjectDashboardController;
+use App\Http\Controllers\ActivityProgressController;
 
 
 Route::get('/', function () {
@@ -473,7 +476,19 @@ Route::put(
     'role:Admin,PMO,DGM'
 ]);
 
+Route::get('/project-progress-dashboard', [ProjectProgressDashboardController::class, 'index'])
+    ->name('project-progress-dashboard.index');
+
+    Route::get('/project-dashboard/{project}', [ProjectDashboardController::class, 'show'])
+    ->name('project-dashboard.show');
+
+    Route::get(
+    '/projects/{project}/activity-progress',
+    [ActivityProgressController::class, 'index']
+)->name('activity-progress.index');
+
 });
+
 
     });
 
