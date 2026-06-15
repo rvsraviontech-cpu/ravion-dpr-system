@@ -39,6 +39,7 @@ use App\Http\Controllers\ProjectProgressDashboardController;
 use App\Http\Controllers\ProjectDashboardController;
 use App\Http\Controllers\ActivityProgressController;
 use App\Http\Controllers\ProjectHealthDashboardController;
+use App\Http\Controllers\PmoExceptionDashboardController;
 
 
 Route::get('/', function () {
@@ -492,6 +493,11 @@ Route::get(
     '/project-health-dashboard',
     [ProjectHealthDashboardController::class, 'index']
 )->name('project-health-dashboard.index');
+
+Route::get(
+    '/pmo-exception-dashboard',
+    [PmoExceptionDashboardController::class, 'index']
+)->name('pmo-exception-dashboard.index');
 
 });
 
