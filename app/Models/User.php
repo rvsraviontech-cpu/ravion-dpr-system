@@ -47,4 +47,17 @@ public function users()
     return $this->belongsToMany(User::class);
 }
 
+public function hasPermission($permissionName)
+{
+    if (!$this->role) {
+        return false;
+    }
+
+    return $this->role
+        ->permissions()
+        ->where('name', $permissionName)
+        ->where('is_active', true)
+        ->exists();
+}
+
 }

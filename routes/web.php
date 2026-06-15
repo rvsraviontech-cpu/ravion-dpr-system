@@ -40,6 +40,10 @@ use App\Http\Controllers\ProjectDashboardController;
 use App\Http\Controllers\ActivityProgressController;
 use App\Http\Controllers\ProjectHealthDashboardController;
 use App\Http\Controllers\PmoExceptionDashboardController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\RolePermissionController;
+
 
 
 Route::get('/', function () {
@@ -498,6 +502,18 @@ Route::get(
     '/pmo-exception-dashboard',
     [PmoExceptionDashboardController::class, 'index']
 )->name('pmo-exception-dashboard.index');
+
+Route::resource('roles', RoleController::class);
+Route::resource('permissions', PermissionController::class);
+
+Route::get('/role-permissions', [RolePermissionController::class, 'index'])
+    ->name('role-permissions.index');
+
+Route::get('/role-permissions/{role}/edit', [RolePermissionController::class, 'edit'])
+    ->name('role-permissions.edit');
+
+Route::put('/role-permissions/{role}', [RolePermissionController::class, 'update'])
+    ->name('role-permissions.update');
 
 });
 
