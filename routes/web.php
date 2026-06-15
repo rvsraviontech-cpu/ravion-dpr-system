@@ -33,6 +33,8 @@ use App\Http\Controllers\TomorrowPlanController;
 use App\Http\Controllers\SiteIssueController;
 use App\Http\Controllers\PlanVsActualController;
 use App\Http\Controllers\MonthlyPlanController;
+use App\Http\Controllers\MaterialVerificationController;
+use App\Http\Controllers\MappingPendingQueueController;
 
 
 Route::get('/', function () {
@@ -414,9 +416,62 @@ Route::get('/plan-vs-actual', [PlanVsActualController::class, 'index'])
     Route::get('/monthly-plans/progress-dashboard', [MonthlyPlanController::class, 'progressDashboard']
 )->name('monthly-plans.progress-dashboard') ->middleware(['auth', 'role:Admin,PMO,DGM']);
 
-Route::resource('monthly-plans', MonthlyPlanController::class) ->middleware([ 'auth', 
-        'role:Admin,PMO,DGM'
+Route::resource('monthly-plans', MonthlyPlanController::class) ->middleware([ 'auth', 'role:Admin,PMO,DGM'
     ]);
+
+    Route::get(
+    '/material-verifications',
+    [MaterialVerificationController::class, 'index']
+)->name('material-verifications.index')
+ ->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+Route::get(
+    '/material-verifications/{materialReceived}',
+    [MaterialVerificationController::class, 'show']
+)->name('material-verifications.show')
+ ->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+Route::post(
+    '/material-verifications/{materialReceived}/verify',
+    [MaterialVerificationController::class, 'verify']
+)->name('material-verifications.verify')
+ ->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+Route::get(
+    '/mapping-pending-queue',
+    [MappingPendingQueueController::class, 'index']
+)->name('mapping-pending-queue.index')
+ ->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+Route::get(
+    '/mapping-pending-queue/{dprWorkItem}/edit',
+    [MappingPendingQueueController::class, 'edit']
+)->name('mapping-pending-queue.edit')
+ ->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
+
+Route::put(
+    '/mapping-pending-queue/{dprWorkItem}',
+    [MappingPendingQueueController::class, 'update']
+)->name('mapping-pending-queue.update')
+ ->middleware([
+    'auth',
+    'role:Admin,PMO,DGM'
+]);
 
 });
 
