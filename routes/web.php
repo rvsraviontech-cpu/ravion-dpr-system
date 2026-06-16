@@ -1,7 +1,8 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ActivityController;
@@ -44,482 +45,575 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RolePermissionController;
 
-
-
 Route::get('/', function () {
     return view('welcome');
 });
 
 Route::get('/dashboard', function () {
     return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth', 'verified', 'permission:dashboard.view'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
-Route::get('/admin-dashboard', [DashboardController::class, 'admin'])
-    ->middleware(['auth', 'role:Admin']);
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
 
-Route::get('/engineer-dashboard', [DashboardController::class, 'engineer'])
-    ->middleware(['auth', 'role:Engineer']);
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
 
-Route::get('/pmo-dashboard', [DashboardController::class, 'pmo'])
-    ->middleware(['auth', 'role:PMO']);
-
-Route::get('/ceo-dashboard', [DashboardController::class, 'ceo'])
-    ->middleware(['auth', 'role:CEO']);
-
-Route::get('/accountant-dashboard', [DashboardController::class, 'accountant'])
-    ->middleware(['auth', 'role:Accountant']);
-
-Route::resource('projects', ProjectController::class)
-    ->middleware(['auth', 'role:Admin']);
-
-Route::resource('activities', ActivityController::class)
-    ->middleware(['auth', 'role:Admin']);
-
-Route::resource('contractors', ContractorController::class)
-    ->middleware(['auth', 'role:Admin']);
-
-Route::resource('dprs', DprController::class)
-    ->middleware(['auth']);
-
-Route::get('/pmo/dprs', [DprController::class, 'pmoQueue'])
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 
 
-    Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf']);
-    Route::middleware(['auth', 'role:Admin'])->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | Dashboards
+    |--------------------------------------------------------------------------
+    */
 
-    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/admin-dashboard', [DashboardController::class, 'admin'])
+        ->middleware('permission:dashboard.view');
 
-    Route::get('/users/create', [UserController::class, 'create']);
+    Route::get('/engineer-dashboard', [DashboardController::class, 'engineer'])
+    ->name('engineer-dashboard')
+    ->middleware('permission:engineer_dashboard.view');
 
-    Route::post('/users/store', [UserController::class, 'store']);
+    Route::get('/pmo-dashboard', [DashboardController::class, 'pmo'])
+    ->name('pmo-dashboard')
+    ->middleware('permission:pmo_dashboard.view');
 
-    Route::get('/users/{id}/edit', [UserController::class, 'edit']);
+    Route::get('/ceo-dashboard', [DashboardController::class, 'ceo'])
+    ->name('ceo-dashboard')
+    ->middleware('permission:ceo_dashboard.view');
 
-    Route::post('/users/{id}/update', [UserController::class, 'update']);
-    Route::get('/project-progress', [ProjectController::class, 'progress'])
-    ->middleware(['auth']);
+    Route::get('/accountant-dashboard', [DashboardController::class, 'accountant'])
+    ->name('accountant-dashboard')
+    ->middleware('permission:accountant_dashboard.view');
+
+    Route::get('/project-progress-dashboard', [ProjectProgressDashboardController::class, 'index'])
+        ->name('project-progress-dashboard.index')
+        ->middleware('permission:project_progress_dashboard.view');
+
+    Route::get('/project-dashboard/{project}', [ProjectDashboardController::class, 'show'])
+        ->name('project-dashboard.show')
+        ->middleware('permission:project_dashboard.view');
+
+    Route::get('/project-health-dashboard', [ProjectHealthDashboardController::class, 'index'])
+        ->name('project-health-dashboard.index')
+        ->middleware('permission:project_health_dashboard.view');
+
+    Route::get('/pmo-exception-dashboard', [PmoExceptionDashboardController::class, 'index'])
+        ->name('pmo-exception-dashboard.index')
+        ->middleware('permission:pmo_exception_dashboard.view');
+
     Route::get('/engineer-productivity', [DashboardController::class, 'engineerProductivity'])
-    ->middleware(['auth']);
+        ->name('engineer-productivity')
+        ->middleware('permission:reports.view');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Masters
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('projects', ProjectController::class)
+        ->middleware('permission:projects.view');
+
+    Route::get('/project-progress', [ProjectController::class, 'progress'])
+        ->middleware('permission:projects.view');
+
+    Route::resource('activities', ActivityController::class)
+        ->middleware('permission:activities.view');
+
+    Route::resource('contractors', ContractorController::class)
+        ->middleware('permission:contractors.view');
+
+    Route::resource('materials', MaterialController::class)
+        ->middleware('permission:materials.view');
+
+    Route::resource('material-categories', MaterialCategoryController::class)
+        ->middleware('permission:material_categories.view');
+
+    Route::resource('vendors', VendorController::class)
+        ->middleware('permission:vendors.view');
+
+    Route::resource('machinery-tools', MachineryToolController::class)
+        ->middleware('permission:machinery_tools.view');
+
     Route::resource('labour-types', LabourTypeController::class)
-    ->middleware(['auth', 'role:Admin']);
-    Route::resource('materials', MaterialController::class )->middleware(['auth', 'role:Admin']);
-    Route::resource('vendors', VendorController::class )->middleware(['auth', 'role:Admin']);
-    Route::resource( 'machinery-tools', MachineryToolController::class
-)->middleware(['auth', 'role:Admin']);
-
-Route::get( '/weekly-plans/progress-dashboard',  [WeeklyPlanController::class, 'progressDashboard']
-) ->name('weekly-plans.progress-dashboard') ->middleware([ 'auth', 'role:Admin,PMO,DGM' ]);
-
-Route::resource('weekly-plans', WeeklyPlanController::class )->middleware([ 'auth', 'role:Admin,PMO,DGM'
-]);
+        ->middleware('permission:labour_types.view');
 
 
+    /*
+    |--------------------------------------------------------------------------
+    | Activity Mapping
+    |--------------------------------------------------------------------------
+    */
 
-Route::get('/activity-mappings', [ActivityMappingController::class, 'index'])
-    ->name('activity-mappings.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/activity-mappings/import', [ActivityMappingController::class, 'import'])
-    ->name('activity-mappings.import')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::get('/activity-mappings/{activityMapping}/edit', [ActivityMappingController::class, 'edit'])
-    ->name('activity-mappings.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::put('/activity-mappings/{activityMapping}', [ActivityMappingController::class, 'update'])
-    ->name('activity-mappings.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::get('/activity-mappings', [ActivityMappingController::class, 'index'])
+        ->name('activity-mappings.index')
+        ->middleware('permission:activity_mappings.view');
 
     Route::get('/activity-mappings/create', [ActivityMappingController::class, 'create'])
-    ->name('activity-mappings.create')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('activity-mappings.create')
+        ->middleware('permission:activity_mappings.manage');
 
-Route::post('/activity-mappings', [ActivityMappingController::class, 'store'])
-    ->name('activity-mappings.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::post('/activity-mappings', [ActivityMappingController::class, 'store'])
+        ->name('activity-mappings.store')
+        ->middleware('permission:activity_mappings.manage');
+
+    Route::post('/activity-mappings/import', [ActivityMappingController::class, 'import'])
+        ->name('activity-mappings.import')
+        ->middleware('permission:activity_mappings.manage');
+
+    Route::get('/activity-mappings/{activityMapping}/edit', [ActivityMappingController::class, 'edit'])
+        ->name('activity-mappings.edit')
+        ->middleware('permission:activity_mappings.manage');
+
+    Route::put('/activity-mappings/{activityMapping}', [ActivityMappingController::class, 'update'])
+        ->name('activity-mappings.update')
+        ->middleware('permission:activity_mappings.manage');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | DPR
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('dprs', DprController::class)
+        ->middleware('permission:dpr.view');
+
+    Route::get('/pmo/dprs', [DprController::class, 'pmoQueue'])
+        ->name('pmo.dprs')
+        ->middleware('permission:dpr_reviews.view');
+
+    Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
+        ->middleware('permission:dpr_reviews.approve');
+
+    Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
+        ->middleware('permission:dpr_reviews.reject');
+
+    Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf'])
+        ->middleware('permission:dpr.view');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Location AJAX
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/location/floors/{block}', [DprController::class, 'getFloors'])
-    ->name('location.floors')
-    ->middleware(['auth']);
+        ->name('location.floors');
 
-Route::get('/location/units/{floor}', [DprController::class, 'getUnits'])
-    ->name('location.units')
-    ->middleware(['auth']);
+    Route::get('/location/units/{floor}', [DprController::class, 'getUnits'])
+        ->name('location.units');
 
-Route::get('/location/rooms/{unit}', [DprController::class, 'getRooms'])
-    ->name('location.rooms')
-    ->middleware(['auth']);
+    Route::get('/location/rooms/{unit}', [DprController::class, 'getRooms'])
+        ->name('location.rooms');
 
-Route::get('/location/subspaces/{room}', [DprController::class, 'getSubspaces'])
-    ->name('location.subspaces')
-    ->middleware(['auth']);
+    Route::get('/location/subspaces/{room}', [DprController::class, 'getSubspaces'])
+        ->name('location.subspaces');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Project Locations
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/project-locations', [ProjectLocationController::class, 'index'])
-    ->name('project-locations.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.index')
+        ->middleware('permission:location_masters.view');
 
     Route::post('/project-locations/blocks', [ProjectLocationController::class, 'storeBlock'])
-    ->name('project-locations.blocks.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.blocks.store')
+        ->middleware('permission:location_masters.manage');
 
     Route::post('/project-locations/floors', [ProjectLocationController::class, 'storeFloor'])
-    ->name('project-locations.floors.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.floors.store')
+        ->middleware('permission:location_masters.manage');
 
     Route::post('/project-locations/units', [ProjectLocationController::class, 'storeUnit'])
-    ->name('project-locations.units.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.units.store')
+        ->middleware('permission:location_masters.manage');
 
     Route::post('/project-locations/rooms', [ProjectLocationController::class, 'storeRoom'])
-    ->name('project-locations.rooms.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.rooms.store')
+        ->middleware('permission:location_masters.manage');
 
     Route::post('/project-locations/subspaces', [ProjectLocationController::class, 'storeSubspace'])
-    ->name('project-locations.subspaces.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-    Route::get('/location-block-masters', [LocationBlockMasterController::class, 'index'])
-    ->name('location-block-masters.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/location-block-masters', [LocationBlockMasterController::class, 'store'])
-    ->name('location-block-masters.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-    Route::get('/location-block-masters/{locationBlockMaster}/edit', [LocationBlockMasterController::class, 'edit'])
-    ->name('location-block-masters.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::put('/location-block-masters/{locationBlockMaster}', [LocationBlockMasterController::class, 'update'])
-    ->name('location-block-masters.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::patch('/location-block-masters/{locationBlockMaster}/toggle-status', [LocationBlockMasterController::class, 'toggleStatus'])
-    ->name('location-block-masters.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-    Route::get('/location-floor-masters', [LocationFloorMasterController::class, 'index'])
-    ->name('location-floor-masters.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/location-floor-masters', [LocationFloorMasterController::class, 'store'])
-    ->name('location-floor-masters.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::get('/location-floor-masters/{locationFloorMaster}/edit', [LocationFloorMasterController::class, 'edit'])
-    ->name('location-floor-masters.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::put('/location-floor-masters/{locationFloorMaster}', [LocationFloorMasterController::class, 'update'])
-    ->name('location-floor-masters.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::patch('/location-floor-masters/{locationFloorMaster}/toggle-status', [LocationFloorMasterController::class, 'toggleStatus'])
-    ->name('location-floor-masters.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-    Route::get('/location-unit-masters', [LocationUnitMasterController::class, 'index'])
-    ->name('location-unit-masters.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/location-unit-masters', [LocationUnitMasterController::class, 'store'])
-    ->name('location-unit-masters.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::get('/location-unit-masters/{locationUnitMaster}/edit', [LocationUnitMasterController::class, 'edit'])
-    ->name('location-unit-masters.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::put('/location-unit-masters/{locationUnitMaster}', [LocationUnitMasterController::class, 'update'])
-    ->name('location-unit-masters.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::patch('/location-unit-masters/{locationUnitMaster}/toggle-status', [LocationUnitMasterController::class, 'toggleStatus'])
-    ->name('location-unit-masters.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-    Route::get('/location-room-masters', [LocationRoomMasterController::class, 'index'])
-    ->name('location-room-masters.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/location-room-masters', [LocationRoomMasterController::class, 'store'])
-    ->name('location-room-masters.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::get('/location-room-masters/{locationRoomMaster}/edit', [LocationRoomMasterController::class, 'edit'])
-    ->name('location-room-masters.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::put('/location-room-masters/{locationRoomMaster}', [LocationRoomMasterController::class, 'update'])
-    ->name('location-room-masters.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::patch('/location-room-masters/{locationRoomMaster}/toggle-status', [LocationRoomMasterController::class, 'toggleStatus'])
-    ->name('location-room-masters.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-    Route::get('/location-subspace-masters', [LocationSubspaceMasterController::class, 'index'])
-    ->name('location-subspace-masters.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::post('/location-subspace-masters', [LocationSubspaceMasterController::class, 'store'])
-    ->name('location-subspace-masters.store')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::get('/location-subspace-masters/{locationSubspaceMaster}/edit', [LocationSubspaceMasterController::class, 'edit'])
-    ->name('location-subspace-masters.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::put('/location-subspace-masters/{locationSubspaceMaster}', [LocationSubspaceMasterController::class, 'update'])
-    ->name('location-subspace-masters.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::patch('/location-subspace-masters/{locationSubspaceMaster}/toggle-status', [LocationSubspaceMasterController::class, 'toggleStatus'])
-    ->name('location-subspace-masters.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.subspaces.store')
+        ->middleware('permission:location_masters.manage');
 
     Route::get('/project-locations/blocks/{projectBlock}/edit', [ProjectLocationController::class, 'editBlock'])
-    ->name('project-locations.blocks.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.blocks.edit')
+        ->middleware('permission:location_masters.manage');
 
-Route::put('/project-locations/blocks/{projectBlock}', [ProjectLocationController::class, 'updateBlock'])
-    ->name('project-locations.blocks.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::put('/project-locations/blocks/{projectBlock}', [ProjectLocationController::class, 'updateBlock'])
+        ->name('project-locations.blocks.update')
+        ->middleware('permission:location_masters.manage');
 
-Route::patch('/project-locations/blocks/{projectBlock}/toggle-status', [ProjectLocationController::class, 'toggleBlockStatus'])
-    ->name('project-locations.blocks.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::patch('/project-locations/blocks/{projectBlock}/toggle-status', [ProjectLocationController::class, 'toggleBlockStatus'])
+        ->name('project-locations.blocks.toggle-status')
+        ->middleware('permission:location_masters.manage');
 
     Route::get('/project-locations/floors/{projectFloor}/edit', [ProjectLocationController::class, 'editFloor'])
-    ->name('project-locations.floors.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.floors.edit')
+        ->middleware('permission:location_masters.manage');
 
-Route::put('/project-locations/floors/{projectFloor}', [ProjectLocationController::class, 'updateFloor'])
-    ->name('project-locations.floors.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::put('/project-locations/floors/{projectFloor}', [ProjectLocationController::class, 'updateFloor'])
+        ->name('project-locations.floors.update')
+        ->middleware('permission:location_masters.manage');
 
-Route::patch('/project-locations/floors/{projectFloor}/toggle-status', [ProjectLocationController::class, 'toggleFloorStatus'])
-    ->name('project-locations.floors.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::patch('/project-locations/floors/{projectFloor}/toggle-status', [ProjectLocationController::class, 'toggleFloorStatus'])
+        ->name('project-locations.floors.toggle-status')
+        ->middleware('permission:location_masters.manage');
 
     Route::get('/project-locations/units/{projectUnit}/edit', [ProjectLocationController::class, 'editUnit'])
-    ->name('project-locations.units.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.units.edit')
+        ->middleware('permission:location_masters.manage');
 
-Route::put('/project-locations/units/{projectUnit}', [ProjectLocationController::class, 'updateUnit'])
-    ->name('project-locations.units.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::put('/project-locations/units/{projectUnit}', [ProjectLocationController::class, 'updateUnit'])
+        ->name('project-locations.units.update')
+        ->middleware('permission:location_masters.manage');
 
-Route::patch('/project-locations/units/{projectUnit}/toggle-status', [ProjectLocationController::class, 'toggleUnitStatus'])
-    ->name('project-locations.units.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::patch('/project-locations/units/{projectUnit}/toggle-status', [ProjectLocationController::class, 'toggleUnitStatus'])
+        ->name('project-locations.units.toggle-status')
+        ->middleware('permission:location_masters.manage');
 
     Route::get('/project-locations/rooms/{projectRoom}/edit', [ProjectLocationController::class, 'editRoom'])
-    ->name('project-locations.rooms.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.rooms.edit')
+        ->middleware('permission:location_masters.manage');
 
-Route::put('/project-locations/rooms/{projectRoom}', [ProjectLocationController::class, 'updateRoom'])
-    ->name('project-locations.rooms.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::put('/project-locations/rooms/{projectRoom}', [ProjectLocationController::class, 'updateRoom'])
+        ->name('project-locations.rooms.update')
+        ->middleware('permission:location_masters.manage');
 
-Route::patch('/project-locations/rooms/{projectRoom}/toggle-status', [ProjectLocationController::class, 'toggleRoomStatus'])
-    ->name('project-locations.rooms.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::patch('/project-locations/rooms/{projectRoom}/toggle-status', [ProjectLocationController::class, 'toggleRoomStatus'])
+        ->name('project-locations.rooms.toggle-status')
+        ->middleware('permission:location_masters.manage');
 
     Route::get('/project-locations/subspaces/{projectSubspace}/edit', [ProjectLocationController::class, 'editSubspace'])
-    ->name('project-locations.subspaces.edit')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('project-locations.subspaces.edit')
+        ->middleware('permission:location_masters.manage');
 
-Route::put('/project-locations/subspaces/{projectSubspace}', [ProjectLocationController::class, 'updateSubspace'])
-    ->name('project-locations.subspaces.update')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::put('/project-locations/subspaces/{projectSubspace}', [ProjectLocationController::class, 'updateSubspace'])
+        ->name('project-locations.subspaces.update')
+        ->middleware('permission:location_masters.manage');
 
-Route::patch('/project-locations/subspaces/{projectSubspace}/toggle-status', [ProjectLocationController::class, 'toggleSubspaceStatus'])
-    ->name('project-locations.subspaces.toggle-status')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::patch('/project-locations/subspaces/{projectSubspace}/toggle-status', [ProjectLocationController::class, 'toggleSubspaceStatus'])
+        ->name('project-locations.subspaces.toggle-status')
+        ->middleware('permission:location_masters.manage');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Location Masters
+    |--------------------------------------------------------------------------
+    */
 
     Route::get('/location-masters', [LocationMasterController::class, 'index'])
-    ->name('location-masters.index')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('location-masters.index')
+        ->middleware('permission:location_masters.view');
 
-    Route::middleware(['auth'])->group(function () {
-    Route::resource('labour-reports', LabourReportController::class);
+    Route::get('/location-block-masters', [LocationBlockMasterController::class, 'index'])
+        ->name('location-block-masters.index')
+        ->middleware('permission:location_masters.view');
+
+    Route::post('/location-block-masters', [LocationBlockMasterController::class, 'store'])
+        ->name('location-block-masters.store')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-block-masters/{locationBlockMaster}/edit', [LocationBlockMasterController::class, 'edit'])
+        ->name('location-block-masters.edit')
+        ->middleware('permission:location_masters.manage');
+
+    Route::put('/location-block-masters/{locationBlockMaster}', [LocationBlockMasterController::class, 'update'])
+        ->name('location-block-masters.update')
+        ->middleware('permission:location_masters.manage');
+
+    Route::patch('/location-block-masters/{locationBlockMaster}/toggle-status', [LocationBlockMasterController::class, 'toggleStatus'])
+        ->name('location-block-masters.toggle-status')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-floor-masters', [LocationFloorMasterController::class, 'index'])
+        ->name('location-floor-masters.index')
+        ->middleware('permission:location_masters.view');
+
+    Route::post('/location-floor-masters', [LocationFloorMasterController::class, 'store'])
+        ->name('location-floor-masters.store')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-floor-masters/{locationFloorMaster}/edit', [LocationFloorMasterController::class, 'edit'])
+        ->name('location-floor-masters.edit')
+        ->middleware('permission:location_masters.manage');
+
+    Route::put('/location-floor-masters/{locationFloorMaster}', [LocationFloorMasterController::class, 'update'])
+        ->name('location-floor-masters.update')
+        ->middleware('permission:location_masters.manage');
+
+    Route::patch('/location-floor-masters/{locationFloorMaster}/toggle-status', [LocationFloorMasterController::class, 'toggleStatus'])
+        ->name('location-floor-masters.toggle-status')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-unit-masters', [LocationUnitMasterController::class, 'index'])
+        ->name('location-unit-masters.index')
+        ->middleware('permission:location_masters.view');
+
+    Route::post('/location-unit-masters', [LocationUnitMasterController::class, 'store'])
+        ->name('location-unit-masters.store')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-unit-masters/{locationUnitMaster}/edit', [LocationUnitMasterController::class, 'edit'])
+        ->name('location-unit-masters.edit')
+        ->middleware('permission:location_masters.manage');
+
+    Route::put('/location-unit-masters/{locationUnitMaster}', [LocationUnitMasterController::class, 'update'])
+        ->name('location-unit-masters.update')
+        ->middleware('permission:location_masters.manage');
+
+    Route::patch('/location-unit-masters/{locationUnitMaster}/toggle-status', [LocationUnitMasterController::class, 'toggleStatus'])
+        ->name('location-unit-masters.toggle-status')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-room-masters', [LocationRoomMasterController::class, 'index'])
+        ->name('location-room-masters.index')
+        ->middleware('permission:location_masters.view');
+
+    Route::post('/location-room-masters', [LocationRoomMasterController::class, 'store'])
+        ->name('location-room-masters.store')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-room-masters/{locationRoomMaster}/edit', [LocationRoomMasterController::class, 'edit'])
+        ->name('location-room-masters.edit')
+        ->middleware('permission:location_masters.manage');
+
+    Route::put('/location-room-masters/{locationRoomMaster}', [LocationRoomMasterController::class, 'update'])
+        ->name('location-room-masters.update')
+        ->middleware('permission:location_masters.manage');
+
+    Route::patch('/location-room-masters/{locationRoomMaster}/toggle-status', [LocationRoomMasterController::class, 'toggleStatus'])
+        ->name('location-room-masters.toggle-status')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-subspace-masters', [LocationSubspaceMasterController::class, 'index'])
+        ->name('location-subspace-masters.index')
+        ->middleware('permission:location_masters.view');
+
+    Route::post('/location-subspace-masters', [LocationSubspaceMasterController::class, 'store'])
+        ->name('location-subspace-masters.store')
+        ->middleware('permission:location_masters.manage');
+
+    Route::get('/location-subspace-masters/{locationSubspaceMaster}/edit', [LocationSubspaceMasterController::class, 'edit'])
+        ->name('location-subspace-masters.edit')
+        ->middleware('permission:location_masters.manage');
+
+    Route::put('/location-subspace-masters/{locationSubspaceMaster}', [LocationSubspaceMasterController::class, 'update'])
+        ->name('location-subspace-masters.update')
+        ->middleware('permission:location_masters.manage');
+
+    Route::patch('/location-subspace-masters/{locationSubspaceMaster}/toggle-status', [LocationSubspaceMasterController::class, 'toggleStatus'])
+        ->name('location-subspace-masters.toggle-status')
+        ->middleware('permission:location_masters.manage');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Labour
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('labour-reports', LabourReportController::class)
+        ->middleware('permission:labour_reports.view');
 
     Route::patch('/labour-reports/{labourReport}/submit', [LabourReportController::class, 'submit'])
-    ->name('labour-reports.submit')
-    ->middleware(['auth']);
+        ->name('labour-reports.submit')
+        ->middleware('permission:labour_reports.create');
 
     Route::patch('/labour-reports/{labourReport}/approve', [LabourReportController::class, 'approve'])
-    ->name('labour-reports.approve')
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+        ->name('labour-reports.approve')
+        ->middleware('permission:labour_reports.approve');
 
-    Route::middleware(['auth'])->group(function () {
 
-    Route::resource('material-received', MaterialReceivedController::class);
+    /*
+    |--------------------------------------------------------------------------
+    | Materials
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('material-received', MaterialReceivedController::class)
+        ->middleware('permission:material_received.view');
 
     Route::patch('/material-received/{materialReceived}/submit', [MaterialReceivedController::class, 'submit'])
-        ->name('material-received.submit');
+        ->name('material-received.submit')
+        ->middleware('permission:material_received.create');
 
     Route::patch('/material-received/{materialReceived}/approve', [MaterialReceivedController::class, 'approve'])
         ->name('material-received.approve')
-        ->middleware(['role:Admin,PMO,DGM']);
+        ->middleware('permission:material_received.approve');
 
-        Route::resource('material-categories', MaterialCategoryController::class)
-    ->middleware(['auth', 'role:Admin,PMO,DGM']);
+    Route::resource('material-consumed', MaterialConsumedController::class)
+        ->middleware('permission:material_consumed.view');
 
-    Route::resource('material-consumed', MaterialConsumedController::class);
+    Route::patch('/material-consumed/{materialConsumed}/submit', [MaterialConsumedController::class, 'submit'])
+        ->name('material-consumed.submit')
+        ->middleware('permission:material_consumed.create');
 
-Route::patch('/material-consumed/{materialConsumed}/submit', [MaterialConsumedController::class, 'submit'])
-    ->name('material-consumed.submit');
+    Route::patch('/material-consumed/{materialConsumed}/approve', [MaterialConsumedController::class, 'approve'])
+        ->name('material-consumed.approve')
+        ->middleware('permission:material_consumed.approve');
 
-Route::patch('/material-consumed/{materialConsumed}/approve', [MaterialConsumedController::class, 'approve'])
-    ->name('material-consumed.approve')
-    ->middleware(['role:Admin,PMO,DGM']);
+    Route::resource('material-requirements', MaterialRequirementController::class)
+        ->middleware('permission:material_required.view');
+
+    Route::patch('/material-requirements/{materialRequirement}/submit', [MaterialRequirementController::class, 'submit'])
+        ->name('material-requirements.submit')
+        ->middleware('permission:material_required.create');
+
+    Route::patch('/material-requirements/{materialRequirement}/approve', [MaterialRequirementController::class, 'approve'])
+        ->name('material-requirements.approve')
+        ->middleware('permission:material_required.approve');
+
     Route::get('/stock-register', [StockRegisterController::class, 'index'])
-    ->name('stock-register.index');
+        ->name('stock-register.index')
+        ->middleware('permission:material_ledger.view');
 
     Route::get('/material-ledger', [MaterialLedgerController::class, 'index'])
-    ->name('material-ledger.index');
-
-    Route::resource('material-requirements', MaterialRequirementController::class);
-
-Route::patch('/material-requirements/{materialRequirement}/submit',
-    [MaterialRequirementController::class, 'submit'])
-    ->name('material-requirements.submit');
-
-Route::patch('/material-requirements/{materialRequirement}/approve',
-    [MaterialRequirementController::class, 'approve'])
-    ->name('material-requirements.approve');
+        ->name('material-ledger.index')
+        ->middleware('permission:material_ledger.view');
 
     Route::get('/material-shortage-report', [MaterialShortageReportController::class, 'index'])
-    ->name('material-shortage-report.index');
+        ->name('material-shortage-report.index')
+        ->middleware('permission:material_shortage_report.view');
 
-    Route::resource('tomorrow-plans', TomorrowPlanController::class);
 
-Route::patch('/tomorrow-plans/{tomorrowPlan}/submit',
-    [TomorrowPlanController::class, 'submit'])
-    ->name('tomorrow-plans.submit');
+    /*
+    |--------------------------------------------------------------------------
+    | Planning
+    |--------------------------------------------------------------------------
+    */
 
-Route::patch('/tomorrow-plans/{tomorrowPlan}/approve',
-    [TomorrowPlanController::class, 'approve'])
-    ->name('tomorrow-plans.approve');
+    Route::get('/weekly-plans/progress-dashboard', [WeeklyPlanController::class, 'progressDashboard'])
+        ->name('weekly-plans.progress-dashboard')
+        ->middleware('permission:weekly_plans.view');
+
+    Route::resource('weekly-plans', WeeklyPlanController::class)
+        ->middleware('permission:weekly_plans.view');
+
+    Route::get('/monthly-plans/progress-dashboard', [MonthlyPlanController::class, 'progressDashboard'])
+        ->name('monthly-plans.progress-dashboard')
+        ->middleware('permission:monthly_plans.view');
+
+    Route::resource('monthly-plans', MonthlyPlanController::class)
+        ->middleware('permission:monthly_plans.view');
+
+    Route::resource('tomorrow-plans', TomorrowPlanController::class)
+        ->middleware('permission:tomorrow_plans.view');
+
+    Route::patch('/tomorrow-plans/{tomorrowPlan}/submit', [TomorrowPlanController::class, 'submit'])
+        ->name('tomorrow-plans.submit')
+        ->middleware('permission:tomorrow_plans.create');
+
+    Route::patch('/tomorrow-plans/{tomorrowPlan}/approve', [TomorrowPlanController::class, 'approve'])
+        ->name('tomorrow-plans.approve')
+        ->middleware('permission:tomorrow_plans.approve');
+
+    Route::get('/plan-vs-actual', [PlanVsActualController::class, 'index'])
+        ->name('plan-vs-actual.index')
+        ->middleware('permission:plan_vs_actual.view');
+
+    Route::get('/projects/{project}/activity-progress', [ActivityProgressController::class, 'index'])
+        ->name('activity-progress.index')
+        ->middleware('permission:activity_progress.view');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Site Issues
+    |--------------------------------------------------------------------------
+    */
+
+    Route::resource('site-issues', SiteIssueController::class)
+        ->middleware('permission:site_issues.view');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | PMO & Verification
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/material-verifications', [MaterialVerificationController::class, 'index'])
+        ->name('material-verifications.index')
+        ->middleware('permission:material_verification.view');
+
+    Route::get('/material-verifications/{materialReceived}', [MaterialVerificationController::class, 'show'])
+        ->name('material-verifications.show')
+        ->middleware('permission:material_verification.view');
+
+    Route::post('/material-verifications/{materialReceived}/verify', [MaterialVerificationController::class, 'verify'])
+        ->name('material-verifications.verify')
+        ->middleware('permission:material_verification.verify');
+
+    Route::get('/mapping-pending-queue', [MappingPendingQueueController::class, 'index'])
+        ->name('mapping-pending-queue.index')
+        ->middleware('permission:mapping_queue.view');
+
+    Route::get('/mapping-pending-queue/{dprWorkItem}/edit', [MappingPendingQueueController::class, 'edit'])
+        ->name('mapping-pending-queue.edit')
+        ->middleware('permission:mapping_queue.manage');
+
+    Route::put('/mapping-pending-queue/{dprWorkItem}', [MappingPendingQueueController::class, 'update'])
+        ->name('mapping-pending-queue.update')
+        ->middleware('permission:mapping_queue.manage');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Administration
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/users', [UserController::class, 'index'])
+        ->name('users.index')
+        ->middleware('permission:users.view');
+
+    Route::get('/users/create', [UserController::class, 'create'])
+        ->name('users.create')
+        ->middleware('permission:users.manage');
+
+    Route::post('/users/store', [UserController::class, 'store'])
+        ->name('users.store')
+        ->middleware('permission:users.manage');
+
+    Route::get('/users/{id}/edit', [UserController::class, 'edit'])
+        ->name('users.edit')
+        ->middleware('permission:users.manage');
+
+    Route::post('/users/{id}/update', [UserController::class, 'update'])
+        ->name('users.update')
+        ->middleware('permission:users.manage');
+
+    Route::resource('roles', RoleController::class)
+        ->middleware('permission:roles.view');
+
+    Route::resource('permissions', PermissionController::class)
+        ->middleware('permission:permissions.view');
+
+    Route::get('/role-permissions', [RolePermissionController::class, 'index'])
+        ->name('role-permissions.index')
+        ->middleware('permission:role_permissions.view');
+
+    Route::get('/role-permissions/{role}/edit', [RolePermissionController::class, 'edit'])
+        ->name('role-permissions.edit')
+        ->middleware('permission:role_permissions.manage');
+
+    Route::put('/role-permissions/{role}', [RolePermissionController::class, 'update'])
+        ->name('role-permissions.update')
+        ->middleware('permission:role_permissions.manage');
 });
-
-Route::resource('site-issues', SiteIssueController::class);
-Route::get('/plan-vs-actual', [PlanVsActualController::class, 'index'])
-    ->name('plan-vs-actual.index');
-
-    Route::get('/monthly-plans/progress-dashboard', [MonthlyPlanController::class, 'progressDashboard']
-)->name('monthly-plans.progress-dashboard') ->middleware(['auth', 'role:Admin,PMO,DGM']);
-
-Route::resource('monthly-plans', MonthlyPlanController::class) ->middleware([ 'auth', 'role:Admin,PMO,DGM'
-    ]);
-
-    Route::get(
-    '/material-verifications',
-    [MaterialVerificationController::class, 'index']
-)->name('material-verifications.index')
- ->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
-
-Route::get(
-    '/material-verifications/{materialReceived}',
-    [MaterialVerificationController::class, 'show']
-)->name('material-verifications.show')
- ->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
-
-Route::post(
-    '/material-verifications/{materialReceived}/verify',
-    [MaterialVerificationController::class, 'verify']
-)->name('material-verifications.verify')
- ->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
-
-Route::get(
-    '/mapping-pending-queue',
-    [MappingPendingQueueController::class, 'index']
-)->name('mapping-pending-queue.index')
- ->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
-
-Route::get(
-    '/mapping-pending-queue/{dprWorkItem}/edit',
-    [MappingPendingQueueController::class, 'edit']
-)->name('mapping-pending-queue.edit')
- ->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
-
-Route::put(
-    '/mapping-pending-queue/{dprWorkItem}',
-    [MappingPendingQueueController::class, 'update']
-)->name('mapping-pending-queue.update')
- ->middleware([
-    'auth',
-    'role:Admin,PMO,DGM'
-]);
-
-Route::get('/project-progress-dashboard', [ProjectProgressDashboardController::class, 'index'])
-    ->name('project-progress-dashboard.index');
-
-    Route::get('/project-dashboard/{project}', [ProjectDashboardController::class, 'show'])
-    ->name('project-dashboard.show');
-
-    Route::get(
-    '/projects/{project}/activity-progress',
-    [ActivityProgressController::class, 'index']
-)->name('activity-progress.index');
-
-Route::get(
-    '/project-health-dashboard',
-    [ProjectHealthDashboardController::class, 'index']
-)->name('project-health-dashboard.index');
-
-Route::get(
-    '/pmo-exception-dashboard',
-    [PmoExceptionDashboardController::class, 'index']
-)->name('pmo-exception-dashboard.index');
-
-Route::resource('roles', RoleController::class);
-Route::resource('permissions', PermissionController::class);
-
-Route::get('/role-permissions', [RolePermissionController::class, 'index'])
-    ->name('role-permissions.index');
-
-Route::get('/role-permissions/{role}/edit', [RolePermissionController::class, 'edit'])
-    ->name('role-permissions.edit');
-
-Route::put('/role-permissions/{role}', [RolePermissionController::class, 'update'])
-    ->name('role-permissions.update');
-
-});
-
-
-    });
-
-
 
 require __DIR__.'/auth.php';

@@ -169,6 +169,12 @@ class PermissionSeeder extends Seeder
 ['module' => 'Quality Checklists', 'name' => 'quality_checklists.manage'],
 ['module' => 'Safety Observations', 'name' => 'safety_observations.manage'],
 ['module' => 'Documents', 'name' => 'documents.manage'],
+
+// Role Dashboards
+['module' => 'Role Dashboards', 'name' => 'engineer_dashboard.view'],
+['module' => 'Role Dashboards', 'name' => 'accountant_dashboard.view'],
+['module' => 'Role Dashboards', 'name' => 'ceo_dashboard.view'],
+['module' => 'Role Dashboards', 'name' => 'pmo_dashboard.view'],
         ];
 
         foreach ($permissions as $permission) {
