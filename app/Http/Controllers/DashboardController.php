@@ -118,26 +118,69 @@ class DashboardController extends Controller
     }
 
     public function engineer()
-    {
-        $user = auth()->user();
+{
+    $user = auth()->user();
 
-        $totalDprs = \App\Models\Dpr::where('user_id', $user->id)->count();
+    $totalDprs = \App\Models\Dpr::where(
+        'user_id',
+        $user->id
+    )->count();
 
-        $todayDprs = \App\Models\Dpr::where('user_id', $user->id)
-            ->whereDate('dpr_date', today())
-            ->count();
+    $todayDprs = \App\Models\Dpr::where(
+        'user_id',
+        $user->id
+    )
+    ->whereDate(
+        'dpr_date',
+        today()
+    )
+    ->count();
 
-        $recentDprs = \App\Models\Dpr::where('user_id', $user->id)
-            ->latest()
-            ->take(5)
-            ->get();
+    $recentDprs = \App\Models\Dpr::with('project')
+        ->where('user_id', $user->id)
+        ->latest()
+        ->take(5)
+        ->get();
 
-        return view('dashboards.engineer', compact(
+    // Open Site Issues
+
+    $openSiteIssues = \App\Models\SiteIssue::whereIn(
+        'status',
+        ['Open', 'In Progress']
+    )->count();
+
+    // Pending Material Requirements
+
+    $pendingMaterialRequests =
+        \App\Models\MaterialRequirement::whereIn(
+            'status',
+            ['Pending', 'Submitted']
+        )->count();
+
+    // Today's Labour Count
+
+    $labourToday =
+        \App\Models\DprLabour::whereHas(
+            'dpr',
+            function ($q) use ($user) {
+                $q->where('user_id', $user->id)
+                  ->whereDate('dpr_date', today());
+            }
+        )
+        ->sum('total_count');
+
+    return view(
+        'dashboards.engineer',
+        compact(
             'totalDprs',
             'todayDprs',
-            'recentDprs'
-        ));
-    }
+            'recentDprs',
+            'openSiteIssues',
+            'pendingMaterialRequests',
+            'labourToday'
+        )
+    );
+}
 
     public function pmo()
     {

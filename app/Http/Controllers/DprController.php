@@ -21,6 +21,7 @@ use App\Models\MachineryTool;
 use App\Models\DprMachineryTool;
 use App\Models\TomorrowPlan;
 use App\Models\SiteIssue;
+use App\Helpers\AuditHelper;
 
 class DprController extends Controller
 {
@@ -96,6 +97,8 @@ else
     )->get();
 }
 
+
+
     return view('dprs.index', compact(
         'dprs',
         'projects',
@@ -120,13 +123,20 @@ else
         $projectUnits = \App\Models\ProjectUnit::where('is_active', true)->get();
         $projectRooms = \App\Models\ProjectRoom::where('is_active', true)->get();
         $projectSubspaces = \App\Models\ProjectSubspace::where('is_active', true)->get();
-        $activityMappings = \App\Models\ActivityMapping::with('division')
-    ->where('is_active', true)
-    ->orderBy('activity_name')
-    ->get();
+        $activityMappings = \App\Models\ActivityMapping::with('division')->where('is_active', true)
+        ->orderBy('activity_name') ->get();
 
         $activityDivisions = \App\Models\ActivityDivision::where('is_active', true)
     ->orderBy('sequence')
+    ->get();
+    $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
+    ->orderBy('category_name')->get();
+    $labourCategories = \App\Models\LabourCategory::where('is_active', true)
+    ->orderBy('category_name')
+    ->get();
+
+$labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
+    ->orderBy('labour_type_name')
     ->get();
 
         
@@ -145,7 +155,10 @@ else
             'projectRooms',
             'projectSubspaces',
             'activityMappings',
-            'activityDivisions'
+            'activityDivisions',
+            'materialCategories',
+            'labourCategories',
+'labourTypes',
         ));
     }
 
@@ -517,6 +530,23 @@ if($request->plan_activity_id)
     }
 }
 
+    AuditHelper::log(
+    'DPR',
+    'Created',
+    'Dpr',
+    $dpr->id,
+    'DPR created for project ID: ' . $dpr->project_id,
+    null,
+    $dpr->only([
+        'id',
+        'project_id',
+        'user_id',
+        'dpr_date',
+        'weather',
+        'remarks',
+        'status'
+    ])
+);
         return redirect('/dprs')
     ->with('success', 'DPR submitted successfully.');
     }
@@ -537,12 +567,30 @@ public function pmoQueue()
 public function approve(Request $request, $id)
 {
     $dpr = Dpr::findOrFail($id);
-
+    
+    $oldStatus = $dpr->status;
+$oldPmoRemarks = $dpr->pmo_remarks;
     $dpr->status = 'Approved';
 
     $dpr->pmo_remarks = $request->pmo_remarks;
 
     $dpr->save();
+
+    AuditHelper::log(
+    'DPR',
+    'Approved',
+    'Dpr',
+    $dpr->id,
+    'DPR approved by PMO/Admin',
+    [
+    'status' => $oldStatus,
+    'pmo_remarks' => $oldPmoRemarks,
+],
+    [
+        'status' => $dpr->status,
+        'pmo_remarks' => $dpr->pmo_remarks
+    ]
+);
 
     return redirect('/pmo/dprs')
         ->with('success', 'DPR approved successfully.');
@@ -551,12 +599,29 @@ public function approve(Request $request, $id)
 public function reject(Request $request, $id)
 {
     $dpr = Dpr::findOrFail($id);
-
+    $oldStatus = $dpr->status;
+$oldPmoRemarks = $dpr->pmo_remarks;
     $dpr->status = 'Rejected';
 
     $dpr->pmo_remarks = $request->pmo_remarks;
 
     $dpr->save();
+
+    AuditHelper::log(
+    'DPR',
+    'Rejected',
+    'Dpr',
+    $dpr->id,
+    'DPR rejected by PMO/Admin',
+    [
+    'status' => $oldStatus,
+    'pmo_remarks' => $oldPmoRemarks,
+],
+    [
+        'status' => $dpr->status,
+        'pmo_remarks' => $dpr->pmo_remarks
+    ]
+);
 
     return redirect('/pmo/dprs')
         ->with('success', 'DPR rejected successfully.');
@@ -623,12 +688,57 @@ public function update(Request $request, $id)
             ->with('success', 'Approved DPR cannot be updated.');
     }
 
-    $dpr->update([
-        'project_id' => $request->project_id,
-        'dpr_date' => $request->dpr_date,
-        'weather' => $request->weather,
-        'remarks' => $request->remarks,
-    ]);
+
+    $request->validate([
+    'project_id' => 'nullable|exists:projects,id',
+    'dpr_date' => 'nullable|date',
+    'weather' => 'nullable|string|max:255',
+    'remarks' => 'nullable|string',
+]);
+
+    $oldValues = $dpr->only([
+    'project_id',
+    'dpr_date',
+    'weather',
+    'remarks',
+    'status'
+]);
+
+
+    $newStatus = $dpr->status;
+
+if ($dpr->status === 'Rejected') {
+    $newStatus = 'Pending';
+}
+
+$dpr->update([
+    'project_id' => $request->project_id ?? $dpr->project_id,
+    'dpr_date' => $request->dpr_date ?? $dpr->dpr_date,
+    'weather' => $request->weather ?? $dpr->weather,
+    'remarks' => $request->remarks,
+    'status' => $newStatus,
+    'pmo_remarks' => $newStatus === 'Pending' ? null : $dpr->pmo_remarks,
+]);
+
+    $newValues = $dpr->only([
+    'project_id',
+    'dpr_date',
+    'weather',
+    'remarks',
+    'status'
+]);
+
+AuditHelper::log(
+    'DPR',
+    'Updated',
+    'Dpr',
+    $dpr->id,
+    $newStatus === 'Pending'
+        ? 'Rejected DPR updated and resubmitted for PMO review'
+        : 'DPR updated',
+    $oldValues,
+    $newValues
+);
 
     return redirect('/dprs')
         ->with('success', 'DPR updated successfully.');
@@ -644,6 +754,24 @@ public function destroy($id)
             ->with('success', 'Approved DPR cannot be deleted.');
     }
 
+
+    AuditHelper::log(
+    'DPR',
+    'Deleted',
+    'Dpr',
+    $dpr->id,
+    'DPR deleted',
+    $dpr->only([
+        'id',
+        'project_id',
+        'user_id',
+        'dpr_date',
+        'weather',
+        'remarks',
+        'status'
+    ]),
+    null
+);
     $dpr->delete();
 
     return redirect('/dprs')

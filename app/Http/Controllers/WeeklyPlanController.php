@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Activity;
 use App\Models\ActivityDivision;
 use App\Models\User;
+use App\Helpers\AuditHelper;
 
 class WeeklyPlanController extends Controller
 {
@@ -91,7 +92,7 @@ class WeeklyPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        WeeklyPlan::create([
+        $weeklyPlan = WeeklyPlan::create([
             'project_id' => $request->project_id,
             'activity_id' => $request->activity_id,
             'user_id' => $request->user_id,
@@ -106,6 +107,28 @@ class WeeklyPlanController extends Controller
             'status' => $request->status,
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Weekly Plans',
+    'Created',
+    'WeeklyPlan',
+    $weeklyPlan->id,
+    'Weekly plan created',
+    null,
+    $weeklyPlan->only([
+        'id',
+        'project_id',
+        'activity_id',
+        'user_id',
+        'week_start_date',
+        'week_end_date',
+        'planned_quantity',
+        'unit',
+        'planned_labour',
+        'status',
+        'remarks'
+    ])
+);
 
         return redirect()
             ->route('weekly-plans.index')
@@ -168,6 +191,22 @@ class WeeklyPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $weeklyPlan->only([
+    'project_id',
+    'activity_id',
+    'user_id',
+    'week_start_date',
+    'week_end_date',
+    'planned_quantity',
+    'unit',
+    'planned_labour',
+    'materials_required',
+    'machinery_required',
+    'risks_constraints',
+    'status',
+    'remarks'
+]);
+
         $weeklyPlan->update([
             'project_id' => $request->project_id,
             'activity_id' => $request->activity_id,
@@ -183,6 +222,47 @@ class WeeklyPlanController extends Controller
             'status' => $request->status,
             'remarks' => $request->remarks,
         ]);
+
+        $newValues = $weeklyPlan->only([
+    'project_id',
+    'activity_id',
+    'user_id',
+    'week_start_date',
+    'week_end_date',
+    'planned_quantity',
+    'unit',
+    'planned_labour',
+    'materials_required',
+    'machinery_required',
+    'risks_constraints',
+    'status',
+    'remarks'
+]);
+
+$action = 'Updated';
+$description = 'Weekly plan updated';
+
+$oldStatus = $oldValues['status'] ?? null;
+$newStatus = $newValues['status'] ?? null;
+
+if ($oldStatus !== $newStatus) {
+    $action = $newStatus;
+    $description =
+        'Weekly plan status changed from ' .
+        $oldStatus .
+        ' to ' .
+        $newStatus;
+}
+
+AuditHelper::log(
+    'Weekly Plans',
+    $action,
+    'WeeklyPlan',
+    $weeklyPlan->id,
+    $description,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('weekly-plans.index')

@@ -64,10 +64,20 @@
 
         <div>
             <label class="block font-semibold mb-1">Brand</label>
-            <input type="text"
-                   name="brand"
-                   value="{{ old('brand', $material->brand) }}"
-                   class="border p-2 rounded w-full">
+            <select name="brand_master_id"
+        class="border rounded w-full p-3">
+    <option value="">Select Brand</option>
+
+    @foreach($brands as $brand)
+        <option value="{{ $brand->id }}"
+            {{ old('brand_master_id', $material->brand_master_id) == $brand->id ? 'selected' : '' }}>
+            {{ $brand->brand_name }}
+            @if($brand->brand_code)
+                ({{ $brand->brand_code }})
+            @endif
+        </option>
+    @endforeach
+</select>
         </div>
 
         <div>

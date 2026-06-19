@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Imports\ActivityMappingsImport;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Helpers\AuditHelper;
 
 class ActivityMappingController extends Controller
 {
@@ -63,6 +64,18 @@ class ActivityMappingController extends Controller
             $request->file('file')
         );
 
+        AuditHelper::log(
+    'Activity Mappings',
+    'Imported',
+    'ActivityMapping',
+    null,
+    $import->importedCount . ' activity mappings imported successfully',
+    null,
+    [
+        'imported_count' => $import->importedCount
+    ]
+);
+
         return back()->with(
             'success',
             $import->importedCount . ' activity mappings imported successfully.'
@@ -113,6 +126,22 @@ public function update(
         'remarks' => 'nullable|string',
     ]);
 
+    $oldValues = $activityMapping->only([
+    'activity_division_id',
+    'activity_id',
+    'rh_cost_code',
+    'activity_name',
+    'unit',
+    'odoo_type_code',
+    'odoo_type',
+    'material_group',
+    'contractor_type',
+    'inventory_expense_bucket',
+    'procurement_mode',
+    'is_active',
+    'remarks'
+]);
+
     $activityMapping->update($request->only([
         'activity_division_id',
         'activity_id',
@@ -128,7 +157,45 @@ public function update(
         'is_active',
         'remarks',
     ]));
+    
+    $newValues = $activityMapping->only([
+    'activity_division_id',
+    'activity_id',
+    'rh_cost_code',
+    'activity_name',
+    'unit',
+    'odoo_type_code',
+    'odoo_type',
+    'material_group',
+    'contractor_type',
+    'inventory_expense_bucket',
+    'procurement_mode',
+    'is_active',
+    'remarks'
+]);
 
+$action = 'Updated';
+$description = 'Activity mapping updated: ' . $activityMapping->activity_name;
+
+if (
+    ($oldValues['is_active'] ?? null) != ($newValues['is_active'] ?? null)
+) {
+    $action = $newValues['is_active'] ? 'Activated' : 'Deactivated';
+
+    $description = $newValues['is_active']
+        ? 'Activity mapping activated: ' . $activityMapping->activity_name
+        : 'Activity mapping deactivated: ' . $activityMapping->activity_name;
+}
+
+AuditHelper::log(
+    'Activity Mappings',
+    $action,
+    'ActivityMapping',
+    $activityMapping->id,
+    $description,
+    $oldValues,
+    $newValues
+);
     return redirect()
         ->route('activity-mappings.index')
         ->with('success', 'Activity mapping updated successfully.');
@@ -178,7 +245,7 @@ public function store(Request $request)
         ]
     );
 
-    \App\Models\ActivityMapping::create([
+    $activityMapping = \App\Models\ActivityMapping::create([
         'activity_division_id' => $request->activity_division_id,
         'activity_id' => $activity->id,
         'division_code' => 'RH',
@@ -194,6 +261,32 @@ public function store(Request $request)
         'is_active' => $request->is_active,
         'remarks' => $request->remarks,
     ]);
+
+    AuditHelper::log(
+    'Activity Mappings',
+    'Created',
+    'ActivityMapping',
+    $activityMapping->id,
+    'Activity mapping created: ' . $activityMapping->activity_name,
+    null,
+    $activityMapping->only([
+        'id',
+        'activity_division_id',
+        'activity_id',
+        'division_code',
+        'rh_cost_code',
+        'activity_name',
+        'unit',
+        'odoo_type_code',
+        'odoo_type',
+        'material_group',
+        'contractor_type',
+        'inventory_expense_bucket',
+        'procurement_mode',
+        'is_active',
+        'remarks'
+    ])
+);
 
     return redirect()
         ->route('activity-mappings.index')

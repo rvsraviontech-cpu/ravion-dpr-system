@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class RoleController extends Controller
 {
@@ -27,9 +28,22 @@ class RoleController extends Controller
             'name' => 'required|string|max:255|unique:roles,name',
         ]);
 
-        Role::create([
-            'name' => $request->name,
-        ]);
+        $role = Role::create([
+    'name' => $request->name,
+]);
+
+AuditHelper::log(
+    'Roles',
+    'Created',
+    'Role',
+    $role->id,
+    'Role created: ' . $role->name,
+    null,
+    $role->only([
+        'id',
+        'name'
+    ])
+);
 
         return redirect()
             ->route('roles.index')
@@ -47,9 +61,27 @@ class RoleController extends Controller
             'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
         ]);
 
+        $oldValues = $role->only([
+    'name'
+]);
+
         $role->update([
             'name' => $request->name,
         ]);
+
+        $newValues = $role->only([
+    'name'
+]);
+
+AuditHelper::log(
+    'Roles',
+    'Updated',
+    'Role',
+    $role->id,
+    'Role updated: ' . $role->name,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('roles.index')
@@ -63,6 +95,19 @@ class RoleController extends Controller
                 ->route('roles.index')
                 ->with('error', 'Cannot delete role because users are assigned to it.');
         }
+
+        AuditHelper::log(
+    'Roles',
+    'Deleted',
+    'Role',
+    $role->id,
+    'Role deleted: ' . $role->name,
+    $role->only([
+        'id',
+        'name'
+    ]),
+    null
+);
 
         $role->delete();
 

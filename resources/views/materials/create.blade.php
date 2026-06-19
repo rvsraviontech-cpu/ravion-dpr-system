@@ -75,25 +75,45 @@
         </div>
 
         <div>
-            <label class="block font-semibold mb-1">
-                Brand
-            </label>
+    <label class="block font-semibold mb-1">
+        Brand
+    </label>
 
-            <input type="text"
-                   name="brand"
-                   class="border p-2 rounded w-full">
-        </div>
+    <select name="brand_master_id"
+            class="border rounded w-full p-3">
+        <option value="">Select Brand</option>
+
+        @foreach($brands as $brand)
+            <option value="{{ $brand->id }}"
+                    data-category="{{ $brand->material_category_id }}">
+                {{ $brand->brand_name }}
+                @if($brand->brand_code)
+                    ({{ $brand->brand_code }})
+                @endif
+            </option>
+        @endforeach
+    </select>
+</div>
 
         <div>
             <label class="block font-semibold mb-1">
                 Unit
             </label>
 
-            <input type="text"
-                   name="unit"
-                   placeholder="Bag, Kg, MT, Nos, Ltr..."
-                   class="border p-2 rounded w-full"
-                   required>
+            <select name="unit"
+        class="border rounded w-full p-3"
+        required>
+    <option value="">Select Unit</option>
+
+    @foreach($units as $unit)
+        <option value="{{ $unit->unit_code ?? $unit->unit_name }}">
+            {{ $unit->unit_name }}
+            @if($unit->unit_code)
+                ({{ $unit->unit_code }})
+            @endif
+        </option>
+    @endforeach
+</select>
         </div>
 
         <div>
@@ -135,5 +155,31 @@
     </div>
 
 </form>
+
+<script>
+const categorySelect = document.querySelector('[name="material_category_id"]');
+const brandSelect = document.querySelector('[name="brand_master_id"]');
+
+if (categorySelect && brandSelect) {
+    const brandOptions = Array.from(brandSelect.querySelectorAll('option'))
+        .map(option => option.cloneNode(true));
+
+    categorySelect.addEventListener('change', function () {
+        const selectedCategory = this.value;
+
+        brandSelect.innerHTML = '';
+        brandSelect.add(new Option('Select Brand', ''));
+
+        brandOptions.forEach(function (option) {
+            if (
+                option.value !== '' &&
+                option.dataset.category === selectedCategory
+            ) {
+                brandSelect.add(option.cloneNode(true));
+            }
+        });
+    });
+}
+</script>
 
 @endsection

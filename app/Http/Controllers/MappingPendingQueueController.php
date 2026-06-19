@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\DprWorkItem;
 use App\Models\ActivityMapping;
 use App\Models\ActivityDivision;
+use App\Helpers\AuditHelper;
 
 class MappingPendingQueueController extends Controller
 {
@@ -65,9 +66,38 @@ class MappingPendingQueueController extends Controller
             'activity_mapping_id' => 'required|exists:activity_mappings,id',
         ]);
 
+        $oldValues = [
+    'activity_mapping_id' => $dprWorkItem->activity_mapping_id,
+    'activity_id' => $dprWorkItem->activity_id,
+    'quantity_completed' => $dprWorkItem->quantity_completed,
+];
+
         $dprWorkItem->update([
-            'activity_mapping_id' => $request->activity_mapping_id,
-        ]);
+    'activity_mapping_id' => $request->activity_mapping_id,
+]);
+
+$dprWorkItem->load([
+    'dpr.project',
+    'activity',
+    'activityMapping',
+]);
+
+$newValues = [
+    'activity_mapping_id' => $dprWorkItem->activity_mapping_id,
+    'activity_id' => $dprWorkItem->activity_id,
+    'quantity_completed' => $dprWorkItem->quantity_completed,
+    'mapped_activity_name' => optional($dprWorkItem->activityMapping)->activity_name,
+];
+
+AuditHelper::log(
+    'Mapping Pending Queue',
+    'Mapped',
+    'DprWorkItem',
+    $dprWorkItem->id,
+    'Activity mapping assigned for DPR work item',
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('mapping-pending-queue.index')

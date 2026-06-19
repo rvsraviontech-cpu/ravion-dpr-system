@@ -175,6 +175,9 @@ class PermissionSeeder extends Seeder
 ['module' => 'Role Dashboards', 'name' => 'accountant_dashboard.view'],
 ['module' => 'Role Dashboards', 'name' => 'ceo_dashboard.view'],
 ['module' => 'Role Dashboards', 'name' => 'pmo_dashboard.view'],
+
+// Audit Trail
+['module' => 'Audit Trail', 'name' => 'audit_trail.view'],
         ];
 
         foreach ($permissions as $permission) {

@@ -211,70 +211,131 @@
     </div>
 
    <h2 class="text-xl font-bold mt-6 mb-4">
-    Labour Counts
+    Labour Deployment
 </h2>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+<div id="labour-detail-wrapper">
 
-    {{-- Actual Labour Categories --}}
-    @foreach([
-        'skilled_count' => 'Skilled',
-        'semi_skilled_count' => 'Semi-Skilled',
-        'helper_count' => 'Helper',
-        'semi_helper_count' => 'Semi-Helper',
-        'supervisor_count' => 'Supervisor',
-        'technician_count' => 'Technician',
-        'machine_operator_count' => 'Machine Operator',
-    ] as $field => $label)
+    <div class="labour-detail-card border rounded p-4 mb-4 bg-gray-50">
 
-        <div>
-            <label class="block font-semibold mb-1">
-                {{ $label }}
-            </label>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-            <input type="number"
-                   name="{{ $field }}"
-                   value="0"
-                   min="0"
-                   class="border p-2 rounded w-full labour-count">
+            <div>
+    <label class="block font-semibold mb-1">Labour Category</label>
+
+    <select name="labour_category_id[]"
+            class="border p-2 rounded w-full labour-category-select">
+        <option value="">Select Labour Category</option>
+
+        @foreach($labourCategories as $category)
+            <option value="{{ $category->id }}">
+                {{ $category->category_name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
+<div>
+    <label class="block font-semibold mb-1">Labour Type</label>
+
+    <select name="labour_type_id[]"
+            class="border p-2 rounded w-full labour-type-select">
+        <option value="">Select Labour Type</option>
+
+        @foreach($labourTypes as $type)
+            <option value="{{ $type->id }}"
+                    data-category="{{ $type->labour_category_id }}">
+                {{ $type->labour_type_name }}
+            </option>
+        @endforeach
+    </select>
+</div>
+
+            <div>
+                <label class="block font-semibold mb-1">Contractor</label>
+
+                <select name="detail_contractor_id[]"
+                        class="border p-2 rounded w-full">
+                    <option value="">Select Contractor</option>
+
+                    @foreach($contractors as $contractor)
+                        <option value="{{ $contractor->id }}">
+                            {{ $contractor->contractor_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Remarks</label>
+                <input type="text"
+                       name="detail_remarks[]"
+                       class="border p-2 rounded w-full">
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Male</label>
+                <input type="number"
+                       name="detail_male_count[]"
+                       value="0"
+                       min="0"
+                       class="border p-2 rounded w-full labour-detail-count">
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Female</label>
+                <input type="number"
+                       name="detail_female_count[]"
+                       value="0"
+                       min="0"
+                       class="border p-2 rounded w-full labour-detail-count">
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Row Total</label>
+                <input type="number"
+                       value="0"
+                       class="border p-2 rounded w-full bg-gray-100 row-total"
+                       readonly>
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Local</label>
+                <input type="number"
+                       name="detail_local_count[]"
+                       value="0"
+                       min="0"
+                       class="border p-2 rounded w-full">
+            </div>
+
+            <div>
+                <label class="block font-semibold mb-1">Non-Local</label>
+                <input type="number"
+                       name="detail_non_local_count[]"
+                       value="0"
+                       min="0"
+                       class="border p-2 rounded w-full">
+            </div>
+
         </div>
 
-    @endforeach
-
-    {{-- Classification Fields --}}
-    @foreach([
-        'male_count' => 'Male',
-        'female_count' => 'Female',
-        'local_count' => 'Local',
-        'non_local_count' => 'Non-Local',
-    ] as $field => $label)
-
-        <div>
-            <label class="block font-semibold mb-1">
-                {{ $label }}
-            </label>
-
-            <input type="number"
-                   name="{{ $field }}"
-                   value="0"
-                   min="0"
-                   class="border p-2 rounded w-full">
-        </div>
-
-    @endforeach
-
-    <div>
-        <label class="block font-semibold mb-1">
-            Total Labour
-        </label>
-
-        <input type="number"
-               id="total_labour_display"
-               value="0"
-               class="border p-2 rounded w-full bg-gray-100"
-               readonly>
     </div>
 
+</div>
+
+<button type="button"
+        onclick="addLabourDetail()"
+        class="bg-green-600 text-white px-4 py-2 rounded">
+    + Add More Labour
+</button>
+
+<div class="mt-4 bg-blue-50 border border-blue-200 rounded p-4">
+    <div class="text-sm text-gray-600">Total Labour</div>
+    <div id="grand_total_labour"
+         class="text-3xl font-bold text-blue-700">
+        0
+    </div>
+</div>
 </div>
     <div class="mt-6">
         <label class="block font-semibold mb-1">Remarks</label>
@@ -449,6 +510,143 @@ activityDivisionSelect.addEventListener('change', function () {
         }
     });
 });
+
+function calculateLabourDetails() {
+    let grandTotal = 0;
+
+    document.querySelectorAll('.labour-detail-card').forEach(function(card) {
+        let male = parseInt(card.querySelector('[name="detail_male_count[]"]').value || 0);
+        let female = parseInt(card.querySelector('[name="detail_female_count[]"]').value || 0);
+
+        let rowTotal = male + female;
+
+        card.querySelector('.row-total').value = rowTotal;
+
+        grandTotal += rowTotal;
+    });
+
+    document.getElementById('grand_total_labour').innerText = grandTotal;
+}
+
+function bindLabourDetailEvents() {
+    document.querySelectorAll('.labour-detail-count').forEach(function(input) {
+        input.removeEventListener('input', calculateLabourDetails);
+        input.addEventListener('input', calculateLabourDetails);
+    });
+}
+
+function addLabourDetail() {
+    const wrapper = document.getElementById('labour-detail-wrapper');
+    const firstCard = wrapper.querySelector('.labour-detail-card');
+    const clone = firstCard.cloneNode(true);
+
+    clone.querySelectorAll('input').forEach(function(input) {
+        if (input.classList.contains('row-total')) {
+            input.value = 0;
+        } else if (input.type === 'number') {
+            input.value = 0;
+        } else {
+            input.value = '';
+        }
+    });
+
+    clone.querySelectorAll('select').forEach(function(select) {
+        select.selectedIndex = 0;
+    });
+
+    wrapper.appendChild(clone);
+
+    bindLabourDetailEvents();
+    calculateLabourDetails();
+    bindLabourCategoryFiltering();
+}
+
+bindLabourDetailEvents();
+calculateLabourDetails();
+bindLabourCategoryFiltering();
+
+const originalLabourTypeOptions = [];
+
+document.querySelectorAll('.labour-type-select').forEach(function(select) {
+    originalLabourTypeOptions.push(
+        ...Array.from(select.querySelectorAll('option')).map(option => option.cloneNode(true))
+    );
+});
+
+function filterLabourTypes(card) {
+    const categorySelect = card.querySelector('.labour-category-select');
+    const labourTypeSelect = card.querySelector('.labour-type-select');
+
+    if (!categorySelect || !labourTypeSelect) {
+        return;
+    }
+
+    const selectedCategory = categorySelect.value;
+
+    labourTypeSelect.innerHTML = '';
+    labourTypeSelect.add(new Option('Select Labour Type', ''));
+
+    originalLabourTypeOptions.forEach(function(option) {
+        if (
+            option.value !== '' &&
+            option.dataset.category === selectedCategory
+        ) {
+            labourTypeSelect.add(option.cloneNode(true));
+        }
+    });
+}
+
+function bindLabourCategoryFiltering() {
+    document.querySelectorAll('.labour-detail-card').forEach(function(card) {
+        const categorySelect = card.querySelector('.labour-category-select');
+
+        if (!categorySelect) {
+            return;
+        }
+
+        categorySelect.onchange = function () {
+            filterLabourTypes(card);
+        };
+
+        filterLabourTypes(card);
+    });
+}
+
+const labourTypeMasterOptions =
+    Array.from(document.querySelectorAll('.labour-type-select option'))
+        .map(option => option.cloneNode(true));
+
+function bindLabourCategoryFiltering() {
+    document.querySelectorAll('.labour-detail-card').forEach(function(card) {
+
+        const categorySelect = card.querySelector('.labour-category-select');
+        const labourTypeSelect = card.querySelector('.labour-type-select');
+
+        if (!categorySelect || !labourTypeSelect) {
+            return;
+        }
+
+        categorySelect.onchange = function () {
+
+            const categoryId = this.value;
+
+            labourTypeSelect.innerHTML = '';
+            labourTypeSelect.add(new Option('Select Labour Type', ''));
+
+            labourTypeMasterOptions.forEach(function(option) {
+                if (
+                    option.value !== '' &&
+                    option.dataset.category === categoryId
+                ) {
+                    labourTypeSelect.add(option.cloneNode(true));
+                }
+            });
+        };
+    });
+}
+
+bindLabourCategoryFiltering();
 </script>
+
 
 @endsection

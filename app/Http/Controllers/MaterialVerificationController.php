@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\MaterialReceived;
 use App\Models\MaterialVerification;
+use App\Helpers\AuditHelper;
 
 class MaterialVerificationController extends Controller
 {
@@ -50,7 +51,15 @@ class MaterialVerificationController extends Controller
             'verification_remarks' => 'nullable|string',
         ]);
 
-        MaterialVerification::updateOrCreate(
+        $oldValues = [
+    'pmo_verification_status' => $materialReceived->pmo_verification_status,
+    'accepted_quantity' => $materialReceived->accepted_quantity,
+    'short_quantity' => $materialReceived->short_quantity,
+    'damaged_quantity' => $materialReceived->damaged_quantity,
+    'rejected_quantity' => $materialReceived->rejected_quantity,
+];
+
+        $materialVerification = MaterialVerification::updateOrCreate(
             [
                 'material_received_id' => $materialReceived->id,
             ],
@@ -76,6 +85,8 @@ class MaterialVerificationController extends Controller
             ]
         );
 
+        
+
         $materialReceived->update([
             'pmo_verification_status' => $request->verification_status,
             'accepted_quantity' => $request->accepted_quantity,
@@ -83,6 +94,25 @@ class MaterialVerificationController extends Controller
             'damaged_quantity' => $request->damaged_quantity ?? 0,
             'rejected_quantity' => $request->rejected_quantity ?? 0,
         ]);
+
+        $newValues = [
+    'pmo_verification_status' => $materialReceived->pmo_verification_status,
+    'accepted_quantity' => $materialReceived->accepted_quantity,
+    'short_quantity' => $materialReceived->short_quantity,
+    'damaged_quantity' => $materialReceived->damaged_quantity,
+    'rejected_quantity' => $materialReceived->rejected_quantity,
+    'verification_remarks' => $request->verification_remarks,
+];
+
+AuditHelper::log(
+    'Material Verification',
+    $request->verification_status,
+    'MaterialVerification',
+    $materialVerification->id,
+    'Material verification status changed to ' . $request->verification_status,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('material-verifications.index')

@@ -2200,3 +2200,69 @@ Security Status:
 
 Application Status:
 ERP Access Control Layer Completed
+
+### Role & Permission System
+- Permissions Seeder completed
+- Role Permission Assignment completed
+- Dynamic Sidebar based on permissions completed
+- Dashboard permissions completed
+
+### Audit Trail
+- AuditLog table created
+- AuditHelper implemented
+- AuditLogController implemented
+- Audit Trail UI completed
+
+### DPR Audit Logging
+- DPR Create logged
+- DPR Update logged
+- DPR Reject logged
+- DPR Resubmission logged
+- DPR Approve logged
+
+### DPR Workflow Enhancement
+- Rejected DPR automatically moves back to Pending on Engineer update
+- PMO queue workflow restored
+
+## Phase 2 ERP Master Data Standardization
+
+Completed:
+- Labour Categories master created
+- Labour Types linked with Labour Categories
+- Labour Type activate/deactivate added
+- DPR labour entry updated with Labour Category → Labour Type filtering
+- Labour Reporting updated for categorized labour deployment
+- Material Categories improved with activate/deactivate
+- Unit Master created
+- Brand Master created
+- Brand Master linked with Material Categories
+- Material Master updated with Brand dropdown
+- Material Master updated with Unit dropdown
+- Material Master Brand dropdown filters by Material Category
+- Vendor Master upgraded with:
+  - Vendor Code
+  - Material Category
+  - GST Number
+  - PAN Number
+  - Contact Person
+  - Mobile / Alternate Mobile
+  - Email
+  - Address
+  - City / State / Pincode
+  - Payment Terms
+  - Credit Days
+  - Active / Inactive
+  - Audit logging
+- Vendor list upgraded with filters, status and actions
+
+Current Status:
+- ERP master data foundation is now much stronger.
+- Labour, Materials, Units, Brands and Vendors now follow a consistent master-data structure.
+- Ready to improve Material Received workflow with category-based filtering for materials and vendors.
+
+Next Planned Work:
+- Improve Material Received entry screen.
+- Filter Material dropdown by Material Category.
+- Filter Vendor dropdown by Material Category.
+- Auto-fill unit and brand based on selected material.
+- Improve Material Consumed and Material Required screens using same pattern.

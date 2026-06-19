@@ -11,6 +11,7 @@ use App\Models\ProjectUnit;
 use Illuminate\Http\Request;
 use App\Models\Material;
 use App\Models\MaterialCategory;
+use App\Helpers\AuditHelper;
 
 class MaterialReceivedController extends Controller
 {
@@ -119,7 +120,7 @@ class MaterialReceivedController extends Controller
             'received_date' => 'required|date',
         ]);
 
-        MaterialReceived::create([
+        $materialReceived = MaterialReceived::create([
             'project_id' => $request->project_id,
             'user_id' => auth()->id(),
 
@@ -162,6 +163,25 @@ class MaterialReceivedController extends Controller
             'status' => 'Draft',
         ]);
 
+        AuditHelper::log(
+    'Material Received',
+    'Created',
+    'MaterialReceived',
+    $materialReceived->id,
+    'Material received entry created',
+    null,
+    $materialReceived->only([
+        'id',
+        'project_id',
+        'material_id',
+        'material_name',
+        'quantity_received',
+        'unit',
+        'received_date',
+        'status'
+    ])
+);
+
         return redirect()
             ->route('material-received.index')
             ->with('success', 'Material received entry added successfully.');
@@ -176,6 +196,16 @@ class MaterialReceivedController extends Controller
         $materialReceived->update([
             'status' => 'Submitted',
         ]);
+
+        AuditHelper::log(
+    'Material Received',
+    'Submitted',
+    'MaterialReceived',
+    $materialReceived->id,
+    'Material received entry submitted for approval',
+    ['status' => 'Draft'],
+    ['status' => 'Submitted']
+);
 
         return redirect()
             ->route('material-received.index')
@@ -192,6 +222,19 @@ class MaterialReceivedController extends Controller
             'status' => 'Approved',
             'pmo_verification_status' => 'Approved',
         ]);
+
+        AuditHelper::log(
+    'Material Received',
+    'Approved',
+    'MaterialReceived',
+    $materialReceived->id,
+    'Material received entry approved',
+    ['status' => 'Submitted'],
+    [
+        'status' => 'Approved',
+        'pmo_verification_status' => 'Approved'
+    ]
+);
 
         return redirect()
             ->route('material-received.index')
@@ -275,6 +318,25 @@ public function update(Request $request, MaterialReceived $materialReceived)
         'received_date' => 'required|date',
     ]);
 
+    $oldValues = $materialReceived->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'material_category_id',
+    'material_id',
+    'material_name',
+    'quantity_received',
+    'unit',
+    'vendor_name',
+    'contractor_id',
+    'vehicle_number',
+    'challan_number',
+    'bill_number',
+    'received_date',
+    'remarks',
+    'status'
+]);
     $material = \App\Models\Material::find($request->material_id);
 
     $materialReceived->update([
@@ -317,6 +379,36 @@ public function update(Request $request, MaterialReceived $materialReceived)
 
         'remarks' => $request->remarks,
     ]);
+
+    $newValues = $materialReceived->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'material_category_id',
+    'material_id',
+    'material_name',
+    'quantity_received',
+    'unit',
+    'vendor_name',
+    'contractor_id',
+    'vehicle_number',
+    'challan_number',
+    'bill_number',
+    'received_date',
+    'remarks',
+    'status'
+]);
+
+AuditHelper::log(
+    'Material Received',
+    'Updated',
+    'MaterialReceived',
+    $materialReceived->id,
+    'Material received entry updated',
+    $oldValues,
+    $newValues
+);
 
     return redirect()
         ->route('material-received.index')

@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\Activity;
 use App\Models\ActivityDivision;
 use App\Models\User;
+use App\Helpers\AuditHelper;
 
 class MonthlyPlanController extends Controller
 {
@@ -93,7 +94,7 @@ class MonthlyPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        MonthlyPlan::create([
+        $monthlyPlan = MonthlyPlan::create([
             'project_id' => $request->project_id,
             'activity_id' => $request->activity_id,
             'user_id' => $request->user_id,
@@ -110,6 +111,30 @@ class MonthlyPlanController extends Controller
             'status' => $request->status,
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Monthly Plans',
+    'Created',
+    'MonthlyPlan',
+    $monthlyPlan->id,
+    'Monthly plan created',
+    null,
+    $monthlyPlan->only([
+        'id',
+        'project_id',
+        'activity_id',
+        'user_id',
+        'plan_month',
+        'plan_year',
+        'month_start_date',
+        'month_end_date',
+        'planned_quantity',
+        'unit',
+        'planned_labour',
+        'status',
+        'remarks'
+    ])
+);
 
         return redirect()
             ->route('monthly-plans.index')
@@ -174,6 +199,24 @@ class MonthlyPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $monthlyPlan->only([
+    'project_id',
+    'activity_id',
+    'user_id',
+    'plan_month',
+    'plan_year',
+    'month_start_date',
+    'month_end_date',
+    'planned_quantity',
+    'unit',
+    'planned_labour',
+    'materials_required',
+    'machinery_required',
+    'risks_constraints',
+    'status',
+    'remarks'
+]);
+
         $monthlyPlan->update([
             'project_id' => $request->project_id,
             'activity_id' => $request->activity_id,
@@ -191,6 +234,49 @@ class MonthlyPlanController extends Controller
             'status' => $request->status,
             'remarks' => $request->remarks,
         ]);
+
+        $newValues = $monthlyPlan->only([
+    'project_id',
+    'activity_id',
+    'user_id',
+    'plan_month',
+    'plan_year',
+    'month_start_date',
+    'month_end_date',
+    'planned_quantity',
+    'unit',
+    'planned_labour',
+    'materials_required',
+    'machinery_required',
+    'risks_constraints',
+    'status',
+    'remarks'
+]);
+
+$action = 'Updated';
+$description = 'Monthly plan updated';
+
+$oldStatus = $oldValues['status'] ?? null;
+$newStatus = $newValues['status'] ?? null;
+
+if ($oldStatus !== $newStatus) {
+    $action = $newStatus;
+    $description =
+        'Monthly plan status changed from ' .
+        $oldStatus .
+        ' to ' .
+        $newStatus;
+}
+
+AuditHelper::log(
+    'Monthly Plans',
+    $action,
+    'MonthlyPlan',
+    $monthlyPlan->id,
+    $description,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('monthly-plans.index')

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Role;
 use App\Models\Permission;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class RolePermissionController extends Controller
 {
@@ -42,9 +43,31 @@ class RolePermissionController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        $permissionIds = $request->input('permissions', []);
+        $oldPermissionNames = $role->permissions()
+    ->pluck('permissions.name')
+    ->toArray();
 
-        $role->permissions()->sync($permissionIds);
+$permissionIds = $request->input('permissions', []);
+
+$role->permissions()->sync($permissionIds);
+
+$newPermissionNames = $role->permissions()
+    ->pluck('permissions.name')
+    ->toArray();
+
+AuditHelper::log(
+    'Role Permissions',
+    'Updated',
+    'Role',
+    $role->id,
+    'Permissions updated for role: ' . $role->name,
+    [
+        'permissions' => $oldPermissionNames
+    ],
+    [
+        'permissions' => $newPermissionNames
+    ]
+);
 
         return redirect()
             ->route('role-permissions.index')

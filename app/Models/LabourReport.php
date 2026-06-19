@@ -93,4 +93,8 @@ class LabourReport extends Model
     {
         return $this->belongsTo(Dpr::class);
     }
+    public function details()
+{
+    return $this->hasMany(\App\Models\LabourReportDetail::class);
+}
 }

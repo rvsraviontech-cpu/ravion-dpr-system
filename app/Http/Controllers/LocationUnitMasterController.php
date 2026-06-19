@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LocationUnitMaster;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class LocationUnitMasterController extends Controller
 {
@@ -22,12 +23,28 @@ class LocationUnitMasterController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        LocationUnitMaster::create([
+        $locationUnitMaster = LocationUnitMaster::create([
             'name' => $request->name,
             'type' => $request->type,
             'is_active' => true,
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Location Unit Masters',
+    'Created',
+    'LocationUnitMaster',
+    $locationUnitMaster->id,
+    'Location unit master created: ' . $locationUnitMaster->name,
+    null,
+    $locationUnitMaster->only([
+        'id',
+        'name',
+        'type',
+        'is_active',
+        'remarks'
+    ])
+);
 
         return redirect()
             ->route('location-unit-masters.index')
@@ -48,12 +65,47 @@ class LocationUnitMasterController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $locationUnitMaster->only([
+    'name',
+    'type',
+    'is_active',
+    'remarks'
+]);
+
         $locationUnitMaster->update([
             'name' => $request->name,
             'type' => $request->type,
             'is_active' => $request->is_active,
             'remarks' => $request->remarks,
         ]);
+
+        $newValues = $locationUnitMaster->only([
+    'name',
+    'type',
+    'is_active',
+    'remarks'
+]);
+
+$action = 'Updated';
+$description = 'Location unit master updated: ' . $locationUnitMaster->name;
+
+if (($oldValues['is_active'] ?? null) != ($newValues['is_active'] ?? null)) {
+    $action = $newValues['is_active'] ? 'Activated' : 'Deactivated';
+
+    $description = $newValues['is_active']
+        ? 'Location unit master activated: ' . $locationUnitMaster->name
+        : 'Location unit master deactivated: ' . $locationUnitMaster->name;
+}
+
+AuditHelper::log(
+    'Location Unit Masters',
+    $action,
+    'LocationUnitMaster',
+    $locationUnitMaster->id,
+    $description,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('location-unit-masters.index')
@@ -62,9 +114,35 @@ class LocationUnitMasterController extends Controller
 
     public function toggleStatus(LocationUnitMaster $locationUnitMaster)
     {
+
+    $oldValues = $locationUnitMaster->only([
+    'name',
+    'type',
+    'is_active',
+    'remarks'
+]);
         $locationUnitMaster->update([
             'is_active' => !$locationUnitMaster->is_active,
         ]);
+
+        $newValues = $locationUnitMaster->only([
+    'name',
+    'type',
+    'is_active',
+    'remarks'
+]);
+
+AuditHelper::log(
+    'Location Unit Masters',
+    $newValues['is_active'] ? 'Activated' : 'Deactivated',
+    'LocationUnitMaster',
+    $locationUnitMaster->id,
+    $newValues['is_active']
+        ? 'Location unit master activated: ' . $locationUnitMaster->name
+        : 'Location unit master deactivated: ' . $locationUnitMaster->name,
+    $oldValues,
+    $newValues
+);
 
         return back()->with('success', 'Status updated successfully.');
     }

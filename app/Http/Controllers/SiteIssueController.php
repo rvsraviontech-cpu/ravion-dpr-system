@@ -12,6 +12,7 @@ use App\Models\ProjectSubspace;
 use App\Models\Activity;
 use App\Models\ActivityDivision;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class SiteIssueController extends Controller
 {
@@ -103,7 +104,7 @@ class SiteIssueController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        SiteIssue::create([
+        $siteIssue = SiteIssue::create([
             'project_id' => $request->project_id,
             'project_block_id' => $request->project_block_id,
             'project_floor_id' => $request->project_floor_id,
@@ -125,6 +126,28 @@ class SiteIssueController extends Controller
             'created_by' => auth()->id(),
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Site Issues',
+    'Created',
+    'SiteIssue',
+    $siteIssue->id,
+    'Site issue created',
+    null,
+    $siteIssue->only([
+        'id',
+        'project_id',
+        'activity_id',
+        'issue_date',
+        'issue_type',
+        'title',
+        'priority',
+        'status',
+        'responsible_person',
+        'target_closure_date',
+        'created_by'
+    ])
+);
 
         return redirect()
             ->route('site-issues.index')
@@ -197,6 +220,30 @@ class SiteIssueController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $siteIssue->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'project_room_id',
+    'project_subspace_id',
+    'activity_id',
+    'issue_date',
+    'issue_type',
+    'title',
+    'description',
+    'root_cause',
+    'responsible_person',
+    'target_closure_date',
+    'actual_closure_date',
+    'priority',
+    'status',
+    'escalated_to_pmo',
+    'escalated_to_management',
+    'resolution',
+    'remarks'
+]);
+
         $siteIssue->update([
             'project_id' => $request->project_id,
             'project_block_id' => $request->project_block_id,
@@ -220,6 +267,57 @@ class SiteIssueController extends Controller
             'resolution' => $request->resolution,
             'remarks' => $request->remarks,
         ]);
+
+        $newValues = $siteIssue->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'project_room_id',
+    'project_subspace_id',
+    'activity_id',
+    'issue_date',
+    'issue_type',
+    'title',
+    'description',
+    'root_cause',
+    'responsible_person',
+    'target_closure_date',
+    'actual_closure_date',
+    'priority',
+    'status',
+    'escalated_to_pmo',
+    'escalated_to_management',
+    'resolution',
+    'remarks'
+]);
+
+$action = 'Updated';
+$description = 'Site issue updated';
+
+$oldStatus = $oldValues['status'] ?? null;
+$newStatus = $newValues['status'] ?? null;
+
+if ($oldStatus !== $newStatus)
+{
+    $action = $newStatus;
+
+    $description =
+        'Site issue status changed from ' .
+        $oldStatus .
+        ' to ' .
+        $newStatus;
+}
+
+AuditHelper::log(
+    'Site Issues',
+    $action,
+    'SiteIssue',
+    $siteIssue->id,
+    $description,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('site-issues.index')

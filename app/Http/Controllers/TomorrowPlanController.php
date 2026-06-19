@@ -13,6 +13,7 @@ use App\Models\Activity;
 use App\Models\Contractor;
 use Illuminate\Http\Request;
 use App\Models\ActivityDivision;
+use App\Helpers\AuditHelper;
 
 class TomorrowPlanController extends Controller
 {
@@ -97,7 +98,7 @@ class TomorrowPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        TomorrowPlan::create([
+        $tomorrowPlan = TomorrowPlan::create([
             'project_id' => $request->project_id,
             'project_block_id' => $request->project_block_id,
             'project_floor_id' => $request->project_floor_id,
@@ -124,6 +125,27 @@ class TomorrowPlanController extends Controller
             'risks_constraints' => $request->risks_constraints,
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Tomorrow Plans',
+    'Created',
+    'TomorrowPlan',
+    $tomorrowPlan->id,
+    'Tomorrow plan created',
+    null,
+    $tomorrowPlan->only([
+        'id',
+        'project_id',
+        'activity_id',
+        'contractor_id',
+        'planned_quantity',
+        'unit',
+        'planned_date',
+        'priority',
+        'status',
+        'created_by'
+    ])
+);
 
         return redirect()
             ->route('tomorrow-plans.index')
@@ -206,6 +228,33 @@ class TomorrowPlanController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $tomorrowPlan->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'project_room_id',
+    'project_subspace_id',
+    'activity_id',
+    'contractor_id',
+    'planned_quantity',
+    'unit',
+    'planned_labour',
+    'required_skilled_labour',
+    'required_semiskilled_labour',
+    'required_helpers',
+    'materials_required',
+    'machinery_required',
+    'drawing_required',
+    'client_approval_required',
+    'responsible_person',
+    'planned_date',
+    'priority',
+    'risks_constraints',
+    'remarks',
+    'status'
+]);
+
         $tomorrowPlan->update($request->only([
             'project_id',
             'project_block_id',
@@ -232,6 +281,43 @@ class TomorrowPlanController extends Controller
             'remarks',
         ]));
 
+        $newValues = $tomorrowPlan->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'project_room_id',
+    'project_subspace_id',
+    'activity_id',
+    'contractor_id',
+    'planned_quantity',
+    'unit',
+    'planned_labour',
+    'required_skilled_labour',
+    'required_semiskilled_labour',
+    'required_helpers',
+    'materials_required',
+    'machinery_required',
+    'drawing_required',
+    'client_approval_required',
+    'responsible_person',
+    'planned_date',
+    'priority',
+    'risks_constraints',
+    'remarks',
+    'status'
+]);
+
+AuditHelper::log(
+    'Tomorrow Plans',
+    'Updated',
+    'TomorrowPlan',
+    $tomorrowPlan->id,
+    'Tomorrow plan updated',
+    $oldValues,
+    $newValues
+);
+
         return redirect()
             ->route('tomorrow-plans.index')
             ->with('success', 'Tomorrow plan updated successfully.');
@@ -246,6 +332,16 @@ class TomorrowPlanController extends Controller
         }
 
         $tomorrowPlan->update(['status' => 'Submitted']);
+
+        AuditHelper::log(
+    'Tomorrow Plans',
+    'Submitted',
+    'TomorrowPlan',
+    $tomorrowPlan->id,
+    'Tomorrow plan submitted for approval',
+    ['status' => 'Draft'],
+    ['status' => 'Submitted']
+);
 
         return redirect()
             ->route('tomorrow-plans.index')
@@ -269,6 +365,20 @@ class TomorrowPlanController extends Controller
             'approved_by' => auth()->id(),
             'approved_at' => now(),
         ]);
+
+        AuditHelper::log(
+    'Tomorrow Plans',
+    'Approved',
+    'TomorrowPlan',
+    $tomorrowPlan->id,
+    'Tomorrow plan approved',
+    ['status' => 'Submitted'],
+    [
+        'status' => 'Approved',
+        'approved_by' => auth()->id(),
+        'approved_at' => now()->toDateTimeString()
+    ]
+);
 
         return redirect()
             ->route('tomorrow-plans.index')

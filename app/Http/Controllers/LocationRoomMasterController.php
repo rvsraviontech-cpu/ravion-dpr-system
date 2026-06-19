@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Helpers\AuditHelper;
 
 use App\Models\LocationRoomMaster;
 use Illuminate\Http\Request;
@@ -24,12 +25,28 @@ class LocationRoomMasterController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        LocationRoomMaster::create([
+        $locationRoomMaster = LocationRoomMaster::create([
             'name' => $request->name,
             'room_type' => $request->room_type,
             'is_active' => true,
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Location Room Masters',
+    'Created',
+    'LocationRoomMaster',
+    $locationRoomMaster->id,
+    'Location room master created: ' . $locationRoomMaster->name,
+    null,
+    $locationRoomMaster->only([
+        'id',
+        'name',
+        'room_type',
+        'is_active',
+        'remarks'
+    ])
+);
 
         return redirect()
             ->route('location-room-masters.index')
@@ -50,12 +67,47 @@ class LocationRoomMasterController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $locationRoomMaster->only([
+    'name',
+    'room_type',
+    'is_active',
+    'remarks'
+]);
+
         $locationRoomMaster->update([
             'name' => $request->name,
             'room_type' => $request->room_type,
             'is_active' => $request->is_active,
             'remarks' => $request->remarks,
         ]);
+
+        $newValues = $locationRoomMaster->only([
+    'name',
+    'room_type',
+    'is_active',
+    'remarks'
+]);
+
+$action = 'Updated';
+$description = 'Location room master updated: ' . $locationRoomMaster->name;
+
+if (($oldValues['is_active'] ?? null) != ($newValues['is_active'] ?? null)) {
+    $action = $newValues['is_active'] ? 'Activated' : 'Deactivated';
+
+    $description = $newValues['is_active']
+        ? 'Location room master activated: ' . $locationRoomMaster->name
+        : 'Location room master deactivated: ' . $locationRoomMaster->name;
+}
+
+AuditHelper::log(
+    'Location Room Masters',
+    $action,
+    'LocationRoomMaster',
+    $locationRoomMaster->id,
+    $description,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('location-room-masters.index')
@@ -64,9 +116,35 @@ class LocationRoomMasterController extends Controller
 
     public function toggleStatus(LocationRoomMaster $locationRoomMaster)
     {
+
+    $oldValues = $locationRoomMaster->only([
+    'name',
+    'room_type',
+    'is_active',
+    'remarks'
+]);
         $locationRoomMaster->update([
             'is_active' => !$locationRoomMaster->is_active,
         ]);
+
+        $newValues = $locationRoomMaster->only([
+    'name',
+    'room_type',
+    'is_active',
+    'remarks'
+]);
+
+AuditHelper::log(
+    'Location Room Masters',
+    $newValues['is_active'] ? 'Activated' : 'Deactivated',
+    'LocationRoomMaster',
+    $locationRoomMaster->id,
+    $newValues['is_active']
+        ? 'Location room master activated: ' . $locationRoomMaster->name
+        : 'Location room master deactivated: ' . $locationRoomMaster->name,
+    $oldValues,
+    $newValues
+);
 
         return back()->with('success', 'Status updated successfully.');
     }

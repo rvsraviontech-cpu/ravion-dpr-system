@@ -14,6 +14,7 @@ use App\Models\LocationFloorMaster;
 use App\Models\LocationUnitMaster;
 use App\Models\LocationRoomMaster;
 use App\Models\LocationSubspaceMaster;
+use App\Helpers\AuditHelper;
 
 class ProjectLocationController extends Controller
 {
@@ -104,7 +105,7 @@ class ProjectLocationController extends Controller
         'remarks' => 'nullable|string',
     ]);
 
-    ProjectBlock::create([
+    $projectBlock = ProjectBlock::create([
         'project_id' => $request->project_id,
         'name' => $request->name,
         'code' => $request->code,
@@ -112,6 +113,15 @@ class ProjectLocationController extends Controller
         'is_active' => true,
         'remarks' => $request->remarks,
     ]);
+
+    $this->auditProjectLocation(
+    'Block Created',
+    'ProjectBlock',
+    $projectBlock,
+    'Project block created: ' . $projectBlock->name,
+    null,
+    $projectBlock->toArray()
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -132,7 +142,7 @@ public function storeFloor(Request $request)
         'remarks' => 'nullable|string',
     ]);
 
-    ProjectFloor::create([
+    $projectFloor = ProjectFloor::create([
         'project_id' => $request->project_id,
         'project_block_id' => $request->project_block_id,
         'name' => $request->name,
@@ -140,6 +150,15 @@ public function storeFloor(Request $request)
         'is_active' => true,
         'remarks' => $request->remarks,
     ]);
+
+    $this->auditProjectLocation(
+    'Floor Created',
+    'ProjectFloor',
+    $projectFloor,
+    'Project floor created: ' . $projectFloor->name,
+    null,
+    $projectFloor->toArray()
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -161,7 +180,7 @@ public function storeUnit(Request $request)
         'remarks' => 'nullable|string',
     ]);
 
-    ProjectUnit::create([
+    $projectUnit = ProjectUnit::create([
         'project_id' => $request->project_id,
         'project_block_id' => $request->project_block_id,
         'project_floor_id' => $request->project_floor_id,
@@ -170,6 +189,14 @@ public function storeUnit(Request $request)
         'is_active' => true,
         'remarks' => $request->remarks,
     ]);
+    $this->auditProjectLocation(
+    'Unit Created',
+    'ProjectUnit',
+    $projectUnit,
+    'Project unit created: ' . $projectUnit->name,
+    null,
+    $projectUnit->toArray()
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -192,7 +219,7 @@ public function storeRoom(Request $request)
         'remarks' => 'nullable|string',
     ]);
 
-    ProjectRoom::create([
+    $projectRoom = ProjectRoom::create([
         'project_id' => $request->project_id,
         'project_block_id' => $request->project_block_id,
         'project_floor_id' => $request->project_floor_id,
@@ -202,6 +229,15 @@ public function storeRoom(Request $request)
         'is_active' => true,
         'remarks' => $request->remarks,
     ]);
+
+    $this->auditProjectLocation(
+    'Room Created',
+    'ProjectRoom',
+    $projectRoom,
+    'Project room created: ' . $projectRoom->name,
+    null,
+    $projectRoom->toArray()
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -225,7 +261,7 @@ public function storeSubspace(Request $request)
         'remarks' => 'nullable|string',
     ]);
 
-    ProjectSubspace::create([
+    $projectSubspace = ProjectSubspace::create([
         'project_id' => $request->project_id,
         'project_block_id' => $request->project_block_id,
         'project_floor_id' => $request->project_floor_id,
@@ -236,6 +272,15 @@ public function storeSubspace(Request $request)
         'is_active' => true,
         'remarks' => $request->remarks,
     ]);
+
+    $this->auditProjectLocation(
+    'Subspace Created',
+    'ProjectSubspace',
+    $projectSubspace,
+    'Project subspace created: ' . $projectSubspace->name,
+    null,
+    $projectSubspace->toArray()
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -266,6 +311,8 @@ public function updateBlock(Request $request, ProjectBlock $projectBlock)
         'remarks' => 'nullable|string',
     ]);
 
+    $oldValues = $projectBlock->toArray();
+
     $projectBlock->update([
         'name' => $request->name,
         'code' => $request->code,
@@ -273,6 +320,17 @@ public function updateBlock(Request $request, ProjectBlock $projectBlock)
         'is_active' => $request->is_active,
         'remarks' => $request->remarks,
     ]);
+
+    $newValues = $projectBlock->fresh()->toArray();
+
+$this->auditProjectLocation(
+    'Block Updated',
+    'ProjectBlock',
+    $projectBlock,
+    'Project block updated: ' . $projectBlock->name,
+    $oldValues,
+    $newValues
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -283,9 +341,22 @@ public function updateBlock(Request $request, ProjectBlock $projectBlock)
 
 public function toggleBlockStatus(ProjectBlock $projectBlock)
 {
+    $oldValues = $projectBlock->toArray();
     $projectBlock->update([
         'is_active' => !$projectBlock->is_active,
     ]);
+    $newValues = $projectBlock->fresh()->toArray();
+
+$this->auditProjectLocation(
+    $projectBlock->is_active ? 'Block Activated' : 'Block Deactivated',
+    'ProjectBlock',
+    $projectBlock,
+    $projectBlock->is_active
+        ? 'Project block activated: ' . $projectBlock->name
+        : 'Project block deactivated: ' . $projectBlock->name,
+    $oldValues,
+    $newValues
+);
 
     return back()->with('success', 'Project block status updated successfully.');
 }
@@ -318,6 +389,8 @@ public function updateFloor(Request $request, ProjectFloor $projectFloor)
         'remarks' => 'nullable|string',
     ]);
 
+     $oldValues = $projectFloor->toArray();
+
     $projectFloor->update([
         'project_block_id' => $request->project_block_id,
         'name' => $request->name,
@@ -325,6 +398,18 @@ public function updateFloor(Request $request, ProjectFloor $projectFloor)
         'is_active' => $request->is_active,
         'remarks' => $request->remarks,
     ]);
+
+   
+    $newValues = $projectFloor->fresh()->toArray();
+
+$this->auditProjectLocation(
+    'Floor Updated',
+    'ProjectFloor',
+    $projectFloor,
+    'Project floor updated: ' . $projectFloor->name,
+    $oldValues,
+    $newValues
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -335,11 +420,31 @@ public function updateFloor(Request $request, ProjectFloor $projectFloor)
 
 public function toggleFloorStatus(ProjectFloor $projectFloor)
 {
+    $oldValues = $projectFloor->toArray();
+
     $projectFloor->update([
         'is_active' => !$projectFloor->is_active,
     ]);
 
-    return back()->with('success', 'Project floor status updated successfully.');
+    $newValues = $projectFloor->fresh()->toArray();
+
+    $this->auditProjectLocation(
+        $projectFloor->is_active
+            ? 'Floor Activated'
+            : 'Floor Deactivated',
+        'ProjectFloor',
+        $projectFloor,
+        $projectFloor->is_active
+            ? 'Project floor activated: ' . $projectFloor->name
+            : 'Project floor deactivated: ' . $projectFloor->name,
+        $oldValues,
+        $newValues
+    );
+
+    return back()->with(
+        'success',
+        'Project floor status updated successfully.'
+    );
 }
 
 public function editUnit(ProjectUnit $projectUnit)
@@ -376,6 +481,8 @@ public function updateUnit(Request $request, ProjectUnit $projectUnit)
         'remarks' => 'nullable|string',
     ]);
 
+    $oldValues = $projectUnit->toArray();
+
     $projectUnit->update([
         'project_block_id' => $request->project_block_id,
         'project_floor_id' => $request->project_floor_id,
@@ -384,6 +491,16 @@ public function updateUnit(Request $request, ProjectUnit $projectUnit)
         'is_active' => $request->is_active,
         'remarks' => $request->remarks,
     ]);
+    $newValues = $projectUnit->fresh()->toArray();
+
+$this->auditProjectLocation(
+    'Unit Updated',
+    'ProjectUnit',
+    $projectUnit,
+    'Project unit updated: ' . $projectUnit->name,
+    $oldValues,
+    $newValues
+);
 
     return redirect()
         ->route('project-locations.index', [
@@ -394,11 +511,31 @@ public function updateUnit(Request $request, ProjectUnit $projectUnit)
 
 public function toggleUnitStatus(ProjectUnit $projectUnit)
 {
+    $oldValues = $projectUnit->toArray();
+
     $projectUnit->update([
         'is_active' => !$projectUnit->is_active,
     ]);
 
-    return back()->with('success', 'Project unit status updated successfully.');
+    $newValues = $projectUnit->fresh()->toArray();
+
+    $this->auditProjectLocation(
+        $projectUnit->is_active
+            ? 'Unit Activated'
+            : 'Unit Deactivated',
+        'ProjectUnit',
+        $projectUnit,
+        $projectUnit->is_active
+            ? 'Project unit activated: ' . $projectUnit->name
+            : 'Project unit deactivated: ' . $projectUnit->name,
+        $oldValues,
+        $newValues
+    );
+
+    return back()->with(
+        'success',
+        'Project unit status updated successfully.'
+    );
 }
 
 public function editRoom(ProjectRoom $projectRoom)
@@ -441,6 +578,7 @@ public function updateRoom(Request $request, ProjectRoom $projectRoom)
         'is_active' => 'required|boolean',
         'remarks' => 'nullable|string',
     ]);
+    $oldValues = $projectRoom->toArray();
 
     $projectRoom->update([
         'project_block_id' => $request->project_block_id,
@@ -452,6 +590,17 @@ public function updateRoom(Request $request, ProjectRoom $projectRoom)
         'remarks' => $request->remarks,
     ]);
 
+    $newValues = $projectRoom->fresh()->toArray();
+
+$this->auditProjectLocation(
+    'Room Updated',
+    'ProjectRoom',
+    $projectRoom,
+    'Project room updated: ' . $projectRoom->name,
+    $oldValues,
+    $newValues
+);
+
     return redirect()
         ->route('project-locations.index', [
             'project_id' => $projectRoom->project_id
@@ -461,11 +610,31 @@ public function updateRoom(Request $request, ProjectRoom $projectRoom)
 
 public function toggleRoomStatus(ProjectRoom $projectRoom)
 {
+    $oldValues = $projectRoom->toArray();
+
     $projectRoom->update([
         'is_active' => !$projectRoom->is_active,
     ]);
 
-    return back()->with('success', 'Project room status updated successfully.');
+    $newValues = $projectRoom->fresh()->toArray();
+
+    $this->auditProjectLocation(
+        $projectRoom->is_active
+            ? 'Room Activated'
+            : 'Room Deactivated',
+        'ProjectRoom',
+        $projectRoom,
+        $projectRoom->is_active
+            ? 'Project room activated: ' . $projectRoom->name
+            : 'Project room deactivated: ' . $projectRoom->name,
+        $oldValues,
+        $newValues
+    );
+
+    return back()->with(
+        'success',
+        'Project room status updated successfully.'
+    );
 }
 
 public function editSubspace(ProjectSubspace $projectSubspace)
@@ -515,6 +684,8 @@ public function updateSubspace(Request $request, ProjectSubspace $projectSubspac
         'remarks' => 'nullable|string',
     ]);
 
+    $oldValues = $projectSubspace->toArray();
+
     $projectSubspace->update([
         'project_block_id' => $request->project_block_id,
         'project_floor_id' => $request->project_floor_id,
@@ -526,6 +697,17 @@ public function updateSubspace(Request $request, ProjectSubspace $projectSubspac
         'remarks' => $request->remarks,
     ]);
 
+    $newValues = $projectSubspace->fresh()->toArray();
+
+$this->auditProjectLocation(
+    'Subspace Updated',
+    'ProjectSubspace',
+    $projectSubspace,
+    'Project subspace updated: ' . $projectSubspace->name,
+    $oldValues,
+    $newValues
+);
+
     return redirect()
         ->route('project-locations.index', [
             'project_id' => $projectSubspace->project_id
@@ -535,10 +717,49 @@ public function updateSubspace(Request $request, ProjectSubspace $projectSubspac
 
 public function toggleSubspaceStatus(ProjectSubspace $projectSubspace)
 {
+    $oldValues = $projectSubspace->toArray();
+
     $projectSubspace->update([
         'is_active' => !$projectSubspace->is_active,
     ]);
 
-    return back()->with('success', 'Project sub-space status updated successfully.');
+    $newValues = $projectSubspace->fresh()->toArray();
+
+    $this->auditProjectLocation(
+        $projectSubspace->is_active
+            ? 'Subspace Activated'
+            : 'Subspace Deactivated',
+        'ProjectSubspace',
+        $projectSubspace,
+        $projectSubspace->is_active
+            ? 'Project subspace activated: ' . $projectSubspace->name
+            : 'Project subspace deactivated: ' . $projectSubspace->name,
+        $oldValues,
+        $newValues
+    );
+
+    return back()->with(
+        'success',
+        'Project sub-space status updated successfully.'
+    );
+}
+
+private function auditProjectLocation(
+    string $action,
+    string $recordType,
+    $record,
+    string $description,
+    $oldValues = null,
+    $newValues = null
+) {
+    AuditHelper::log(
+        'Project Locations',
+        $action,
+        $recordType,
+        $record->id,
+        $description,
+        $oldValues,
+        $newValues
+    );
 }
 }

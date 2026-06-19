@@ -13,6 +13,11 @@ use App\Models\ProjectUnit;
 use App\Models\ProjectRoom;
 use App\Models\ProjectSubspace;
 use App\Models\ActivityDivision;
+use App\Helpers\AuditHelper;
+use App\Models\LabourType;
+use App\Models\LabourReportDetail;
+use App\Models\LabourCategory;
+
 
 class LabourReportController extends Controller
 {
@@ -132,6 +137,18 @@ $projectSubspaces = ProjectSubspace::where('is_active', true)
     ->orderBy('sequence')
     ->orderBy('name')
     ->get();
+    $labourTypes = LabourType::orderBy('category')
+    ->orderBy('labour_type_name')
+    ->get()
+    ->groupBy('category');
+
+    $labourCategories = LabourCategory::where('is_active', true)
+    ->orderBy('category_name')
+    ->get();
+
+$labourTypes = LabourType::with('category')
+    ->orderBy('labour_type_name')
+    ->get();
 
         return view('labour-reports.create', compact(
             'projects',
@@ -142,7 +159,10 @@ $projectSubspaces = ProjectSubspace::where('is_active', true)
             'projectUnits',
             'projectRooms',
             'projectSubspaces',
-            'activityDivisions'
+            'activityDivisions',
+            'labourTypes',
+            'labourCategories',
+
         ));
     }
 
@@ -162,7 +182,7 @@ $projectSubspaces = ProjectSubspace::where('is_active', true)
             ($request->technician_count ?? 0) +
             ($request->machine_operator_count ?? 0);
 
-        LabourReport::create([
+        $labourReport = LabourReport::create([
             'project_id' => $request->project_id,
             'user_id' => auth()->id(),
 
@@ -203,6 +223,64 @@ $projectSubspaces = ProjectSubspace::where('is_active', true)
             'status' => 'Draft',
         ]);
 
+        $totalLabourFromDetails = 0;
+
+if ($request->labour_type_id) {
+    foreach ($request->labour_type_id as $index => $labourTypeId) {
+
+        if (!$labourTypeId) {
+            continue;
+        }
+
+        $male = $request->detail_male_count[$index] ?? 0;
+        $female = $request->detail_female_count[$index] ?? 0;
+        $local = $request->detail_local_count[$index] ?? 0;
+        $nonLocal = $request->detail_non_local_count[$index] ?? 0;
+
+        $total = $male + $female;
+
+        $totalLabourFromDetails += $total;
+
+        LabourReportDetail::create([
+            'labour_report_id' => $labourReport->id,
+            'labour_type_id' => $labourTypeId,
+            'contractor_id' => $request->detail_contractor_id[$index] ?? null,
+            'male_count' => $male,
+            'female_count' => $female,
+            'local_count' => $local,
+            'non_local_count' => $nonLocal,
+            'total_count' => $total,
+            'remarks' => $request->detail_remarks[$index] ?? null,
+        ]);
+    }
+}
+
+if ($totalLabourFromDetails > 0) {
+    $labourReport->update([
+        'total_labour' => $totalLabourFromDetails,
+        'male_count' => array_sum($request->detail_male_count ?? []),
+        'female_count' => array_sum($request->detail_female_count ?? []),
+        'local_count' => array_sum($request->detail_local_count ?? []),
+        'non_local_count' => array_sum($request->detail_non_local_count ?? []),
+    ]);
+}
+AuditHelper::log(
+    'Labour Reports',
+    'Created',
+    'LabourReport',
+    $labourReport->id,
+    'Labour report created',
+    null,
+    $labourReport->only([
+        'id',
+        'project_id',
+        'activity_id',
+        'contractor_id',
+        'total_labour',
+        'entry_date',
+        'status'
+    ])
+);
         return redirect()
             ->route('labour-reports.index')
             ->with('success', 'Labour report added successfully.');
@@ -300,6 +378,30 @@ public function update(Request $request, LabourReport $labourReport)
         ($request->technician_count ?? 0) +
         ($request->machine_operator_count ?? 0);
 
+
+        $oldValues = $labourReport->only([
+    'project_id',
+    'activity_id',
+    'contractor_id',
+    'skilled_count',
+    'semi_skilled_count',
+    'helper_count',
+    'semi_helper_count',
+    'supervisor_count',
+    'technician_count',
+    'machine_operator_count',
+    'male_count',
+    'female_count',
+    'local_count',
+    'non_local_count',
+    'total_labour',
+    'shift',
+    'work_output',
+    'work_output_unit',
+    'entry_date',
+    'remarks',
+    'status'
+]);
     $labourReport->update([
         'project_id' => $request->project_id,
 
@@ -335,6 +437,40 @@ public function update(Request $request, LabourReport $labourReport)
         'remarks' => $request->remarks,
     ]);
 
+    $newValues = $labourReport->only([
+    'project_id',
+    'activity_id',
+    'contractor_id',
+    'skilled_count',
+    'semi_skilled_count',
+    'helper_count',
+    'semi_helper_count',
+    'supervisor_count',
+    'technician_count',
+    'machine_operator_count',
+    'male_count',
+    'female_count',
+    'local_count',
+    'non_local_count',
+    'total_labour',
+    'shift',
+    'work_output',
+    'work_output_unit',
+    'entry_date',
+    'remarks',
+    'status'
+]);
+
+AuditHelper::log(
+    'Labour Reports',
+    'Updated',
+    'LabourReport',
+    $labourReport->id,
+    'Labour report updated',
+    $oldValues,
+    $newValues
+);
+
     return redirect()
         ->route('labour-reports.index')
         ->with('success', 'Labour report updated successfully.');
@@ -350,6 +486,16 @@ public function submit(LabourReport $labourReport)
         'status' => 'Submitted',
     ]);
 
+    AuditHelper::log(
+    'Labour Reports',
+    'Submitted',
+    'LabourReport',
+    $labourReport->id,
+    'Labour report submitted for approval',
+    ['status' => 'Draft'],
+    ['status' => 'Submitted']
+);
+
     return redirect()
         ->route('labour-reports.index')
         ->with('success', 'Labour report submitted successfully.');
@@ -364,6 +510,16 @@ public function approve(LabourReport $labourReport)
     $labourReport->update([
         'status' => 'Approved',
     ]);
+
+    AuditHelper::log(
+    'Labour Reports',
+    'Approved',
+    'LabourReport',
+    $labourReport->id,
+    'Labour report approved',
+    ['status' => 'Submitted'],
+    ['status' => 'Approved']
+);
 
     return redirect()
         ->route('labour-reports.index')

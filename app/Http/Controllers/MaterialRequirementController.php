@@ -8,6 +8,7 @@ use App\Models\ProjectBlock;
 use App\Models\MaterialCategory;
 use App\Models\Material;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class MaterialRequirementController extends Controller
 {
@@ -69,7 +70,7 @@ class MaterialRequirementController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        MaterialRequirement::create([
+        $materialRequirement = MaterialRequirement::create([
             'project_id' => $request->project_id,
             'project_block_id' => $request->project_block_id,
             'material_category_id' => $request->material_category_id,
@@ -83,6 +84,28 @@ class MaterialRequirementController extends Controller
             'created_by' => auth()->id(),
             'fulfilled_quantity' => 0,
         ]);
+
+        AuditHelper::log(
+    'Material Requirements',
+    'Created',
+    'MaterialRequirement',
+    $materialRequirement->id,
+    'Material requirement created',
+    null,
+    $materialRequirement->only([
+        'id',
+        'project_id',
+        'project_block_id',
+        'material_category_id',
+        'material_id',
+        'required_quantity',
+        'unit',
+        'required_date',
+        'priority',
+        'status',
+        'created_by'
+    ])
+);
 
         return redirect()
             ->route('material-requirements.index')
@@ -145,6 +168,19 @@ class MaterialRequirementController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $materialRequirement->only([
+    'project_id',
+    'project_block_id',
+    'material_category_id',
+    'material_id',
+    'required_quantity',
+    'unit',
+    'required_date',
+    'priority',
+    'remarks',
+    'status'
+]);
+
         $materialRequirement->update([
             'project_id' => $request->project_id,
             'project_block_id' => $request->project_block_id,
@@ -156,6 +192,29 @@ class MaterialRequirementController extends Controller
             'priority' => $request->priority,
             'remarks' => $request->remarks,
         ]);
+
+        $newValues = $materialRequirement->only([
+    'project_id',
+    'project_block_id',
+    'material_category_id',
+    'material_id',
+    'required_quantity',
+    'unit',
+    'required_date',
+    'priority',
+    'remarks',
+    'status'
+]);
+
+AuditHelper::log(
+    'Material Requirements',
+    'Updated',
+    'MaterialRequirement',
+    $materialRequirement->id,
+    'Material requirement updated',
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('material-requirements.index')
@@ -173,6 +232,16 @@ class MaterialRequirementController extends Controller
         $materialRequirement->update([
             'status' => 'Submitted',
         ]);
+
+        AuditHelper::log(
+    'Material Requirements',
+    'Submitted',
+    'MaterialRequirement',
+    $materialRequirement->id,
+    'Material requirement submitted for approval',
+    ['status' => 'Draft'],
+    ['status' => 'Submitted']
+);
 
         return redirect()
             ->route('material-requirements.index')
@@ -196,6 +265,20 @@ class MaterialRequirementController extends Controller
             'approved_by' => auth()->id(),
             'approved_at' => now(),
         ]);
+
+        AuditHelper::log(
+    'Material Requirements',
+    'Approved',
+    'MaterialRequirement',
+    $materialRequirement->id,
+    'Material requirement approved',
+    ['status' => 'Submitted'],
+    [
+        'status' => 'Approved',
+        'approved_by' => auth()->id(),
+        'approved_at' => now()->toDateTimeString()
+    ]
+);
 
         return redirect()
             ->route('material-requirements.index')

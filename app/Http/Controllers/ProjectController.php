@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+use App\Helpers\AuditHelper;
 
 use Illuminate\Http\Request;
 use App\Models\Project;
@@ -21,7 +22,7 @@ class ProjectController extends Controller
 
     public function store(Request $request)
     {
-        Project::create([
+        $project = Project::create([
             'project_code' => $request->project_code,
             'project_name' => $request->project_name,
             'client_name' => $request->client_name,
@@ -29,6 +30,24 @@ class ProjectController extends Controller
             'start_date' => $request->start_date,
             'target_completion_date' => $request->target_completion_date,
         ]);
+
+        AuditHelper::log(
+    'Projects',
+    'Created',
+    'Project',
+    $project->id,
+    'Project created: ' . $project->project_name,
+    null,
+    $project->only([
+        'id',
+        'project_code',
+        'project_name',
+        'client_name',
+        'location',
+        'start_date',
+        'target_completion_date'
+    ])
+);
 
         return redirect('/projects')
     ->with('success', 'Project created successfully.');
@@ -62,9 +81,51 @@ public function update(Request $request, $id)
             $request->target_completion_date,
     ]);
 
+    $oldValues = $project->only([
+    'project_code',
+    'project_name',
+    'client_name',
+    'location',
+    'start_date',
+    'target_completion_date'
+]);
+
+$oldEngineerIds = $project->users()
+    ->pluck('users.id')
+    ->toArray();
+
     $project->users()->sync(
         $request->engineers ?? []
     );
+
+    $newValues = $project->only([
+    'project_code',
+    'project_name',
+    'client_name',
+    'location',
+    'start_date',
+    'target_completion_date'
+]);
+
+$newEngineerIds = $project->users()
+    ->pluck('users.id')
+    ->toArray();
+
+AuditHelper::log(
+    'Projects',
+    'Updated',
+    'Project',
+    $project->id,
+    'Project updated: ' . $project->project_name,
+    [
+        'project' => $oldValues,
+        'engineers' => $oldEngineerIds
+    ],
+    [
+        'project' => $newValues,
+        'engineers' => $newEngineerIds
+    ]
+);
 
     return redirect('/projects')
         ->with('success', 'Project updated successfully.');
@@ -73,7 +134,23 @@ public function update(Request $request, $id)
 public function destroy($id)
 {
     $project = Project::findOrFail($id);
-
+     AuditHelper::log(
+    'Projects',
+    'Deleted',
+    'Project',
+    $project->id,
+    'Project deleted: ' . $project->project_name,
+    $project->only([
+        'id',
+        'project_code',
+        'project_name',
+        'client_name',
+        'location',
+        'start_date',
+        'target_completion_date'
+    ]),
+    null
+);
     $project->delete();
 
     return redirect('/projects')

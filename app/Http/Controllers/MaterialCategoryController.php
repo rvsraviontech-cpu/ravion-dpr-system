@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MaterialCategory;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class MaterialCategoryController extends Controller
 {
@@ -27,12 +28,30 @@ class MaterialCategoryController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        MaterialCategory::create([
+        $materialCategory = MaterialCategory::create([
             'category_name' => $request->category_name,
             'category_code' => $request->category_code,
             'is_active' => true,
             'remarks' => $request->remarks,
         ]);
+
+        AuditHelper::log(
+    'Material Categories',
+    'Created',
+    'MaterialCategory',
+    $materialCategory->id,
+    'Material category created: ' . $materialCategory->category_name,
+    null,
+    $materialCategory->only([
+        'id',
+        'category_name',
+        'category_code',
+        'is_active',
+        'remarks'
+    ])
+);
+
+
 
         return redirect()
             ->route('material-categories.index')
@@ -53,6 +72,13 @@ class MaterialCategoryController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        $oldValues = $materialCategory->only([
+    'category_name',
+    'category_code',
+    'is_active',
+    'remarks'
+]);
+
         $materialCategory->update([
             'category_name' => $request->category_name,
             'category_code' => $request->category_code,
@@ -60,8 +86,81 @@ class MaterialCategoryController extends Controller
             'remarks' => $request->remarks,
         ]);
 
+        $newValues = $materialCategory->only([
+    'category_name',
+    'category_code',
+    'is_active',
+    'remarks'
+]);
+
+$action = 'Updated';
+$description =
+    'Material category updated: ' .
+    $materialCategory->category_name;
+
+if (
+    ($oldValues['is_active'] ?? null) !=
+    ($newValues['is_active'] ?? null)
+) {
+    $action = $newValues['is_active']
+        ? 'Activated'
+        : 'Deactivated';
+
+    $description = $newValues['is_active']
+        ? 'Material category activated: ' . $materialCategory->category_name
+        : 'Material category deactivated: ' . $materialCategory->category_name;
+}
+
+AuditHelper::log(
+    'Material Categories',
+    $action,
+    'MaterialCategory',
+    $materialCategory->id,
+    $description,
+    $oldValues,
+    $newValues
+);
+
         return redirect()
             ->route('material-categories.index')
             ->with('success', 'Material category updated successfully.');
     }
+
+    public function toggleStatus(MaterialCategory $materialCategory)
+{
+    $oldValues = $materialCategory->only([
+        'category_name',
+        'category_code',
+        'is_active',
+        'remarks'
+    ]);
+
+    $materialCategory->update([
+        'is_active' => !$materialCategory->is_active,
+    ]);
+
+    $newValues = $materialCategory->only([
+        'category_name',
+        'category_code',
+        'is_active',
+        'remarks'
+    ]);
+
+    AuditHelper::log(
+        'Material Categories',
+        $materialCategory->is_active ? 'Activated' : 'Deactivated',
+        'MaterialCategory',
+        $materialCategory->id,
+        $materialCategory->is_active
+            ? 'Material category activated: ' . $materialCategory->category_name
+            : 'Material category deactivated: ' . $materialCategory->category_name,
+        $oldValues,
+        $newValues
+    );
+
+    return back()->with(
+        'success',
+        'Material category status updated successfully.'
+    );
+}
 }

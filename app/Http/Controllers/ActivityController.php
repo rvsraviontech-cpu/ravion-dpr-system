@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Activity;
+use App\Helpers\AuditHelper;
 
 class ActivityController extends Controller
 {
@@ -21,12 +22,28 @@ class ActivityController extends Controller
 
     public function store(Request $request)
     {
-        Activity::create([
+        $activity = Activity::create([
             'activity_name' => $request->activity_name,
             'unit' => $request->unit,
             'work_stage' => $request->work_stage,
             'is_active' => true,
         ]);
+
+        AuditHelper::log(
+    'Activities',
+    'Created',
+    'Activity',
+    $activity->id,
+    'Activity created: ' . $activity->activity_name,
+    null,
+    $activity->only([
+        'id',
+        'activity_name',
+        'unit',
+        'work_stage',
+        'is_active'
+    ])
+);
 
         return redirect('/activities')
     ->with('success', 'Activity created successfully.');
@@ -43,7 +60,36 @@ public function update(Request $request, $id)
 {
     $activity = Activity::findOrFail($id);
 
-    $activity->update($request->all());
+    $oldValues = $activity->only([
+    'activity_name',
+    'unit',
+    'work_stage',
+    'is_active'
+]);
+
+$activity->update($request->only([
+    'activity_name',
+    'unit',
+    'work_stage',
+    'is_active'
+]));
+
+$newValues = $activity->only([
+    'activity_name',
+    'unit',
+    'work_stage',
+    'is_active'
+]);
+
+AuditHelper::log(
+    'Activities',
+    'Updated',
+    'Activity',
+    $activity->id,
+    'Activity updated: ' . $activity->activity_name,
+    $oldValues,
+    $newValues
+);
 
     return redirect('/activities')
         ->with('success', 'Activity updated successfully.');
@@ -52,6 +98,22 @@ public function update(Request $request, $id)
 public function destroy($id)
 {
     $activity = Activity::findOrFail($id);
+
+    AuditHelper::log(
+    'Activities',
+    'Deleted',
+    'Activity',
+    $activity->id,
+    'Activity deleted: ' . $activity->activity_name,
+    $activity->only([
+        'id',
+        'activity_name',
+        'unit',
+        'work_stage',
+        'is_active'
+    ]),
+    null
+);
 
     $activity->delete();
 

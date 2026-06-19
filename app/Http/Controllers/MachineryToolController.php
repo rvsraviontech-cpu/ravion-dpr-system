@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\MachineryTool;
+use App\Helpers\AuditHelper;
 
 class MachineryToolController extends Controller
 {
@@ -33,8 +34,19 @@ class MachineryToolController extends Controller
 
         ]);
 
-        MachineryTool::create(
-            $request->all()
+        $machineryTool = MachineryTool::create(
+    $request->all()
+);
+
+AuditHelper::log(
+    'Machinery Tools',
+    'Created',
+    'MachineryTool',
+    $machineryTool->id,
+    'Machinery/tool created: ' . $machineryTool->machine_name,
+    null,
+    $machineryTool->toArray()
+);
         );
 
         return redirect('/machinery-tools')

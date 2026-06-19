@@ -16,10 +16,19 @@ class Material extends Model
         'minimum_stock_level',
         'is_active',
         'remarks',
+        'brand_master_id',
     ];
 
     public function category()
     {
         return $this->belongsTo(MaterialCategory::class, 'material_category_id');
     }
+
+    public function brandMaster()
+{
+    return $this->belongsTo(
+        \App\Models\BrandMaster::class,
+        'brand_master_id'
+    );
+}
 }

@@ -15,6 +15,7 @@ use App\Models\ProjectRoom;
 use App\Models\ProjectSubspace;
 use App\Models\ProjectUnit;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class MaterialConsumedController extends Controller
 {
@@ -133,7 +134,7 @@ class MaterialConsumedController extends Controller
 
     $material = Material::find($request->material_id);
 
-    MaterialConsumed::create([
+    $materialConsumed = MaterialConsumed::create([
         'project_id' => $request->project_id,
         'user_id' => auth()->id(),
 
@@ -166,6 +167,27 @@ class MaterialConsumedController extends Controller
 
         'status' => 'Draft',
     ]);
+
+    AuditHelper::log(
+    'Material Consumed',
+    'Created',
+    'MaterialConsumed',
+    $materialConsumed->id,
+    'Material consumption entry created',
+    null,
+    $materialConsumed->only([
+        'id',
+        'project_id',
+        'activity_id',
+        'material_id',
+        'contractor_id',
+        'quantity_consumed',
+        'unit',
+        'wastage_quantity',
+        'consumed_date',
+        'status'
+    ])
+);
 
     return redirect()
         ->route('material-consumed.index')
@@ -269,6 +291,28 @@ public function update(Request $request, MaterialConsumed $materialConsumed)
         'consumed_date' => 'required|date',
     ]);
 
+    $oldValues = $materialConsumed->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'project_room_id',
+    'project_subspace_id',
+    'activity_division_id',
+    'activity_id',
+    'material_category_id',
+    'material_id',
+    'contractor_id',
+    'quantity_consumed',
+    'unit',
+    'related_work_output_quantity',
+    'wastage_quantity',
+    'wastage_reason',
+    'consumed_date',
+    'remarks',
+    'status'
+]);
+
     $materialConsumed->update([
         'project_id' => $request->project_id,
 
@@ -297,6 +341,38 @@ public function update(Request $request, MaterialConsumed $materialConsumed)
         'remarks' => $request->remarks,
     ]);
 
+    $newValues = $materialConsumed->only([
+    'project_id',
+    'project_block_id',
+    'project_floor_id',
+    'project_unit_id',
+    'project_room_id',
+    'project_subspace_id',
+    'activity_division_id',
+    'activity_id',
+    'material_category_id',
+    'material_id',
+    'contractor_id',
+    'quantity_consumed',
+    'unit',
+    'related_work_output_quantity',
+    'wastage_quantity',
+    'wastage_reason',
+    'consumed_date',
+    'remarks',
+    'status'
+]);
+
+AuditHelper::log(
+    'Material Consumed',
+    'Updated',
+    'MaterialConsumed',
+    $materialConsumed->id,
+    'Material consumption entry updated',
+    $oldValues,
+    $newValues
+);
+
     return redirect()
         ->route('material-consumed.index')
         ->with('success', 'Material consumption entry updated successfully.');
@@ -314,6 +390,16 @@ public function submit(MaterialConsumed $materialConsumed)
     $materialConsumed->update([
         'status' => 'Submitted'
     ]);
+
+    AuditHelper::log(
+    'Material Consumed',
+    'Submitted',
+    'MaterialConsumed',
+    $materialConsumed->id,
+    'Material consumption entry submitted for approval',
+    ['status' => 'Draft'],
+    ['status' => 'Submitted']
+);
 
     return back()->with(
         'success',
@@ -333,6 +419,16 @@ public function approve(MaterialConsumed $materialConsumed)
     $materialConsumed->update([
         'status' => 'Approved'
     ]);
+
+    AuditHelper::log(
+    'Material Consumed',
+    'Approved',
+    'MaterialConsumed',
+    $materialConsumed->id,
+    'Material consumption entry approved',
+    ['status' => 'Submitted'],
+    ['status' => 'Approved']
+);
 
     return back()->with(
         'success',

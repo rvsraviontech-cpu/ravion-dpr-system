@@ -2,22 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class LabourCategory extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'name',
-        'code',
-        'description',
-        'status',
+        'category_name',
+        'is_active',
+        'remarks',
     ];
 
-    public function labourReports()
+    public function labourTypes()
     {
-        return $this->hasMany(LabourReport::class);
+        return $this->hasMany(LabourType::class);
     }
 }

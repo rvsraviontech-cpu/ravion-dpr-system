@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Permission;
 use Illuminate\Http\Request;
+use App\Helpers\AuditHelper;
 
 class PermissionController extends Controller
 {
@@ -30,12 +31,28 @@ class PermissionController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        Permission::create([
+        $permission = Permission::create([
             'name' => $request->name,
             'module' => $request->module,
             'description' => $request->description,
             'is_active' => $request->has('is_active'),
         ]);
+
+        AuditHelper::log(
+    'Permissions',
+    'Created',
+    'Permission',
+    $permission->id,
+    'Permission created: ' . $permission->name,
+    null,
+    $permission->only([
+        'id',
+        'name',
+        'module',
+        'description',
+        'is_active'
+    ])
+);
 
         return redirect()
             ->route('permissions.index')
@@ -56,12 +73,36 @@ class PermissionController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
+        $oldValues = $permission->only([
+    'name',
+    'module',
+    'description',
+    'is_active'
+]);
+
         $permission->update([
             'name' => $request->name,
             'module' => $request->module,
             'description' => $request->description,
             'is_active' => $request->has('is_active'),
         ]);
+
+        $newValues = $permission->only([
+    'name',
+    'module',
+    'description',
+    'is_active'
+]);
+
+AuditHelper::log(
+    'Permissions',
+    'Updated',
+    'Permission',
+    $permission->id,
+    'Permission updated: ' . $permission->name,
+    $oldValues,
+    $newValues
+);
 
         return redirect()
             ->route('permissions.index')
@@ -75,6 +116,22 @@ class PermissionController extends Controller
                 ->route('permissions.index')
                 ->with('error', 'Cannot delete permission because it is assigned to one or more roles.');
         }
+
+        AuditHelper::log(
+    'Permissions',
+    'Deleted',
+    'Permission',
+    $permission->id,
+    'Permission deleted: ' . $permission->name,
+    $permission->only([
+        'id',
+        'name',
+        'module',
+        'description',
+        'is_active'
+    ]),
+    null
+);
 
         $permission->delete();
 
