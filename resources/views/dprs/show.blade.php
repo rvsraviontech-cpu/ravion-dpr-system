@@ -922,5 +922,111 @@
 </div>
 
 </div>
+{{-- PMO REVIEW PANEL --}}
+@if(in_array(auth()->user()->role->name, ['PMO', 'Admin', 'DGM']) && $dpr->status === 'Pending')
+
+<div class="bg-white rounded shadow p-6 mb-6 border-l-4 border-blue-600">
+
+    <h2 class="text-2xl font-bold mb-4">
+        PMO Review Panel
+    </h2>
+
+    <div class="mb-4">
+        <span class="font-semibold">Current Status:</span>
+
+        <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded">
+            Pending Review
+        </span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <form method="POST"
+              action="{{ route('dprs.approve', $dpr->id) }}">
+
+            @csrf
+
+            <label class="block font-semibold mb-2">
+                Approval Remarks
+            </label>
+
+            <textarea name="pmo_remarks"
+                      rows="4"
+                      class="border rounded w-full p-3 mb-4"
+                      placeholder="Enter approval remarks..."></textarea>
+
+            <button type="submit"
+                    onclick="return confirm('Approve this DPR?')"
+                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded">
+                Approve DPR
+            </button>
+
+        </form>
+
+        <form method="POST"
+              action="{{ route('dprs.reject', $dpr->id) }}">
+
+            @csrf
+
+            <label class="block font-semibold mb-2">
+                Rejection Remarks <span class="text-red-600">*</span>
+            </label>
+
+            <textarea name="pmo_remarks"
+                      rows="4"
+                      class="border rounded w-full p-3 mb-4"
+                      placeholder="Enter reason for rejection..."
+                      required></textarea>
+
+            <button type="submit"
+                    onclick="return confirm('Reject this DPR?')"
+                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded">
+                Reject DPR
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+@endif
+
+
+{{-- PMO REMARKS DISPLAY --}}
+@if($dpr->pmo_remarks)
+
+<div class="bg-white rounded shadow p-6 mb-6 border-l-4
+    {{ $dpr->status === 'Approved' ? 'border-green-600' : 'border-red-600' }}">
+
+    <h2 class="text-2xl font-bold mb-4">
+        PMO Remarks
+    </h2>
+
+    <div class="mb-3">
+        <span class="font-semibold">Status:</span>
+
+        @if($dpr->status === 'Approved')
+            <span class="bg-green-100 text-green-800 px-3 py-1 rounded">
+                Approved
+            </span>
+        @elseif($dpr->status === 'Rejected')
+            <span class="bg-red-100 text-red-800 px-3 py-1 rounded">
+                Rejected
+            </span>
+        @else
+            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded">
+                {{ $dpr->status }}
+            </span>
+        @endif
+    </div>
+
+    <p class="text-gray-700 whitespace-pre-line">
+        {{ $dpr->pmo_remarks }}
+    </p>
+
+</div>
+
+@endif
 
 @endsection

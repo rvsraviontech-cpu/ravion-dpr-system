@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\AuditHelper;
 use App\Models\Contractor;
+use App\Models\Material;
+use App\Models\MaterialCategory;
 use App\Models\MaterialReceived;
 use App\Models\Project;
 use App\Models\ProjectBlock;
 use App\Models\ProjectFloor;
 use App\Models\ProjectUnit;
+use App\Models\Vendor;
 use Illuminate\Http\Request;
-use App\Models\Material;
-use App\Models\MaterialCategory;
-use App\Helpers\AuditHelper;
 
 class MaterialReceivedController extends Controller
 {
@@ -24,6 +25,8 @@ class MaterialReceivedController extends Controller
             'floor',
             'unit',
             'contractor',
+            'materialCategory',
+            'material',
         ]);
 
         if ($request->filled('project_id')) {
@@ -95,30 +98,42 @@ class MaterialReceivedController extends Controller
             ->orderBy('category_name')
             ->get();
 
-        $materials = Material::where('is_active', true)
-             ->orderBy('material_name')
-             ->get();
+        $materials = Material::with(['category', 'brandMaster'])
+            ->where('is_active', true)
+            ->orderBy('material_name')
+            ->get();
+
+        $vendors = Vendor::where('is_active', true)
+            ->orderBy('vendor_name')
+            ->get();
 
         return view('material-received.create', compact(
-    'projects',
-    'projectBlocks',
-    'projectFloors',
-    'projectUnits',
-    'contractors',
-    'materialCategories',
-    'materials'
-));
+            'projects',
+            'projectBlocks',
+            'projectFloors',
+            'projectUnits',
+            'contractors',
+            'materialCategories',
+            'materials',
+            'vendors'
+        ));
     }
 
     public function store(Request $request)
     {
         $request->validate([
             'project_id' => 'required|exists:projects,id',
-            'material_id' => 'required|exists:materials,id',
             'material_category_id' => 'required|exists:material_categories,id',
+            'material_id' => 'required|exists:materials,id',
             'quantity_received' => 'required|numeric|min:0',
             'received_date' => 'required|date',
+            'vendor_id' => 'nullable|exists:vendors,id',
         ]);
+
+        $material = Material::with(['category', 'brandMaster'])
+            ->find($request->material_id);
+
+        $vendor = Vendor::find($request->vendor_id);
 
         $materialReceived = MaterialReceived::create([
             'project_id' => $request->project_id,
@@ -132,15 +147,15 @@ class MaterialReceivedController extends Controller
             'material_id' => $request->material_id,
 
             'storage_location' => $request->storage_location,
-            'material_category' => $request->material_category,
-            'material_name' => optional(\App\Models\Material::find($request->material_id))->material_name,
-            'specification' => $request->specification,
-            'brand' => $request->brand,
+            'material_category' => $material?->category?->category_name,
+            'material_name' => $material?->material_name,
+            'specification' => $material?->specification,
+            'brand' => $material?->brandMaster?->brand_name,
+            'unit' => $material?->unit,
 
             'quantity_received' => $request->quantity_received ?? 0,
-            'unit' => $request->unit,
 
-            'vendor_name' => $request->vendor_name,
+            'vendor_name' => $vendor?->vendor_name,
             'supplied_by_contractor' => $request->has('supplied_by_contractor'),
             'contractor_id' => $request->contractor_id,
 
@@ -164,23 +179,23 @@ class MaterialReceivedController extends Controller
         ]);
 
         AuditHelper::log(
-    'Material Received',
-    'Created',
-    'MaterialReceived',
-    $materialReceived->id,
-    'Material received entry created',
-    null,
-    $materialReceived->only([
-        'id',
-        'project_id',
-        'material_id',
-        'material_name',
-        'quantity_received',
-        'unit',
-        'received_date',
-        'status'
-    ])
-);
+            'Material Received',
+            'Created',
+            'MaterialReceived',
+            $materialReceived->id,
+            'Material received entry created',
+            null,
+            $materialReceived->only([
+                'id',
+                'project_id',
+                'material_id',
+                'material_name',
+                'quantity_received',
+                'unit',
+                'received_date',
+                'status'
+            ])
+        );
 
         return redirect()
             ->route('material-received.index')
@@ -198,14 +213,14 @@ class MaterialReceivedController extends Controller
         ]);
 
         AuditHelper::log(
-    'Material Received',
-    'Submitted',
-    'MaterialReceived',
-    $materialReceived->id,
-    'Material received entry submitted for approval',
-    ['status' => 'Draft'],
-    ['status' => 'Submitted']
-);
+            'Material Received',
+            'Submitted',
+            'MaterialReceived',
+            $materialReceived->id,
+            'Material received entry submitted for approval',
+            ['status' => 'Draft'],
+            ['status' => 'Submitted']
+        );
 
         return redirect()
             ->route('material-received.index')
@@ -224,17 +239,17 @@ class MaterialReceivedController extends Controller
         ]);
 
         AuditHelper::log(
-    'Material Received',
-    'Approved',
-    'MaterialReceived',
-    $materialReceived->id,
-    'Material received entry approved',
-    ['status' => 'Submitted'],
-    [
-        'status' => 'Approved',
-        'pmo_verification_status' => 'Approved'
-    ]
-);
+            'Material Received',
+            'Approved',
+            'MaterialReceived',
+            $materialReceived->id,
+            'Material received entry approved',
+            ['status' => 'Submitted'],
+            [
+                'status' => 'Approved',
+                'pmo_verification_status' => 'Approved'
+            ]
+        );
 
         return redirect()
             ->route('material-received.index')
@@ -242,176 +257,196 @@ class MaterialReceivedController extends Controller
     }
 
     public function show(MaterialReceived $materialReceived)
-{
-    $materialReceived->load([
-        'project',
-        'engineer',
-        'block',
-        'floor',
-        'unit',
-        'contractor',
-        'materialCategory',
-        'material',
-    ]);
+    {
+        $materialReceived->load([
+            'project',
+            'engineer',
+            'block',
+            'floor',
+            'unit',
+            'contractor',
+            'materialCategory',
+            'material',
+        ]);
 
-    return view('material-received.show', compact('materialReceived'));
-}
-
-public function edit(MaterialReceived $materialReceived)
-{
-    if ($materialReceived->status !== 'Draft') {
-        abort(403, 'Only draft material received entries can be edited.');
+        return view('material-received.show', compact('materialReceived'));
     }
 
-    $user = auth()->user();
+    public function edit(MaterialReceived $materialReceived)
+    {
+        if ($materialReceived->status !== 'Draft') {
+            abort(403, 'Only draft material received entries can be edited.');
+        }
 
-    if (in_array($user->role->name, ['Admin', 'PMO', 'DGM'])) {
-        $projects = Project::where('status', 'Active')
-            ->orderBy('project_name')
+        $user = auth()->user();
+
+        if (in_array($user->role->name, ['Admin', 'PMO', 'DGM'])) {
+            $projects = Project::where('status', 'Active')
+                ->orderBy('project_name')
+                ->get();
+        } else {
+            $projects = $user->projects()
+                ->where('status', 'Active')
+                ->orderBy('project_name')
+                ->get();
+        }
+
+        $projectBlocks = ProjectBlock::where('is_active', true)
+            ->orderBy('name')
             ->get();
-    } else {
-        $projects = $user->projects()
-            ->where('status', 'Active')
-            ->orderBy('project_name')
+
+        $projectFloors = ProjectFloor::where('is_active', true)
+            ->orderBy('sequence')
+            ->orderBy('name')
             ->get();
+
+        $projectUnits = ProjectUnit::where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $contractors = Contractor::where('status', 1)
+            ->orderBy('contractor_name')
+            ->get();
+
+        $materialCategories = MaterialCategory::where('is_active', true)
+            ->orderBy('category_name')
+            ->get();
+
+        $materials = Material::with(['category', 'brandMaster'])
+            ->where('is_active', true)
+            ->orderBy('material_name')
+            ->get();
+
+        $vendors = Vendor::where('is_active', true)
+            ->orderBy('vendor_name')
+            ->get();
+
+        return view('material-received.edit', compact(
+            'materialReceived',
+            'projects',
+            'projectBlocks',
+            'projectFloors',
+            'projectUnits',
+            'contractors',
+            'materialCategories',
+            'materials',
+            'vendors'
+        ));
     }
 
-    $projectBlocks = ProjectBlock::where('is_active', true)->orderBy('name')->get();
-    $projectFloors = ProjectFloor::where('is_active', true)->orderBy('sequence')->orderBy('name')->get();
-    $projectUnits = ProjectUnit::where('is_active', true)->orderBy('name')->get();
+    public function update(Request $request, MaterialReceived $materialReceived)
+    {
+        if ($materialReceived->status !== 'Draft') {
+            abort(403, 'Only draft material received entries can be updated.');
+        }
 
-    $contractors = Contractor::where('status', 1)
-        ->orderBy('contractor_name')
-        ->get();
+        $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'material_category_id' => 'required|exists:material_categories,id',
+            'material_id' => 'required|exists:materials,id',
+            'quantity_received' => 'required|numeric|min:0',
+            'received_date' => 'required|date',
+            'vendor_id' => 'nullable|exists:vendors,id',
+        ]);
 
-    $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
-        ->orderBy('category_name')
-        ->get();
+        $oldValues = $materialReceived->only([
+            'project_id',
+            'project_block_id',
+            'project_floor_id',
+            'project_unit_id',
+            'material_category_id',
+            'material_id',
+            'material_name',
+            'quantity_received',
+            'unit',
+            'vendor_name',
+            'contractor_id',
+            'vehicle_number',
+            'challan_number',
+            'bill_number',
+            'received_date',
+            'remarks',
+            'status'
+        ]);
 
-    $materials = \App\Models\Material::where('is_active', true)
-        ->orderBy('material_name')
-        ->get();
+        $material = Material::with(['category', 'brandMaster'])
+            ->find($request->material_id);
 
-    return view('material-received.edit', compact(
-        'materialReceived',
-        'projects',
-        'projectBlocks',
-        'projectFloors',
-        'projectUnits',
-        'contractors',
-        'materialCategories',
-        'materials'
-    ));
-}
+        $vendor = Vendor::find($request->vendor_id);
 
-public function update(Request $request, MaterialReceived $materialReceived)
-{
-    if ($materialReceived->status !== 'Draft') {
-        abort(403, 'Only draft material received entries can be updated.');
+        $materialReceived->update([
+            'project_id' => $request->project_id,
+
+            'project_block_id' => $request->project_block_id,
+            'project_floor_id' => $request->project_floor_id,
+            'project_unit_id' => $request->project_unit_id,
+
+            'storage_location' => $request->storage_location,
+
+            'material_category_id' => $request->material_category_id,
+            'material_id' => $request->material_id,
+
+            'material_category' => $material?->category?->category_name,
+            'material_name' => $material?->material_name,
+            'specification' => $material?->specification,
+            'brand' => $material?->brandMaster?->brand_name,
+            'unit' => $material?->unit,
+
+            'quantity_received' => $request->quantity_received ?? 0,
+
+            'vendor_name' => $vendor?->vendor_name,
+            'supplied_by_contractor' => $request->has('supplied_by_contractor'),
+            'contractor_id' => $request->contractor_id,
+
+            'vehicle_number' => $request->vehicle_number,
+            'driver_name' => $request->driver_name,
+            'challan_number' => $request->challan_number,
+            'bill_number' => $request->bill_number,
+
+            'received_date' => $request->received_date,
+
+            'material_condition' => $request->material_condition ?? 'Pending verification',
+
+            'accepted_quantity' => $request->accepted_quantity ?? 0,
+            'short_quantity' => $request->short_quantity ?? 0,
+            'damaged_quantity' => $request->damaged_quantity ?? 0,
+            'rejected_quantity' => $request->rejected_quantity ?? 0,
+
+            'remarks' => $request->remarks,
+        ]);
+
+        $newValues = $materialReceived->only([
+            'project_id',
+            'project_block_id',
+            'project_floor_id',
+            'project_unit_id',
+            'material_category_id',
+            'material_id',
+            'material_name',
+            'quantity_received',
+            'unit',
+            'vendor_name',
+            'contractor_id',
+            'vehicle_number',
+            'challan_number',
+            'bill_number',
+            'received_date',
+            'remarks',
+            'status'
+        ]);
+
+        AuditHelper::log(
+            'Material Received',
+            'Updated',
+            'MaterialReceived',
+            $materialReceived->id,
+            'Material received entry updated',
+            $oldValues,
+            $newValues
+        );
+
+        return redirect()
+            ->route('material-received.index')
+            ->with('success', 'Material received entry updated successfully.');
     }
-
-    $request->validate([
-        'project_id' => 'required|exists:projects,id',
-        'material_category_id' => 'required|exists:material_categories,id',
-        'material_id' => 'required|exists:materials,id',
-        'quantity_received' => 'required|numeric|min:0',
-        'received_date' => 'required|date',
-    ]);
-
-    $oldValues = $materialReceived->only([
-    'project_id',
-    'project_block_id',
-    'project_floor_id',
-    'project_unit_id',
-    'material_category_id',
-    'material_id',
-    'material_name',
-    'quantity_received',
-    'unit',
-    'vendor_name',
-    'contractor_id',
-    'vehicle_number',
-    'challan_number',
-    'bill_number',
-    'received_date',
-    'remarks',
-    'status'
-]);
-    $material = \App\Models\Material::find($request->material_id);
-
-    $materialReceived->update([
-        'project_id' => $request->project_id,
-
-        'project_block_id' => $request->project_block_id,
-        'project_floor_id' => $request->project_floor_id,
-        'project_unit_id' => $request->project_unit_id,
-
-        'storage_location' => $request->storage_location,
-
-        'material_category_id' => $request->material_category_id,
-        'material_id' => $request->material_id,
-
-        'material_category' => optional($material?->category)->category_name,
-        'material_name' => $material?->material_name,
-        'specification' => $material?->specification,
-        'brand' => $material?->brand,
-
-        'quantity_received' => $request->quantity_received ?? 0,
-        'unit' => $request->unit,
-
-        'vendor_name' => $request->vendor_name,
-        'supplied_by_contractor' => $request->has('supplied_by_contractor'),
-        'contractor_id' => $request->contractor_id,
-
-        'vehicle_number' => $request->vehicle_number,
-        'driver_name' => $request->driver_name,
-        'challan_number' => $request->challan_number,
-        'bill_number' => $request->bill_number,
-
-        'received_date' => $request->received_date,
-
-        'material_condition' => $request->material_condition ?? 'Pending verification',
-
-        'accepted_quantity' => $request->accepted_quantity ?? 0,
-        'short_quantity' => $request->short_quantity ?? 0,
-        'damaged_quantity' => $request->damaged_quantity ?? 0,
-        'rejected_quantity' => $request->rejected_quantity ?? 0,
-
-        'remarks' => $request->remarks,
-    ]);
-
-    $newValues = $materialReceived->only([
-    'project_id',
-    'project_block_id',
-    'project_floor_id',
-    'project_unit_id',
-    'material_category_id',
-    'material_id',
-    'material_name',
-    'quantity_received',
-    'unit',
-    'vendor_name',
-    'contractor_id',
-    'vehicle_number',
-    'challan_number',
-    'bill_number',
-    'received_date',
-    'remarks',
-    'status'
-]);
-
-AuditHelper::log(
-    'Material Received',
-    'Updated',
-    'MaterialReceived',
-    $materialReceived->id,
-    'Material received entry updated',
-    $oldValues,
-    $newValues
-);
-
-    return redirect()
-        ->route('material-received.index')
-        ->with('success', 'Material received entry updated successfully.');
-}
 }

@@ -97,6 +97,12 @@ Route::patch('/labour-categories/{labourCategory}/toggle-status', [LabourCategor
     ->name('vendors.toggle-status')
     ->middleware('permission:vendors.view');
 
+    Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
+    ->name('dprs.approve');
+
+Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
+    ->name('dprs.reject');
+
 
     /*
     |--------------------------------------------------------------------------
@@ -281,6 +287,12 @@ Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterControlle
 
     Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf'])
         ->middleware('permission:dpr.view');
+
+        Route::post('/dprs/{dpr}/approve', [DprController::class, 'approve'])
+    ->name('dprs.approve');
+
+    Route::post('/dprs/{dpr}/reject', [DprController::class, 'reject'])
+    ->name('dprs.reject');
 
 
     /*

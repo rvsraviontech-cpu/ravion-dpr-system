@@ -2266,3 +2266,63 @@ Next Planned Work:
 - Filter Vendor dropdown by Material Category.
 - Auto-fill unit and brand based on selected material.
 - Improve Material Consumed and Material Required screens using same pattern.
+
+## Update – Engineer to PMO DPR Workflow
+
+### Date
+
+18 June 2026
+
+### Modules Completed
+
+#### Labour Master
+
+* Completed Labour Category Master
+* Completed Labour Type Master
+* Added Category-wise Labour Types
+* Added Activate / Deactivate functionality
+* Added Search & Filter
+* Added Audit Logs
+
+#### Material Masters
+
+* Completed Material Category Master
+* Completed Material Master
+* Completed Unit Master
+* Completed Brand Master
+* Completed Vendor Master
+
+#### Material Improvements
+
+* Material Category linked with Materials
+* Brand linked with Material Category
+* Unit linked through Unit Master
+* Automatic Brand / Unit / Specification loading
+* Category-wise Material filtering
+* Vendor integration prepared
+
+#### DPR Workflow
+
+* Engineer can create DPR
+* Engineer can edit Draft DPR
+* Engineer can submit DPR
+* PMO Review Queue completed
+* DPR View page completed
+* PMO Approval panel added
+* PMO Reject panel added
+* PMO Remarks display completed
+* Approval and Rejection routes added
+* Audit logs for Create / Update / Submit / Approve / Reject
+
+### Current Project Status
+
+Approximately **78–80%** of the core ERP functionality is now complete.
+
+### Next Phase
+
+* Live testing of Engineer → PMO workflow
+* Material Stock Ledger
+* Inventory Engine
+* DPR PDF
+* Notification System
+* UI/UX redesign
