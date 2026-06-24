@@ -1,0 +1,1185 @@
+# Ravion_DPR_Functional_Architecture_v2.0
+
+---
+
+# Document Information
+
+| Item                   | Details                                           |
+| ---------------------- | ------------------------------------------------- |
+| Project Name           | Ravion DPR                                        |
+| Full Name              | Ravion Daily Progress Report & Construction ERP   |
+| Document Version       | 2.0                                               |
+| Document Type          | Functional Architecture & Technical Specification |
+| Development Status     | Active Development                                |
+| Project Owner          | Ravion Group                                      |
+| Business Domain        | Construction ERP                                  |
+| Primary Technology     | Laravel 12                                        |
+| Database               | MySQL                                             |
+| Frontend               | Blade + Tailwind CSS + Alpine.js (Planned)        |
+| Authentication         | Laravel Authentication                            |
+| Authorization          | Role Based Access Control (RBAC)                  |
+| Source Control         | Git & GitHub                                      |
+| Documentation Standard | Enterprise Software Functional Specification      |
+| Prepared By            | Ravion Development Team                           |
+| Last Updated           | June 2026                                         |
+
+---
+
+# Document Purpose
+
+This document serves as the official Functional Architecture and Technical Specification for the Ravion DPR system.
+
+Its purpose is to define the business requirements, software architecture, module relationships, workflows, database structure, implementation strategy, and future roadmap for the Ravion DPR platform.
+
+This document is intended to remain the primary reference throughout the lifecycle of the application and should be updated whenever new modules or architectural changes are introduced.
+
+---
+
+# Intended Audience
+
+This document is designed for:
+
+* Product Owners
+* Project Managers
+* Software Architects
+* Laravel Developers
+* UI/UX Designers
+* QA Engineers
+* Implementation Engineers
+* Future Development Teams
+* System Administrators
+
+---
+
+# Project Overview
+
+Ravion DPR is an enterprise-level Construction Daily Progress Reporting and Project Management platform designed specifically for residential, commercial, and industrial construction projects.
+
+The application is intended to digitize all site-level activities while providing complete visibility to management through structured workflows, standardized master data, approvals, dashboards, reports, and inventory management.
+
+Unlike a simple DPR application, Ravion DPR is being architected as a scalable Construction ERP capable of supporting multiple companies, multiple projects, multiple users, and future enterprise modules such as Procurement, Inventory, BOQ, QA/QC, Safety, Equipment, Billing, CRM, and Odoo Integration.
+
+---
+
+# Vision Statement
+
+To build a modern, scalable, and intelligent Construction ERP that enables engineers, project managers, contractors, management, and stakeholders to collaborate through a unified digital platform while maintaining complete transparency, accountability, and operational efficiency.
+
+---
+
+# Mission
+
+The mission of Ravion DPR is to eliminate manual reporting, disconnected spreadsheets, paper-based approvals, and fragmented project information by providing a centralized ERP platform for construction project execution.
+
+The platform aims to become the single source of truth for project progress, labour deployment, material movement, planning, approvals, reporting, and management decision-making.
+
+---
+
+# Core Objectives
+
+The primary objectives of Ravion DPR are:
+
+* Digitize Daily Progress Reporting
+* Standardize all construction master data
+* Improve project monitoring
+* Increase reporting accuracy
+* Provide real-time management visibility
+* Reduce manual paperwork
+* Strengthen auditability
+* Improve material accountability
+* Enable workflow-based approvals
+* Build a scalable ERP foundation
+
+---
+
+# Business Goals
+
+The application has been designed to achieve the following business outcomes:
+
+## Engineering
+
+* Faster DPR preparation
+* Reduced repetitive data entry
+* Standardized reporting
+* Mobile-friendly operation
+* Accurate labour reporting
+* Accurate material reporting
+
+---
+
+## Project Management
+
+* Daily project visibility
+* Labour productivity tracking
+* Material monitoring
+* Delay identification
+* Work progress analysis
+* Better planning
+
+---
+
+## PMO
+
+* Centralized DPR review
+* Standardized approval process
+* Quality verification
+* Progress validation
+* Cross-project monitoring
+
+---
+
+## Management
+
+* Executive dashboards
+* Multi-project monitoring
+* KPI reporting
+* Resource utilization
+* Decision support
+* Historical analytics
+
+---
+
+# Design Philosophy
+
+The application follows the following guiding principles.
+
+## Simplicity
+
+Every screen should require minimal training and allow engineers to complete daily reporting quickly.
+
+---
+
+## Standardization
+
+Master data shall be maintained centrally to eliminate inconsistent naming and duplicate records.
+
+---
+
+## Traceability
+
+Every transaction must be traceable through complete audit logs.
+
+---
+
+## Scalability
+
+The architecture shall support future ERP modules without major redesign.
+
+---
+
+## Security
+
+Role-based permissions shall ensure users only access information relevant to their responsibilities.
+
+---
+
+## Performance
+
+The application shall remain responsive even with large datasets, multiple concurrent users, and multiple active projects.
+
+---
+
+## Maintainability
+
+The software shall follow modular architecture, Laravel best practices, reusable components, and clean coding standards to simplify long-term maintenance.
+
+---
+
+# Current Project Status
+
+## Current Version
+
+Version 2.0 (Development)
+
+---
+
+## Current Phase
+
+Phase 2
+
+ERP Foundation & Workflow Stabilization
+
+---
+
+## Current Focus
+
+* Engineer Workflow Completion
+* PMO Approval Workflow
+* Master Data Standardization
+* Live Testing Preparation
+
+---
+
+# Development Principles
+
+Every module developed within Ravion DPR shall follow these standards:
+
+* Business-first architecture
+* Modular development
+* Reusable components
+* Database normalization
+* Audit logging
+* Role-based access
+* Standardized validations
+* Responsive design
+* Future ERP compatibility
+
+---
+
+# Long-Term Product Vision
+
+Ravion DPR is not intended to remain only a Daily Progress Reporting application.
+
+The long-term vision is to evolve the platform into a complete Construction ERP capable of managing every operational aspect of construction projects, including planning, execution, procurement, inventory, finance integration, analytics, and enterprise reporting.
+
+The architecture has therefore been intentionally designed to support continuous expansion without requiring fundamental redesign of existing modules.
+
+---
+
+**End of Chapter 1**
+
+**Next Chapter:** Technology Stack & System Architecture
+
+# Chapter 2 – Technology Stack & System Architecture
+
+---
+
+# Technology Stack
+
+Ravion DPR is built using a modern, scalable, and open-source technology stack that provides long-term maintainability, performance, and compatibility with future enterprise modules.
+
+The technology selection emphasizes reliability, developer productivity, security, and ease of deployment.
+
+| Layer                | Technology                                        |
+| -------------------- | ------------------------------------------------- |
+| Programming Language | PHP 8.3+                                          |
+| Framework            | Laravel 12                                        |
+| Database             | MySQL 8.x                                         |
+| ORM                  | Laravel Eloquent                                  |
+| Frontend             | Blade Templates                                   |
+| CSS Framework        | Tailwind CSS                                      |
+| JavaScript           | Vanilla JavaScript (Current), Alpine.js (Planned) |
+| Authentication       | Laravel Authentication                            |
+| Authorization        | Role-Based Access Control (RBAC)                  |
+| Version Control      | Git                                               |
+| Repository           | GitHub                                            |
+| Web Server           | Apache / Nginx                                    |
+| Local Development    | XAMPP / Laragon                                   |
+| Deployment           | Linux VPS / Cloud Server (Planned)                |
+
+---
+
+# Software Architecture
+
+Ravion DPR follows a layered architecture based on Laravel's MVC pattern.
+
+```
+Presentation Layer
+        │
+Blade Views
+        │
+Controllers
+        │
+Business Logic
+        │
+Models (Eloquent ORM)
+        │
+Database (MySQL)
+```
+
+Each layer has a clearly defined responsibility.
+
+---
+
+# Architectural Principles
+
+The system follows the following principles:
+
+## Modular Design
+
+Every functional area is developed as an independent module.
+
+Examples:
+
+* Projects
+* Labour
+* Materials
+* DPR
+* Inventory
+* Planning
+* Reports
+
+Each module should remain independent while integrating with shared master data.
+
+---
+
+## Master Data Driven
+
+The application minimizes manual text entry.
+
+Instead, users select data from standardized master records.
+
+Examples include:
+
+* Project
+* Activity
+* Labour Category
+* Labour Type
+* Material Category
+* Material
+* Brand
+* Unit
+* Vendor
+* Contractor
+
+This ensures consistency and improves reporting accuracy.
+
+---
+
+## Workflow Based
+
+Every business transaction follows a controlled workflow.
+
+Example:
+
+Engineer creates DPR
+
+↓
+
+Submit
+
+↓
+
+PMO Review
+
+↓
+
+Approved / Rejected
+
+↓
+
+Reports
+
+The same workflow philosophy will be applied to other modules such as Material Requests, Purchase Orders, and Planning.
+
+---
+
+## Role-Based Access
+
+Users are granted access based on their assigned role.
+
+Permissions are controlled centrally and determine:
+
+* Menu visibility
+* Screen access
+* Create
+* Edit
+* Delete
+* Approve
+* Reports
+* Administration
+
+---
+
+## Audit First
+
+Every important business transaction is recorded in the Audit Log.
+
+Tracked events include:
+
+* Create
+* Update
+* Submit
+* Approve
+* Reject
+* Activate
+* Deactivate
+
+Future versions may also log:
+
+* Login
+* Logout
+* Password changes
+* Export actions
+
+---
+
+# Folder Structure
+
+The project follows the standard Laravel directory structure.
+
+```
+app/
+│
+├── Http/
+│   ├── Controllers/
+│   ├── Middleware/
+│
+├── Models/
+│
+├── Helpers/
+│
+├── Policies/ (Future)
+│
+└── Services/ (Future)
+```
+
+```
+resources/
+│
+├── views/
+│
+├── layouts/
+│
+├── components/ (Future)
+│
+└── partials/
+```
+
+```
+database/
+│
+├── migrations/
+├── seeders/
+└── factories/
+```
+
+---
+
+# Coding Standards
+
+The following coding standards shall be followed throughout the project.
+
+## Controllers
+
+Controllers should only coordinate requests.
+
+Business logic should remain minimal and reusable.
+
+---
+
+## Models
+
+Models define:
+
+* Relationships
+* Fillable fields
+* Accessors
+* Scopes
+* Mutators
+
+---
+
+## Views
+
+Views should contain presentation logic only.
+
+Complex business calculations should never be performed inside Blade templates.
+
+---
+
+## Helpers
+
+Shared utility functions such as Audit Logging shall be implemented through helper classes.
+
+---
+
+## Validation
+
+All validation must occur inside Controllers (or Form Requests in future versions).
+
+Validation messages should be user-friendly.
+
+---
+
+# Naming Conventions
+
+## Controllers
+
+```
+ProjectController
+
+MaterialController
+
+LabourReportController
+```
+
+---
+
+## Models
+
+Singular names.
+
+```
+Project
+
+Material
+
+Vendor
+
+LabourType
+```
+
+---
+
+## Database Tables
+
+Plural snake_case.
+
+Examples:
+
+```
+projects
+
+materials
+
+material_categories
+
+labour_types
+
+vendors
+```
+
+---
+
+## Primary Keys
+
+Every table shall use:
+
+```
+id
+```
+
+as the primary key.
+
+---
+
+## Foreign Keys
+
+Examples:
+
+```
+project_id
+
+material_id
+
+vendor_id
+
+contractor_id
+
+labour_category_id
+```
+
+---
+
+# Database Design Philosophy
+
+The database follows normalization principles.
+
+Goals:
+
+* Avoid duplicate data
+* Maintain referential integrity
+* Simplify reporting
+* Improve scalability
+
+Relationships use Laravel Eloquent ORM.
+
+Examples:
+
+```
+Project
+    hasMany DPR
+
+Material Category
+    hasMany Materials
+
+Material
+    belongsTo Material Category
+
+Vendor
+    belongsTo Material Category
+
+Labour Category
+    hasMany Labour Types
+```
+
+---
+
+# Security Principles
+
+The application follows the principle of least privilege.
+
+Users receive only the permissions required for their responsibilities.
+
+Sensitive operations such as approvals, configuration changes, and master management are restricted to authorized roles.
+
+Future enhancements include:
+
+* Two-Factor Authentication (2FA)
+* Session timeout
+* Password expiry policies
+* Login audit trails
+
+---
+
+# Performance Strategy
+
+The application is designed for efficient operation across multiple projects.
+
+Performance considerations include:
+
+* Eloquent eager loading
+* Database indexing
+* Pagination
+* Lazy loading where appropriate
+* Optimized queries
+* Reusable components
+
+Future enhancements:
+
+* Redis caching
+* Queue workers
+* Background jobs
+* Scheduled tasks
+
+---
+
+# Scalability Strategy
+
+The architecture is designed to support future expansion without major structural changes.
+
+Planned enterprise modules include:
+
+* Inventory Management
+* Procurement
+* Purchase Orders
+* BOQ
+* Billing
+* QA/QC
+* Safety
+* Equipment
+* Asset Management
+* Payroll Integration
+* CRM
+* Vendor Portal
+* Customer Portal
+* Mobile Application
+* Odoo Integration
+
+---
+
+# Current Implementation Status
+
+## Completed
+
+* Laravel Project Structure
+* Authentication
+* Role-Based Access
+* Master Data Foundation
+* Audit Logging Framework
+* Engineer DPR Workflow
+* PMO Approval Workflow
+* Material & Labour Master Integration
+
+## In Progress
+
+* Live Workflow Validation
+* Inventory Engine
+* Dashboard Improvements
+
+## Planned
+
+* UI/UX Modernization
+* Notification Engine
+* Stock Ledger
+* Reporting Suite
+* Mobile Optimization
+* ERP Expansion Modules
+
+---
+
+**End of Chapter 2**
+
+**Next Chapter:** User Roles, Permissions & Security Architecture
+
+# Chapter 3 – User Roles, Permissions & Security Architecture
+
+---
+
+# Introduction
+
+The Ravion DPR platform follows a **Role-Based Access Control (RBAC)** architecture.
+
+Every authenticated user is assigned one or more predefined roles. Permissions are granted to roles rather than individual users, ensuring centralized administration, simplified maintenance, and improved security.
+
+The RBAC model ensures that users can only access the data and functionality required to perform their assigned responsibilities.
+
+---
+
+# Security Objectives
+
+The security model has been designed to achieve the following objectives:
+
+* Protect sensitive project information.
+* Prevent unauthorized data access.
+* Restrict approval authority.
+* Maintain complete auditability.
+* Simplify user administration.
+* Support future enterprise modules.
+
+---
+
+# User Hierarchy
+
+The application follows the organizational hierarchy shown below.
+
+```text
+Management
+        │
+Administrator
+        │
+DGM
+        │
+PMO
+        │
+Project Manager (Future)
+        │
+Site Engineer
+        │
+Store Incharge (Future)
+        │
+Supervisor (Future)
+        │
+Contractor (Future Portal)
+```
+
+Each level inherits greater operational responsibility but not unrestricted system access.
+
+---
+
+# Standard User Roles
+
+The following roles are currently defined.
+
+## Administrator
+
+### Purpose
+
+Complete system administration.
+
+### Responsibilities
+
+* Manage users
+* Manage roles
+* Manage permissions
+* Configure masters
+* View all projects
+* Approve where required
+* Audit monitoring
+* System maintenance
+
+### Access
+
+✔ Complete application
+
+---
+
+## DGM (Deputy General Manager)
+
+### Purpose
+
+Corporate-level project monitoring.
+
+### Responsibilities
+
+* Monitor all projects
+* Review dashboards
+* View reports
+* Review DPRs
+* Approve selected workflows
+* Performance monitoring
+
+### Access
+
+* All projects
+* Reports
+* Dashboards
+* PMO functions
+
+---
+
+## PMO (Project Management Office)
+
+### Purpose
+
+Central technical verification.
+
+### Responsibilities
+
+* Review DPR submissions
+* Verify labour
+* Verify materials
+* Approve DPR
+* Reject DPR
+* Enter review remarks
+* Project monitoring
+
+### Access
+
+* PMO Queue
+* DPR Review
+* Reports
+
+Cannot:
+
+* Delete master data
+* Modify user permissions
+* System configuration
+
+---
+
+## Site Engineer
+
+### Purpose
+
+Daily project execution and reporting.
+
+### Responsibilities
+
+* Create DPR
+* Edit Draft DPR
+* Submit DPR
+* Record labour
+* Record material received
+* Record material consumption
+* Record material requirement
+* Update project progress
+
+Cannot:
+
+* Approve DPR
+* Edit approved DPR
+* Access system settings
+
+---
+
+# Future Roles
+
+The following roles are planned.
+
+---
+
+## Store Incharge
+
+Responsibilities
+
+* Material receipts
+* Material issue
+* Stock verification
+* Inventory management
+
+---
+
+## Purchase Officer
+
+Responsibilities
+
+* Vendor management
+* Purchase requests
+* Purchase Orders
+* Supplier quotations
+
+---
+
+## Accounts
+
+Responsibilities
+
+* Billing
+* Vendor payments
+* Financial reports
+
+---
+
+## QA/QC Engineer
+
+Responsibilities
+
+* Quality inspections
+* Material testing
+* NCR management
+* Quality reports
+
+---
+
+## Safety Officer
+
+Responsibilities
+
+* Safety inspections
+* Incident reporting
+* PPE compliance
+* Safety observations
+
+---
+
+## Project Manager
+
+Responsibilities
+
+* Project monitoring
+* Team management
+* Resource allocation
+* Planning approval
+
+---
+
+## Managing Director
+
+Responsibilities
+
+* Executive dashboards
+* Multi-project analytics
+* Financial overview
+* Strategic reporting
+
+---
+
+## Contractor Portal (Future)
+
+Contractors will receive restricted portal access.
+
+Capabilities may include:
+
+* View assigned work
+* Labour deployment
+* Material requests
+* Progress updates
+* Document uploads
+
+---
+
+# Permission Categories
+
+Permissions are grouped into functional areas.
+
+## Dashboard
+
+* View Dashboard
+* View KPIs
+* Executive Dashboard
+
+---
+
+## Projects
+
+* Create
+* Edit
+* View
+* Delete
+
+---
+
+## DPR
+
+* Create
+* Edit
+* Submit
+* Approve
+* Reject
+* View
+
+---
+
+## Labour
+
+* Labour Reports
+* Labour Masters
+* Labour Categories
+* Labour Types
+
+---
+
+## Materials
+
+* Material Received
+* Material Consumed
+* Material Required
+* Material Masters
+* Material Categories
+* Units
+* Brands
+* Vendors
+
+---
+
+## Planning
+
+Future permissions:
+
+* Weekly Planning
+* Monthly Planning
+* Recovery Planning
+* Look Ahead Planning
+
+---
+
+## Inventory
+
+Future permissions:
+
+* Stock Ledger
+* Stock Adjustment
+* Stock Verification
+* Material Transfer
+
+---
+
+## Reports
+
+Permissions include:
+
+* Daily Reports
+* Weekly Reports
+* Monthly Reports
+* Labour Reports
+* Material Reports
+* Inventory Reports
+* Executive Reports
+
+---
+
+## Administration
+
+* Users
+* Roles
+* Permissions
+* Audit Logs
+* System Settings
+
+---
+
+# Permission Matrix
+
+| Module            | Admin |  DGM |   PMO   |    Engineer   |
+| ----------------- | :---: | :--: | :-----: | :-----------: |
+| Dashboard         |   ✔   |   ✔  |    ✔    |       ✔       |
+| Projects          |   ✔   | View |   View  | Assigned Only |
+| DPR Create        |   ✔   | View |   View  |       ✔       |
+| DPR Submit        |   ✔   | View |   View  |       ✔       |
+| DPR Approve       |   ✔   |   ✔  |    ✔    |       ✖       |
+| Labour Reports    |   ✔   |   ✔  |    ✔    |       ✔       |
+| Material Received |   ✔   |   ✔  |    ✔    |       ✔       |
+| Material Consumed |   ✔   |   ✔  |    ✔    |       ✔       |
+| Masters           |   ✔   | View | Limited |       ✖       |
+| Audit Logs        |   ✔   |   ✔  |   View  |       ✖       |
+
+---
+
+# Project-Level Security
+
+Engineers should only access projects assigned to them.
+
+Rules:
+
+* Assigned Engineer → Assigned Projects
+* PMO → All Projects
+* DGM → All Projects
+* Administrator → Complete Access
+
+This rule is already implemented for project selection and should remain consistent throughout the application.
+
+---
+
+# Approval Authority
+
+Only authorized roles may approve business transactions.
+
+Examples:
+
+| Transaction           | Approval Authority |
+| --------------------- | ------------------ |
+| DPR                   | PMO / Admin / DGM  |
+| Material Verification | PMO                |
+| Future Purchase Order | Purchase Manager   |
+| Future Payment        | Accounts           |
+
+---
+
+# Audit Security
+
+Every sensitive operation shall generate an audit record.
+
+Tracked actions include:
+
+* Create
+* Update
+* Delete (where permitted)
+* Submit
+* Approve
+* Reject
+* Activate
+* Deactivate
+
+Future enhancements:
+
+* Login History
+* Failed Login Attempts
+* Session Tracking
+* IP Address Logging
+* Browser Information
+
+---
+
+# Future Security Enhancements
+
+The following enterprise-grade security features are planned:
+
+* Two-Factor Authentication (2FA)
+* Password Expiry Policies
+* Account Lockout
+* Single Sign-On (SSO)
+* LDAP / Active Directory Integration
+* API Token Authentication
+* Device Recognition
+* Session Timeout
+* Security Notifications
+
+---
+
+# Current Implementation Status
+
+## Completed
+
+* Authentication
+* Role-Based Access
+* Project Assignment
+* Engineer Restrictions
+* PMO Approval Workflow
+* Audit Logging
+
+---
+
+## In Progress
+
+* Permission refinement
+* Project-level authorization improvements
+
+---
+
+## Planned
+
+* Dynamic Permission Management
+* Policy Classes
+* Gate Authorization
+* Two-Factor Authentication
+* API Authentication
+* Enterprise Security Enhancements
+
+---
+
+**End of Chapter 3**
+
+**Next Chapter:** Module Architecture & Master Data Design
+

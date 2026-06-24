@@ -48,6 +48,8 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\LabourCategoryController;
 use App\Http\Controllers\UnitMasterController;
 use App\Http\Controllers\BrandMasterController;
+use App\Http\Controllers\ActivityDivisionController;
+use App\Http\Controllers\WorkStageController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -59,6 +61,12 @@ Route::get('/dashboard', function () {
 
 Route::middleware('auth')->group(function () {
 
+    /*
+    |--------------------------------------------------------------------------
+    | Profile
+    |--------------------------------------------------------------------------
+    */
+
     Route::get('/profile', [ProfileController::class, 'edit'])
         ->name('profile.edit');
 
@@ -68,40 +76,16 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
-    Route::get('/labour-categories', [LabourCategoryController::class, 'index'])
-    ->name('labour-categories.index')
-    ->middleware('permission:labour_types.view');
+        Route::get('/ajax/projects/{project}/blocks', [ProjectLocationController::class, 'ajaxBlocks'])->name('ajax.project.blocks');
+Route::get('/ajax/blocks/{block}/floors', [ProjectLocationController::class, 'ajaxFloors'])->name('ajax.block.floors');
+Route::get('/ajax/floors/{floor}/units', [ProjectLocationController::class, 'ajaxUnits'])->name('ajax.floor.units');
+Route::get('/ajax/units/{unit}/rooms', [ProjectLocationController::class, 'ajaxRooms'])->name('ajax.unit.rooms');
+Route::get('/ajax/rooms/{room}/subspaces', [ProjectLocationController::class, 'ajaxSubspaces'])->name('ajax.room.subspaces');
+Route::resource('activity-divisions', ActivityDivisionController::class)
+    ->middleware('permission:activity_masters.manage');
 
-Route::post('/labour-categories', [LabourCategoryController::class, 'store'])
-    ->name('labour-categories.store')
-    ->middleware('permission:labour_types.view');
-
-Route::get('/labour-categories/{labourCategory}/edit', [LabourCategoryController::class, 'edit'])
-    ->name('labour-categories.edit')
-    ->middleware('permission:labour_types.view');
-
-Route::put('/labour-categories/{labourCategory}', [LabourCategoryController::class, 'update'])
-    ->name('labour-categories.update')
-    ->middleware('permission:labour_types.view');
-
-Route::patch('/labour-categories/{labourCategory}/toggle-status', [LabourCategoryController::class, 'toggleStatus'])
-    ->name('labour-categories.toggle-status')
-    ->middleware('permission:labour_types.view');    
-
-    Route::resource('labour-types', LabourTypeController::class)->middleware('permission:labour_types.view');
-
-    Route::post( '/labour-types/{labourType}/toggle', [LabourTypeController::class, 'toggle']
-    )->name('labour-types.toggle');
-
-    Route::patch('/vendors/{vendor}/toggle-status', [VendorController::class, 'toggleStatus'])
-    ->name('vendors.toggle-status')
-    ->middleware('permission:vendors.view');
-
-    Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
-    ->name('dprs.approve');
-
-Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
-    ->name('dprs.reject');
+    Route::resource('work-stages', WorkStageController::class)
+    ->middleware('permission:activity_masters.manage');
 
 
     /*
@@ -114,20 +98,20 @@ Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
         ->middleware('permission:dashboard.view');
 
     Route::get('/engineer-dashboard', [DashboardController::class, 'engineer'])
-    ->name('engineer-dashboard')
-    ->middleware('permission:engineer_dashboard.view');
+        ->name('engineer-dashboard')
+        ->middleware('permission:engineer_dashboard.view');
 
     Route::get('/pmo-dashboard', [DashboardController::class, 'pmo'])
-    ->name('pmo-dashboard')
-    ->middleware('permission:pmo_dashboard.view');
+        ->name('pmo-dashboard')
+        ->middleware('permission:pmo_dashboard.view');
 
     Route::get('/ceo-dashboard', [DashboardController::class, 'ceo'])
-    ->name('ceo-dashboard')
-    ->middleware('permission:ceo_dashboard.view');
+        ->name('ceo-dashboard')
+        ->middleware('permission:ceo_dashboard.view');
 
     Route::get('/accountant-dashboard', [DashboardController::class, 'accountant'])
-    ->name('accountant-dashboard')
-    ->middleware('permission:accountant_dashboard.view');
+        ->name('accountant-dashboard')
+        ->middleware('permission:accountant_dashboard.view');
 
     Route::get('/project-progress-dashboard', [ProjectProgressDashboardController::class, 'index'])
         ->name('project-progress-dashboard.index')
@@ -149,57 +133,6 @@ Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
         ->name('engineer-productivity')
         ->middleware('permission:reports.view');
 
-        Route::patch('/material-categories/{materialCategory}/toggle-status', [MaterialCategoryController::class, 'toggleStatus'])
-    ->name('material-categories.toggle-status')
-    ->middleware('permission:material_categories.view');
-
-    Route::patch('/materials/{material}/toggle-status', [MaterialController::class, 'toggleStatus'])
-    ->name('materials.toggle-status')
-    ->middleware('permission:materials.view');
-
-    Route::resource('materials', MaterialController::class)
-    ->middleware('permission:materials.view');
-
-    Route::get('/unit-masters', [UnitMasterController::class, 'index'])
-    ->name('unit-masters.index')
-    ->middleware('permission:materials.view');
-
-Route::post('/unit-masters', [UnitMasterController::class, 'store'])
-    ->name('unit-masters.store')
-    ->middleware('permission:materials.view');
-
-Route::get('/unit-masters/{unitMaster}/edit', [UnitMasterController::class, 'edit'])
-    ->name('unit-masters.edit')
-    ->middleware('permission:materials.view');
-
-Route::put('/unit-masters/{unitMaster}', [UnitMasterController::class, 'update'])
-    ->name('unit-masters.update')
-    ->middleware('permission:materials.view');
-
-Route::patch('/unit-masters/{unitMaster}/toggle-status', [UnitMasterController::class, 'toggleStatus'])
-    ->name('unit-masters.toggle-status')
-    ->middleware('permission:materials.view');
-
-    Route::get('/brand-masters', [BrandMasterController::class, 'index'])
-    ->name('brand-masters.index')
-    ->middleware('permission:materials.view');
-
-Route::post('/brand-masters', [BrandMasterController::class, 'store'])
-    ->name('brand-masters.store')
-    ->middleware('permission:materials.view');
-
-Route::get('/brand-masters/{brandMaster}/edit', [BrandMasterController::class, 'edit'])
-    ->name('brand-masters.edit')
-    ->middleware('permission:materials.view');
-
-Route::put('/brand-masters/{brandMaster}', [BrandMasterController::class, 'update'])
-    ->name('brand-masters.update')
-    ->middleware('permission:materials.view');
-
-Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterController::class, 'toggleStatus'])
-    ->name('brand-masters.toggle-status')
-    ->middleware('permission:materials.view');
-
 
     /*
     |--------------------------------------------------------------------------
@@ -219,20 +152,110 @@ Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterControlle
     Route::resource('contractors', ContractorController::class)
         ->middleware('permission:contractors.view');
 
-    Route::resource('materials', MaterialController::class)
-        ->middleware('permission:materials.view');
-
     Route::resource('material-categories', MaterialCategoryController::class)
         ->middleware('permission:material_categories.view');
 
+    Route::patch('/material-categories/{materialCategory}/toggle-status', [MaterialCategoryController::class, 'toggleStatus'])
+        ->name('material-categories.toggle-status')
+        ->middleware('permission:material_categories.view');
+
+    Route::resource('materials', MaterialController::class)
+        ->middleware('permission:materials.view');
+
+    Route::patch('/materials/{material}/toggle-status', [MaterialController::class, 'toggleStatus'])
+        ->name('materials.toggle-status')
+        ->middleware('permission:materials.view');
+
     Route::resource('vendors', VendorController::class)
+        ->middleware('permission:vendors.view');
+
+    Route::patch('/vendors/{vendor}/toggle-status', [VendorController::class, 'toggleStatus'])
+        ->name('vendors.toggle-status')
         ->middleware('permission:vendors.view');
 
     Route::resource('machinery-tools', MachineryToolController::class)
         ->middleware('permission:machinery_tools.view');
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Labour Categories & Labour Types
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/labour-categories', [LabourCategoryController::class, 'index'])
+        ->name('labour-categories.index')
+        ->middleware('permission:labour_types.view');
+
+    Route::post('/labour-categories', [LabourCategoryController::class, 'store'])
+        ->name('labour-categories.store')
+        ->middleware('permission:labour_types.view');
+
+    Route::get('/labour-categories/{labourCategory}/edit', [LabourCategoryController::class, 'edit'])
+        ->name('labour-categories.edit')
+        ->middleware('permission:labour_types.view');
+
+    Route::put('/labour-categories/{labourCategory}', [LabourCategoryController::class, 'update'])
+        ->name('labour-categories.update')
+        ->middleware('permission:labour_types.view');
+
+    Route::patch('/labour-categories/{labourCategory}/toggle-status', [LabourCategoryController::class, 'toggleStatus'])
+        ->name('labour-categories.toggle-status')
+        ->middleware('permission:labour_types.view');
+
     Route::resource('labour-types', LabourTypeController::class)
         ->middleware('permission:labour_types.view');
+
+    Route::post('/labour-types/{labourType}/toggle', [LabourTypeController::class, 'toggle'])
+        ->name('labour-types.toggle')
+        ->middleware('permission:labour_types.view');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unit & Brand Masters
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/unit-masters', [UnitMasterController::class, 'index'])
+        ->name('unit-masters.index')
+        ->middleware('permission:materials.view');
+
+    Route::post('/unit-masters', [UnitMasterController::class, 'store'])
+        ->name('unit-masters.store')
+        ->middleware('permission:materials.view');
+
+    Route::get('/unit-masters/{unitMaster}/edit', [UnitMasterController::class, 'edit'])
+        ->name('unit-masters.edit')
+        ->middleware('permission:materials.view');
+
+    Route::put('/unit-masters/{unitMaster}', [UnitMasterController::class, 'update'])
+        ->name('unit-masters.update')
+        ->middleware('permission:materials.view');
+
+    Route::patch('/unit-masters/{unitMaster}/toggle-status', [UnitMasterController::class, 'toggleStatus'])
+        ->name('unit-masters.toggle-status')
+        ->middleware('permission:materials.view');
+
+    Route::get('/brand-masters', [BrandMasterController::class, 'index'])
+        ->name('brand-masters.index')
+        ->middleware('permission:materials.view');
+
+    Route::post('/brand-masters', [BrandMasterController::class, 'store'])
+        ->name('brand-masters.store')
+        ->middleware('permission:materials.view');
+
+    Route::get('/brand-masters/{brandMaster}/edit', [BrandMasterController::class, 'edit'])
+        ->name('brand-masters.edit')
+        ->middleware('permission:materials.view');
+
+    Route::put('/brand-masters/{brandMaster}', [BrandMasterController::class, 'update'])
+        ->name('brand-masters.update')
+        ->middleware('permission:materials.view');
+
+    Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterController::class, 'toggleStatus'])
+        ->name('brand-masters.toggle-status')
+        ->middleware('permission:materials.view');
 
 
     /*
@@ -275,24 +298,21 @@ Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterControlle
     Route::resource('dprs', DprController::class)
         ->middleware('permission:dpr.view');
 
+    Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf'])
+        ->name('dprs.pdf')
+        ->middleware('permission:dpr.view');
+
     Route::get('/pmo/dprs', [DprController::class, 'pmoQueue'])
         ->name('pmo.dprs')
         ->middleware('permission:dpr_reviews.view');
 
     Route::post('/dprs/{id}/approve', [DprController::class, 'approve'])
+        ->name('dprs.approve')
         ->middleware('permission:dpr_reviews.approve');
 
     Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
+        ->name('dprs.reject')
         ->middleware('permission:dpr_reviews.reject');
-
-    Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf'])
-        ->middleware('permission:dpr.view');
-
-        Route::post('/dprs/{dpr}/approve', [DprController::class, 'approve'])
-    ->name('dprs.approve');
-
-    Route::post('/dprs/{dpr}/reject', [DprController::class, 'reject'])
-    ->name('dprs.reject');
 
 
     /*
@@ -515,10 +535,22 @@ Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterControlle
         ->name('location-subspace-masters.toggle-status')
         ->middleware('permission:location_masters.manage');
 
+        Route::get('/project-locations/{project}/wizard', [ProjectLocationController::class, 'wizard'])
+    ->name('project-locations.wizard')
+    ->middleware('permission:location_masters.manage');
+
+Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationController::class, 'generateWizard'])
+    ->name('project-locations.wizard.generate')
+    ->middleware('permission:location_masters.manage');
+
+    Route::patch('/project-locations/floors/{projectFloor}/convert-usage', [ProjectLocationController::class, 'convertFloorUsage'])
+    ->name('project-locations.floors.convert-usage')
+    ->middleware('permission:location_masters.manage');
+
 
     /*
     |--------------------------------------------------------------------------
-    | Labour
+    | Labour Reports
     |--------------------------------------------------------------------------
     */
 
@@ -711,17 +743,13 @@ Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterControlle
         ->name('role-permissions.update')
         ->middleware('permission:role_permissions.manage');
 
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])
+        ->name('audit-logs.index')
+        ->middleware('permission:audit_trail.view');
 
-        Route::get('/audit-logs', [AuditLogController::class, 'index'])
-    ->name('audit-logs.index')
-    ->middleware('permission:audit_trail.view');
-
-Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])
-    ->name('audit-logs.show')
-    ->middleware('permission:audit_trail.view');
-
-
-        
+    Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])
+        ->name('audit-logs.show')
+        ->middleware('permission:audit_trail.view');
 });
 
 require __DIR__.'/auth.php';

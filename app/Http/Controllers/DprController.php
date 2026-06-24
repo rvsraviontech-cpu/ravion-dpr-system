@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\DB;
 use App\Models\Project;
 use App\Models\Activity;
 use App\Models\Contractor;
@@ -25,97 +25,117 @@ use App\Helpers\AuditHelper;
 
 class DprController extends Controller
 {
-    public function index(Request $request)
-{
-    $query = Dpr::with('project', 'user');
-
-    // Engineer restriction
-
-    if(auth()->user()->role->name == 'Engineer')
+    private function userRole()
     {
-        $query->where('user_id', auth()->id());
+        return auth()->user()->role->name ?? null;
     }
 
-    // Project filter
-
-    if($request->project_id)
+    private function isEngineer()
     {
-        $query->where('project_id', $request->project_id);
+        return $this->userRole() === 'Engineer';
     }
 
-    // Status filter
-
-    if($request->status)
+    private function isPmoReviewer()
     {
-        $query->where('status', $request->status);
+        return in_array($this->userRole(), ['Admin', 'PMO', 'DGM']);
     }
 
-    // Engineer filter
-
-    if($request->user_id)
+    private function ensureEngineerProjectAccess($projectId)
     {
-        $query->where('user_id', $request->user_id);
-    }
-    if($request->from_date)
-{
-    $query->whereDate(
-        'dpr_date',
-        '>=',
-        $request->from_date
-    );
-}
-
-if($request->to_date)
-{
-    $query->whereDate(
-        'dpr_date',
-        '<=',
-        $request->to_date
-    );
-}
-
-    $dprs = $query->latest()->get();
-
-    if(auth()->user()->role->name == 'Engineer')
-{
-    $projects = auth()->user()->projects;
-
-    $engineers = \App\Models\User::where(
-        'id',
-        auth()->id()
-    )->get();
-}
-else
-{
-    $projects = Project::all();
-
-    $engineers = \App\Models\User::whereHas(
-        'role',
-        function($q){
-            $q->where('name', 'Engineer');
+        if (!$this->isEngineer()) {
+            return;
         }
-    )->get();
+
+        $hasAccess = auth()->user()
+            ->projects()
+            ->where('projects.id', $projectId)
+            ->exists();
+
+        abort_unless($hasAccess, 403, 'You are not assigned to this project.');
+    }
+
+    private function ensureDprAccess(Dpr $dpr)
+    {
+        if ($this->isEngineer()) {
+            abort_unless($dpr->user_id === auth()->id(), 403, 'Unauthorized DPR access.');
+        }
+    }
+
+    private function ensureEditable(Dpr $dpr)
+{
+    $this->ensureDprAccess($dpr);
+
+    if ($dpr->status === 'Approved') {
+        return redirect('/dprs')
+            ->with('success', 'Approved DPR cannot be edited.');
+    }
+
+    if ($this->isEngineer() && !in_array($dpr->status, ['Pending', 'Rejected'])) {
+        return redirect('/dprs')
+            ->with('success', 'This DPR cannot be edited at the current stage.');
+    }
+
+    return null;
 }
+    public function index(Request $request)
+    {
+        $query = Dpr::with('project', 'user');
 
+        if ($this->isEngineer()) {
+            $query->where('user_id', auth()->id());
+        }
 
+        if ($request->project_id) {
+            $query->where('project_id', $request->project_id);
+        }
 
-    return view('dprs.index', compact(
-        'dprs',
-        'projects',
-        'engineers'
-    ));
-}
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
 
-// CREATE FUNCTION
+        if ($request->user_id && !$this->isEngineer()) {
+            $query->where('user_id', $request->user_id);
+        }
+
+        if ($request->from_date) {
+            $query->whereDate('dpr_date', '>=', $request->from_date);
+        }
+
+        if ($request->to_date) {
+            $query->whereDate('dpr_date', '<=', $request->to_date);
+        }
+
+        $dprs = $query->latest()->get();
+
+        if ($this->isEngineer()) {
+            $projects = auth()->user()->projects;
+
+            $engineers = \App\Models\User::where('id', auth()->id())->get();
+        } else {
+            $projects = Project::all();
+
+            $engineers = \App\Models\User::whereHas('role', function ($q) {
+                $q->where('name', 'Engineer');
+            })->get();
+        }
+
+        return view('dprs.index', compact(
+            'dprs',
+            'projects',
+            'engineers'
+        ));
+    }
 
     public function create()
     {
-        $projects = auth()->user()->projects;
-        $activities = Activity::all();
-        $contractors = Contractor::all();
-        $labourTypes = \App\Models\LabourType::all();
-        $materials = Material::all();
-        $vendors = Vendor::all();
+        $projects = $this->isEngineer()
+            ? auth()->user()->projects
+            : Project::where('status', 1)->get();
+
+        $activities = Activity::where('is_active', true)->orderBy('activity_name')->get();
+        $contractors = Contractor::where('status', 1)->orderBy('contractor_name')->get();
+        $materials = Material::where('is_active', true)->orderBy('material_name')->get();
+        $vendors = Vendor::where('is_active', true)->orderBy('vendor_name')->get();
         $machineries = MachineryTool::all();
 
         $projectBlocks = \App\Models\ProjectBlock::where('is_active', true)->get();
@@ -123,29 +143,32 @@ else
         $projectUnits = \App\Models\ProjectUnit::where('is_active', true)->get();
         $projectRooms = \App\Models\ProjectRoom::where('is_active', true)->get();
         $projectSubspaces = \App\Models\ProjectSubspace::where('is_active', true)->get();
-        $activityMappings = \App\Models\ActivityMapping::with('division')->where('is_active', true)
-        ->orderBy('activity_name') ->get();
+
+        $activityMappings = \App\Models\ActivityMapping::with('division')
+            ->where('is_active', true)
+            ->orderBy('activity_name')
+            ->get();
 
         $activityDivisions = \App\Models\ActivityDivision::where('is_active', true)
-    ->orderBy('sequence')
-    ->get();
-    $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
-    ->orderBy('category_name')->get();
-    $labourCategories = \App\Models\LabourCategory::where('is_active', true)
-    ->orderBy('category_name')
-    ->get();
+            ->orderBy('sequence')
+            ->get();
 
-$labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
-    ->orderBy('labour_type_name')
-    ->get();
+        $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
+            ->orderBy('category_name')
+            ->get();
 
-        
+        $labourCategories = \App\Models\LabourCategory::where('is_active', true)
+            ->orderBy('category_name')
+            ->get();
+
+        $labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
+            ->orderBy('labour_type_name')
+            ->get();
 
         return view('dprs.create', compact(
             'projects',
             'activities',
             'contractors',
-            'labourTypes',
             'materials',
             'vendors',
             'machineries',
@@ -158,703 +181,751 @@ $labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
             'activityDivisions',
             'materialCategories',
             'labourCategories',
-'labourTypes',
+            'labourTypes'
         ));
     }
 
-    // STORE FUNCTION
-
     public function store(Request $request)
     {
-    
-    $request->validate([
-
-    'project_id' => 'required',
-
-    'dpr_date' => 'required',
-
-    'activity_id.*' => 'required',
-
-    'contractor_id.*' => 'required',
-
-    'quantity_completed.*' =>
-        'required|numeric|min:0',
-
-        'photos.*' => 'image|mimes:jpg,jpeg,png|max:5120',
-
-]);
-    
-
-    $dpr = Dpr::create([
-            'project_id' => $request->project_id,
-            'user_id' => auth()->id(),
-            'dpr_date' => $request->dpr_date,
-            'weather' => $request->weather,
-            'remarks' => $request->remarks,
-            'status' => 'Pending',
+        $request->validate([
+            'project_id' => 'required|exists:projects,id',
+            'dpr_date' => 'required|date',
+            'weather' => 'nullable|string|max:255',
+            'remarks' => 'nullable|string',
+            'activity_id.*' => 'required|exists:activities,id',
+            'contractor_id.*' => 'nullable|exists:contractors,id',
+            'quantity_completed.*' => 'required|numeric|min:0',
+            'photos.*' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        foreach ($request->activity_id as $index => $activityId)
-{
-    DprWorkItem::create([
+        $this->ensureEngineerProjectAccess($request->project_id);
 
-    'dpr_id' => $dpr->id,
+        DB::transaction(function () use ($request, &$dpr) {
+            $dpr = Dpr::create([
+                'project_id' => $request->project_id,
+                'user_id' => auth()->id(),
+                'dpr_date' => $request->dpr_date,
+                'weather' => $request->weather,
+                'remarks' => $request->remarks,
+                'status' => 'Pending',
+                'pmo_remarks' => null,
+            ]);
 
-    'activity_id' => $activityId,
+            foreach ($request->activity_id as $index => $activityId) {
+                DprWorkItem::create([
+                    'dpr_id' => $dpr->id,
+                    'activity_id' => $activityId,
+                    'activity_mapping_id' => $request->activity_mapping_id[$index] ?? null,
+                    'project_block_id' => $request->project_block_id[$index] ?? null,
+                    'project_floor_id' => $request->project_floor_id[$index] ?? null,
+                    'project_unit_id' => $request->project_unit_id[$index] ?? null,
+                    'project_room_id' => $request->project_room_id[$index] ?? null,
+                    'project_subspace_id' => $request->project_subspace_id[$index] ?? null,
+                    'contractor_id' => $request->contractor_id[$index] ?? null,
+                    'quantity_completed' => $request->quantity_completed[$index],
+                    'remarks' => $request->work_remarks[$index] ?? null,
+                ]);
+            }
 
-    'activity_mapping_id' =>
-        $request->activity_mapping_id[$index] ?? null,
+            if ($request->hasFile('photos')) {
+                foreach ($request->file('photos') as $photo) {
+                    $path = $photo->store('dpr_photos', 'public');
 
-    'project_block_id' =>
-        $request->project_block_id[$index] ?? null,
+                    DprPhoto::create([
+                        'dpr_id' => $dpr->id,
+                        'photo_path' => $path,
+                    ]);
+                }
+            }
 
-    'project_floor_id' =>
-        $request->project_floor_id[$index] ?? null,
+            if ($request->labour_type) {
+                foreach ($request->labour_type as $index => $labourTypeId) {
+                    if (!$labourTypeId) {
+                        continue;
+                    }
 
-    'project_unit_id' =>
-        $request->project_unit_id[$index] ?? null,
+                    $male = $request->male_count[$index] ?? 0;
+                    $female = $request->female_count[$index] ?? 0;
+                    $local = $request->local_count[$index] ?? 0;
+                    $nonLocal = $request->non_local_count[$index] ?? 0;
 
-    'project_room_id' =>
-        $request->project_room_id[$index] ?? null,
+                    DprLabour::create([
+                        'dpr_id' => $dpr->id,
+                        'labour_type_id' => $labourTypeId,
+                        'male_count' => $male,
+                        'female_count' => $female,
+                        'local_count' => $local,
+                        'non_local_count' => $nonLocal,
+                        'total_count' => $male + $female,
+                    ]);
+                }
+            }
 
-    'project_subspace_id' =>
-        $request->project_subspace_id[$index] ?? null,
+            if ($request->material_id) {
+                foreach ($request->material_id as $index => $materialId) {
+                    if (!$materialId) {
+                        continue;
+                    }
 
-    'contractor_id' =>
-        $request->contractor_id[$index],
+                    DprMaterial::create([
+                        'dpr_id' => $dpr->id,
+                        'material_id' => $materialId,
+                        'quantity_used' => $request->quantity_used[$index] ?? 0,
+                    ]);
+                }
+            }
 
-    'quantity_completed' =>
-        $request->quantity_completed[$index],
+            if ($request->received_material_id) {
+                foreach ($request->received_material_id as $index => $materialId) {
+                    if (!$materialId) {
+                        continue;
+                    }
 
-    'remarks' =>
-        $request->work_remarks[$index] ?? null,
+                    DprMaterialReceived::create([
+                        'dpr_id' => $dpr->id,
+                        'material_id' => $materialId,
+                        'vendor_id' => $request->vendor_id[$index] ?? null,
+                        'quantity_received' => $request->quantity_received[$index] ?? 0,
+                        'challan_number' => $request->challan_number[$index] ?? null,
+                        'bill_number' => $request->bill_number[$index] ?? null,
+                    ]);
+                }
+            }
 
-]);
-}
+            if ($request->required_material_id) {
+                foreach ($request->required_material_id as $index => $materialId) {
+                    if (!$materialId) {
+                        continue;
+                    }
 
-if($request->hasFile('photos'))
-{
-    foreach($request->file('photos') as $photo)
+                    DprMaterialRequired::create([
+                        'dpr_id' => $dpr->id,
+                        'material_id' => $materialId,
+                        'required_quantity' => $request->required_quantity[$index] ?? 0,
+                        'required_date' => $request->required_date[$index] ?? null,
+                        'priority' => $request->priority[$index] ?? 'Normal',
+                        'reason' => $request->reason[$index] ?? null,
+                        'remarks' => $request->required_remarks[$index] ?? null,
+                    ]);
+                }
+            }
+
+            if ($request->machinery_tool_id) {
+                foreach ($request->machinery_tool_id as $index => $machineId) {
+                    if (!$machineId) {
+                        continue;
+                    }
+
+                    DprMachineryTool::create([
+                        'dpr_id' => $dpr->id,
+                        'machinery_tool_id' => $machineId,
+                        'quantity' => $request->machine_quantity[$index] ?? 1,
+                        'usage_hours' => $request->usage_hours[$index] ?? 0,
+                        'working_condition' => $request->working_condition[$index] ?? 'Working',
+                        'remarks' => $request->machine_remarks[$index] ?? null,
+                    ]);
+                }
+            }
+
+            if ($request->issue_type) {
+                foreach ($request->issue_type as $index => $issueType) {
+                    if (!$issueType) {
+                        continue;
+                    }
+
+                    SiteIssue::create([
+                        'dpr_id' => $dpr->id,
+                        'issue_type' => $issueType,
+                        'related_activity' => $request->related_activity[$index] ?? null,
+                        'description' => $request->issue_description[$index] ?? null,
+                        'responsible_person' => $request->responsible_person[$index] ?? null,
+                        'priority' => $request->issue_priority[$index] ?? 'Medium',
+                        'status' => $request->issue_status[$index] ?? 'Open',
+                        'remarks' => $request->issue_remarks[$index] ?? null,
+                    ]);
+                }
+            }
+
+            if ($request->plan_activity_id) {
+                foreach ($request->plan_activity_id as $index => $activityId) {
+                    if (!$activityId) {
+                        continue;
+                    }
+
+                    TomorrowPlan::create([
+                        'dpr_id' => $dpr->id,
+                        'activity_id' => $activityId,
+                        'planned_quantity' => $request->planned_quantity[$index] ?? 0,
+                        'unit' => $request->planned_unit[$index] ?? null,
+                        'planned_labour' => $request->planned_labour[$index] ?? null,
+                        'materials_required' => $request->planned_materials[$index] ?? null,
+                        'machinery_required' => $request->planned_machinery[$index] ?? null,
+                        'risks_constraints' => $request->planned_risks[$index] ?? null,
+                        'unit' => $request->used_unit[$index] ?? null,
+                    ]);
+                }
+            }
+
+            AuditHelper::log(
+                'DPR',
+                'Created',
+                'Dpr',
+                $dpr->id,
+                'DPR submitted by engineer for PMO review',
+                null,
+                $dpr->only([
+                    'id',
+                    'project_id',
+                    'user_id',
+                    'dpr_date',
+                    'weather',
+                    'remarks',
+                    'status',
+                    'pmo_remarks',
+                ])
+            );
+        });
+
+        return redirect('/dprs')
+            ->with('success', 'DPR submitted successfully for PMO review.');
+    }
+
+    public function pmoQueue()
     {
-        $path = $photo->store(
-            'dpr_photos',
-            'public'
+        abort_unless($this->isPmoReviewer(), 403);
+
+        $dprs = Dpr::with('project', 'user')
+            ->where('status', 'Pending')
+            ->latest()
+            ->get();
+
+        return view('dprs.pmo-queue', compact('dprs'));
+    }
+
+    public function approve(Request $request, $id)
+    {
+        abort_unless($this->isPmoReviewer(), 403);
+
+        $request->validate([
+            'pmo_remarks' => 'nullable|string|max:2000',
+        ]);
+
+        $dpr = Dpr::findOrFail($id);
+
+        if ($dpr->status !== 'Pending') {
+            return redirect('/pmo/dprs')
+                ->with('success', 'Only pending DPRs can be approved.');
+        }
+
+        $oldValues = $dpr->only(['status', 'pmo_remarks']);
+
+        $dpr->update([
+            'status' => 'Approved',
+            'pmo_remarks' => $request->pmo_remarks,
+        ]);
+
+        AuditHelper::log(
+            'DPR',
+            'Approved',
+            'Dpr',
+            $dpr->id,
+            'DPR approved by PMO/Admin',
+            $oldValues,
+            $dpr->only(['status', 'pmo_remarks'])
         );
 
-        DprPhoto::create([
-            'dpr_id' => $dpr->id,
-            'photo_path' => $path
-        ]);
+        return redirect('/pmo/dprs')
+            ->with('success', 'DPR approved successfully.');
     }
-}
-if($request->labour_type)
-{
-    foreach($request->labour_type as $index => $labourTypeId)
+
+    public function reject(Request $request, $id)
     {
-        if(!$labourTypeId)
-        {
-            continue;
+        abort_unless($this->isPmoReviewer(), 403);
+
+        $request->validate([
+            'pmo_remarks' => 'required|string|max:2000',
+        ]);
+
+        $dpr = Dpr::findOrFail($id);
+
+        if ($dpr->status !== 'Pending') {
+            return redirect('/pmo/dprs')
+                ->with('success', 'Only pending DPRs can be rejected or returned for correction.');
         }
 
-        $male =
-            $request->male_count[$index] ?? 0;
+        $oldValues = $dpr->only(['status', 'pmo_remarks']);
 
-        $female =
-            $request->female_count[$index] ?? 0;
-
-        $local =
-            $request->local_count[$index] ?? 0;
-
-        $nonLocal =
-            $request->non_local_count[$index] ?? 0;
-
-        DprLabour::create([
-
-            'dpr_id' => $dpr->id,
-
-            'labour_type_id' => $labourTypeId,
-
-            'male_count' => $male,
-
-            'female_count' => $female,
-
-            'local_count' => $local,
-
-            'non_local_count' => $nonLocal,
-
-            'total_count' =>
-                $male + $female
-
+        $dpr->update([
+            'status' => 'Rejected',
+            'pmo_remarks' => $request->pmo_remarks,
         ]);
-    }
-}
 
-if($request->material_id)
-{
-    foreach($request->material_id as $index => $materialId)
+        AuditHelper::log(
+            'DPR',
+            'Rejected',
+            'Dpr',
+            $dpr->id,
+            'DPR rejected / returned for correction by PMO/Admin',
+            $oldValues,
+            $dpr->only(['status', 'pmo_remarks'])
+        );
+
+        return redirect('/pmo/dprs')
+            ->with('success', 'DPR returned to engineer for correction.');
+    }
+
+    public function show($id)
     {
-        if(!$materialId)
-        {
-            continue;
-        }
+        $dpr = Dpr::with([
+            'project',
+            'user',
+            'workItems.activity',
+            'workItems.contractor',
+            'photos',
+            'labours.labourType',
+            'materials.material',
+            'materialReceived.material',
+            'materialReceived.vendor',
+            'materialRequired.material',
+            'machineryTools.machineryTool',
+            'siteIssues',
+            'tomorrowPlans.activity',
+            'workItems.block',
+            'workItems.floor',
+            'workItems.unit',
+            'workItems.room',
+            'workItems.subspace',
+            'workItems.activityMapping.division',
+        ])->findOrFail($id);
 
-        DprMaterial::create([
+        $this->ensureDprAccess($dpr);
 
-            'dpr_id' => $dpr->id,
-
-            'material_id' => $materialId,
-
-            'quantity_used' =>
-                $request->quantity_used[$index] ?? 0
-
-        ]);
-    }
-}
-
-// Material Received
-
-if($request->received_material_id)
-{
-    foreach(
-        $request->received_material_id
-        as $index => $materialId
-    )
-    {
-        if(!$materialId)
-        {
-            continue;
-        }
-
-        DprMaterialReceived::create([
-
-            'dpr_id' => $dpr->id,
-
-            'material_id' => $materialId,
-
-            'vendor_id' =>
-                $request->vendor_id[$index]
-                ?? null,
-
-            'quantity_received' =>
-                $request->quantity_received[$index]
-                ?? 0,
-
-            'challan_number' =>
-                $request->challan_number[$index]
-                ?? null,
-
-            'bill_number' =>
-                $request->bill_number[$index]
-                ?? null
-
-        ]);
-    }
-}
-
-// Material Required
-
-if($request->required_material_id)
-{
-    foreach(
-        $request->required_material_id
-        as $index => $materialId
-    )
-    {
-        if(!$materialId)
-        {
-            continue;
-        }
-
-        DprMaterialRequired::create([
-
-            'dpr_id' => $dpr->id,
-
-            'material_id' => $materialId,
-
-            'required_quantity' =>
-                $request->required_quantity[$index]
-                ?? 0,
-
-            'required_date' =>
-                $request->required_date[$index]
-                ?? null,
-
-            'priority' =>
-                $request->priority[$index]
-                ?? 'Normal',
-
-            'reason' =>
-                $request->reason[$index]
-                ?? null,
-
-            'remarks' =>
-                $request->required_remarks[$index]
-                ?? null
-
-        ]);
-    }
-}
-
-// Machinery/Tool Used
-
-if($request->machinery_tool_id)
-{
-    foreach(
-        $request->machinery_tool_id
-        as $index => $machineId
-    )
-    {
-        if(!$machineId)
-        {
-            continue;
-        }
-
-        DprMachineryTool::create([
-
-            'dpr_id' => $dpr->id,
-
-            'machinery_tool_id' => $machineId,
-
-            'quantity' =>
-                $request->machine_quantity[$index]
-                ?? 1,
-
-            'usage_hours' =>
-                $request->usage_hours[$index]
-                ?? 0,
-
-            'working_condition' =>
-                $request->working_condition[$index]
-                ?? 'Working',
-
-            'remarks' =>
-                $request->machine_remarks[$index]
-                ?? null
-
-        ]);
-    }
-}
-
-// Site Issues
-if($request->issue_type)
-{
-    foreach(
-        $request->issue_type
-        as $index => $issueType
-    )
-    {
-        if(!$issueType)
-        {
-            continue;
-        }
-
-        SiteIssue::create([
-
-            'dpr_id' => $dpr->id,
-
-            'issue_type' =>
-                $issueType,
-
-            'related_activity' =>
-                $request->related_activity[$index]
-                ?? null,
-
-            'description' =>
-                $request->issue_description[$index]
-                ?? null,
-
-            'responsible_person' =>
-                $request->responsible_person[$index]
-                ?? null,
-
-            'priority' =>
-                $request->issue_priority[$index]
-                ?? 'Medium',
-
-            'status' =>
-                $request->issue_status[$index]
-                ?? 'Open',
-
-            'remarks' =>
-                $request->issue_remarks[$index]
-                ?? null
-
-        ]);
-    }
-}
-
-// Tomorrow Plans
-if($request->plan_activity_id)
-{
-    foreach(
-        $request->plan_activity_id
-        as $index => $activityId
-    )
-    {
-        if(!$activityId)
-        {
-            continue;
-        }
-
-        TomorrowPlan::create([
-
-            'dpr_id' => $dpr->id,
-
-            'activity_id' => $activityId,
-
-            'planned_quantity' =>
-                $request->planned_quantity[$index]
-                ?? 0,
-
-            'unit' =>
-                $request->planned_unit[$index]
-                ?? null,
-
-            'planned_labour' =>
-                $request->planned_labour[$index]
-                ?? null,
-
-            'materials_required' =>
-                $request->planned_materials[$index]
-                ?? null,
-
-            'machinery_required' =>
-                $request->planned_machinery[$index]
-                ?? null,
-
-            'risks_constraints' =>
-                $request->planned_risks[$index]
-                ?? null
-
-        ]);
-    }
-}
-
-    AuditHelper::log(
-    'DPR',
-    'Created',
-    'Dpr',
-    $dpr->id,
-    'DPR created for project ID: ' . $dpr->project_id,
-    null,
-    $dpr->only([
-        'id',
-        'project_id',
-        'user_id',
-        'dpr_date',
-        'weather',
-        'remarks',
-        'status'
-    ])
-);
-        return redirect('/dprs')
-    ->with('success', 'DPR submitted successfully.');
+        return view('dprs.show', compact('dpr'));
     }
 
-
-
-
-public function pmoQueue()
+    public function edit($id)
 {
-    $dprs = Dpr::with('project', 'user')
-        ->where('status', 'Pending')
-        ->latest()
-        ->get();
-
-    return view('dprs.pmo-queue', compact('dprs'));
-}
-
-public function approve(Request $request, $id)
-{
-    $dpr = Dpr::findOrFail($id);
-    
-    $oldStatus = $dpr->status;
-$oldPmoRemarks = $dpr->pmo_remarks;
-    $dpr->status = 'Approved';
-
-    $dpr->pmo_remarks = $request->pmo_remarks;
-
-    $dpr->save();
-
-    AuditHelper::log(
-    'DPR',
-    'Approved',
-    'Dpr',
-    $dpr->id,
-    'DPR approved by PMO/Admin',
-    [
-    'status' => $oldStatus,
-    'pmo_remarks' => $oldPmoRemarks,
-],
-    [
-        'status' => $dpr->status,
-        'pmo_remarks' => $dpr->pmo_remarks
-    ]
-);
-
-    return redirect('/pmo/dprs')
-        ->with('success', 'DPR approved successfully.');
-}
-
-public function reject(Request $request, $id)
-{
-    $dpr = Dpr::findOrFail($id);
-    $oldStatus = $dpr->status;
-$oldPmoRemarks = $dpr->pmo_remarks;
-    $dpr->status = 'Rejected';
-
-    $dpr->pmo_remarks = $request->pmo_remarks;
-
-    $dpr->save();
-
-    AuditHelper::log(
-    'DPR',
-    'Rejected',
-    'Dpr',
-    $dpr->id,
-    'DPR rejected by PMO/Admin',
-    [
-    'status' => $oldStatus,
-    'pmo_remarks' => $oldPmoRemarks,
-],
-    [
-        'status' => $dpr->status,
-        'pmo_remarks' => $dpr->pmo_remarks
-    ]
-);
-
-    return redirect('/pmo/dprs')
-        ->with('success', 'DPR rejected successfully.');
-}
-
-// SHOW FUNCTION
-public function show($id)
-{
-    $dpr = \App\Models\Dpr::with([
-        'project',
-        'user',
-        'workItems.activity',
-        'workItems.contractor',
-        'photos',
-        'labours.labourType',
-        'materials.material',
-        'materialReceived.material',
-        'materialReceived.vendor',
-        'materialRequired.material',
-        'machineryTools.machineryTool',
+    $dpr = Dpr::with([
+        'workItems',
+        'labours',
+        'materials',
+        'materialReceived',
+        'materialRequired',
+        'machineryTools',
         'siteIssues',
-        'tomorrowPlans.activity',
-        'workItems.block',
-        'workItems.floor',
-        'workItems.unit',
-        'workItems.room',
-        'workItems.subspace',
-        'workItems.activityMapping.division'
+        'tomorrowPlans',
+        'photos',
     ])->findOrFail($id);
 
-    return view('dprs.show', compact('dpr'));
-}
-public function edit($id)
-{
-    $dpr = Dpr::with('workItems')->findOrFail($id);
-
-    if($dpr->status == 'Approved')
-    {
-        return redirect('/dprs')
-            ->with('success', 'Approved DPR cannot be edited.');
+    if ($response = $this->ensureEditable($dpr)) {
+        return $response;
     }
 
-    $projects = Project::all();
+    $projects = $this->isEngineer()
+        ? auth()->user()->projects
+        : Project::all();
 
-    $activities = Activity::all();
+    $activities = Activity::where('is_active', true)
+        ->orderBy('activity_name')
+        ->get();
 
-    $contractors = Contractor::all();
+    $contractors = Contractor::where('status', 1)
+        ->orderBy('contractor_name')
+        ->get();
+
+    $materials = Material::where('is_active', true)
+        ->orderBy('material_name')
+        ->get();
+
+    $vendors = Vendor::where('is_active', true)
+        ->orderBy('vendor_name')
+        ->get();
+
+    $machineries = MachineryTool::all();
+
+    $projectBlocks = \App\Models\ProjectBlock::where('is_active', true)->get();
+    $projectFloors = \App\Models\ProjectFloor::where('is_active', true)->get();
+    $projectUnits = \App\Models\ProjectUnit::where('is_active', true)->get();
+    $projectRooms = \App\Models\ProjectRoom::where('is_active', true)->get();
+    $projectSubspaces = \App\Models\ProjectSubspace::where('is_active', true)->get();
+
+    $activityMappings = \App\Models\ActivityMapping::with('division')
+        ->where('is_active', true)
+        ->orderBy('activity_name')
+        ->get();
+
+    $activityDivisions = \App\Models\ActivityDivision::where('is_active', true)
+        ->orderBy('sequence')
+        ->get();
+
+    $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
+        ->orderBy('category_name')
+        ->get();
+
+    $labourCategories = \App\Models\LabourCategory::where('is_active', true)
+        ->orderBy('category_name')
+        ->get();
+
+    $labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
+        ->orderBy('labour_type_name')
+        ->get();
 
     return view('dprs.edit', compact(
         'dpr',
         'projects',
         'activities',
-        'contractors'
+        'contractors',
+        'materials',
+        'vendors',
+        'machineries',
+        'projectBlocks',
+        'projectFloors',
+        'projectUnits',
+        'projectRooms',
+        'projectSubspaces',
+        'activityMappings',
+        'activityDivisions',
+        'materialCategories',
+        'labourCategories',
+        'labourTypes'
     ));
 }
 
-public function update(Request $request, $id)
+    public function update(Request $request, $id)
 {
     $dpr = Dpr::findOrFail($id);
 
-    if($dpr->status == 'Approved')
-    {
-        return redirect('/dprs')
-            ->with('success', 'Approved DPR cannot be updated.');
+    if ($response = $this->ensureEditable($dpr)) {
+        return $response;
     }
 
-
     $request->validate([
-    'project_id' => 'nullable|exists:projects,id',
-    'dpr_date' => 'nullable|date',
-    'weather' => 'nullable|string|max:255',
-    'remarks' => 'nullable|string',
-]);
+        'project_id' => 'required|exists:projects,id',
+        'dpr_date' => 'required|date',
+        'weather' => 'nullable|string|max:255',
+        'remarks' => 'nullable|string',
+        'activity_id.*' => 'required|exists:activities,id',
+        'contractor_id.*' => 'nullable|exists:contractors,id',
+        'quantity_completed.*' => 'required|numeric|min:0',
+        'photos.*' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
+    ]);
 
-    $oldValues = $dpr->only([
-    'project_id',
-    'dpr_date',
-    'weather',
-    'remarks',
-    'status'
-]);
+    $this->ensureEngineerProjectAccess($request->project_id);
 
+    DB::transaction(function () use ($request, $dpr) {
 
-    $newStatus = $dpr->status;
+        $oldValues = $dpr->only([
+            'project_id',
+            'dpr_date',
+            'weather',
+            'remarks',
+            'status',
+            'pmo_remarks',
+        ]);
 
-if ($dpr->status === 'Rejected') {
-    $newStatus = 'Pending';
-}
+        $newStatus = $dpr->status === 'Rejected'
+            ? 'Pending'
+            : $dpr->status;
 
-$dpr->update([
-    'project_id' => $request->project_id ?? $dpr->project_id,
-    'dpr_date' => $request->dpr_date ?? $dpr->dpr_date,
-    'weather' => $request->weather ?? $dpr->weather,
-    'remarks' => $request->remarks,
-    'status' => $newStatus,
-    'pmo_remarks' => $newStatus === 'Pending' ? null : $dpr->pmo_remarks,
-]);
+        $dpr->update([
+            'project_id' => $request->project_id,
+            'dpr_date' => $request->dpr_date,
+            'weather' => $request->weather,
+            'remarks' => $request->remarks,
+            'status' => $newStatus,
+            'pmo_remarks' => $newStatus === 'Pending' ? null : $dpr->pmo_remarks,
+        ]);
 
-    $newValues = $dpr->only([
-    'project_id',
-    'dpr_date',
-    'weather',
-    'remarks',
-    'status'
-]);
+        DprWorkItem::where('dpr_id', $dpr->id)->delete();
+        DprLabour::where('dpr_id', $dpr->id)->delete();
+        DprMaterial::where('dpr_id', $dpr->id)->delete();
+        DprMaterialReceived::where('dpr_id', $dpr->id)->delete();
+        DprMaterialRequired::where('dpr_id', $dpr->id)->delete();
+        DprMachineryTool::where('dpr_id', $dpr->id)->delete();
+        SiteIssue::where('dpr_id', $dpr->id)->delete();
+        TomorrowPlan::where('dpr_id', $dpr->id)->delete();
 
-AuditHelper::log(
-    'DPR',
-    'Updated',
-    'Dpr',
-    $dpr->id,
-    $newStatus === 'Pending'
-        ? 'Rejected DPR updated and resubmitted for PMO review'
-        : 'DPR updated',
-    $oldValues,
-    $newValues
-);
+        foreach ($request->activity_id as $index => $activityId) {
+            DprWorkItem::create([
+                'dpr_id' => $dpr->id,
+                'activity_id' => $activityId,
+                'activity_mapping_id' => $request->activity_mapping_id[$index] ?? null,
+                'project_block_id' => $request->project_block_id[$index] ?? null,
+                'project_floor_id' => $request->project_floor_id[$index] ?? null,
+                'project_unit_id' => $request->project_unit_id[$index] ?? null,
+                'project_room_id' => $request->project_room_id[$index] ?? null,
+                'project_subspace_id' => $request->project_subspace_id[$index] ?? null,
+                'contractor_id' => $request->contractor_id[$index] ?? null,
+                'quantity_completed' => $request->quantity_completed[$index],
+                'remarks' => $request->work_remarks[$index] ?? null,
+            ]);
+        }
+
+        if ($request->labour_type) {
+            foreach ($request->labour_type as $index => $labourTypeId) {
+                if (!$labourTypeId) continue;
+
+                $male = $request->male_count[$index] ?? 0;
+                $female = $request->female_count[$index] ?? 0;
+
+                DprLabour::create([
+                    'dpr_id' => $dpr->id,
+                    'labour_type_id' => $labourTypeId,
+                    'male_count' => $male,
+                    'female_count' => $female,
+                    'local_count' => $request->local_count[$index] ?? 0,
+                    'non_local_count' => $request->non_local_count[$index] ?? 0,
+                    'total_count' => $male + $female,
+                ]);
+            }
+        }
+
+        if ($request->material_id) {
+            foreach ($request->material_id as $index => $materialId) {
+                if (!$materialId) continue;
+
+                DprMaterial::create([
+                    'dpr_id' => $dpr->id,
+                    'material_id' => $materialId,
+                    'quantity_used' => $request->quantity_used[$index] ?? 0,
+                ]);
+            }
+        }
+
+        if ($request->received_material_id) {
+            foreach ($request->received_material_id as $index => $materialId) {
+                if (!$materialId) continue;
+
+                DprMaterialReceived::create([
+                    'dpr_id' => $dpr->id,
+                    'material_id' => $materialId,
+                    'vendor_id' => $request->vendor_id[$index] ?? null,
+                    'quantity_received' => $request->quantity_received[$index] ?? 0,
+                    'challan_number' => $request->challan_number[$index] ?? null,
+                    'bill_number' => $request->bill_number[$index] ?? null,
+                    'unit' => $request->received_unit[$index] ?? null,
+                ]);
+            }
+        }
+
+        if ($request->required_material_id) {
+            foreach ($request->required_material_id as $index => $materialId) {
+                if (!$materialId) continue;
+
+                DprMaterialRequired::create([
+                    'dpr_id' => $dpr->id,
+                    'material_id' => $materialId,
+                    'required_quantity' => $request->required_quantity[$index] ?? 0,
+                    'required_date' => $request->required_date[$index] ?? null,
+                    'priority' => $request->priority[$index] ?? 'Normal',
+                    'reason' => $request->reason[$index] ?? null,
+                    'remarks' => $request->required_remarks[$index] ?? null,
+                    'unit' => $request->required_unit[$index] ?? null,
+                ]);
+            }
+        }
+
+        if ($request->machinery_tool_id) {
+            foreach ($request->machinery_tool_id as $index => $machineId) {
+                if (!$machineId) continue;
+
+                DprMachineryTool::create([
+                    'dpr_id' => $dpr->id,
+                    'machinery_tool_id' => $machineId,
+                    'quantity' => $request->machine_quantity[$index] ?? 1,
+                    'usage_hours' => $request->usage_hours[$index] ?? 0,
+                    'working_condition' => $request->working_condition[$index] ?? 'Working',
+                    'remarks' => $request->machine_remarks[$index] ?? null,
+                ]);
+            }
+        }
+
+        if ($request->issue_type) {
+            foreach ($request->issue_type as $index => $issueType) {
+                if (!$issueType) continue;
+
+                SiteIssue::create([
+                    'dpr_id' => $dpr->id,
+                    'issue_type' => $issueType,
+                    'related_activity' => $request->related_activity[$index] ?? null,
+                    'description' => $request->issue_description[$index] ?? null,
+                    'responsible_person' => $request->responsible_person[$index] ?? null,
+                    'priority' => $request->issue_priority[$index] ?? 'Medium',
+                    'status' => $request->issue_status[$index] ?? 'Open',
+                    'remarks' => $request->issue_remarks[$index] ?? null,
+                ]);
+            }
+        }
+
+        if ($request->plan_activity_id) {
+            foreach ($request->plan_activity_id as $index => $activityId) {
+                if (!$activityId) continue;
+
+                TomorrowPlan::create([
+                    'dpr_id' => $dpr->id,
+                    'activity_id' => $activityId,
+                    'planned_quantity' => $request->planned_quantity[$index] ?? 0,
+                    'unit' => $request->planned_unit[$index] ?? null,
+                    'planned_labour' => $request->planned_labour[$index] ?? null,
+                    'materials_required' => $request->planned_materials[$index] ?? null,
+                    'machinery_required' => $request->planned_machinery[$index] ?? null,
+                    'risks_constraints' => $request->planned_risks[$index] ?? null,
+                ]);
+            }
+        }
+
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $photo) {
+                $path = $photo->store('dpr_photos', 'public');
+
+                DprPhoto::create([
+                    'dpr_id' => $dpr->id,
+                    'photo_path' => $path,
+                ]);
+            }
+        }
+
+        AuditHelper::log(
+            'DPR',
+            $oldValues['status'] === 'Rejected' ? 'Resubmitted' : 'Updated',
+            'Dpr',
+            $dpr->id,
+            $oldValues['status'] === 'Rejected'
+                ? 'Rejected DPR corrected and resubmitted for PMO review'
+                : 'DPR fully updated before PMO approval',
+            $oldValues,
+            $dpr->only([
+                'project_id',
+                'dpr_date',
+                'weather',
+                'remarks',
+                'status',
+                'pmo_remarks',
+            ])
+        );
+    });
 
     return redirect('/dprs')
         ->with('success', 'DPR updated successfully.');
 }
 
-public function destroy($id)
-{
-    $dpr = Dpr::findOrFail($id);
-
-    if($dpr->status == 'Approved')
+    public function destroy($id)
     {
+        $dpr = Dpr::findOrFail($id);
+
+        $this->ensureDprAccess($dpr);
+
+        if ($dpr->status === 'Approved') {
+            return redirect('/dprs')
+                ->with('success', 'Approved DPR cannot be deleted.');
+        }
+
+        if ($this->isEngineer() && !in_array($dpr->status, ['Pending', 'Rejected'])) {
+    return redirect('/dprs')
+        ->with('success', 'This DPR cannot be deleted at the current stage.');
+}
+
+        AuditHelper::log(
+            'DPR',
+            'Deleted',
+            'Dpr',
+            $dpr->id,
+            'DPR deleted',
+            $dpr->only([
+                'id',
+                'project_id',
+                'user_id',
+                'dpr_date',
+                'weather',
+                'remarks',
+                'status',
+                'pmo_remarks',
+            ]),
+            null
+        );
+
+        $dpr->delete();
+
         return redirect('/dprs')
-            ->with('success', 'Approved DPR cannot be deleted.');
+            ->with('success', 'DPR deleted successfully.');
     }
 
+    public function downloadPdf($id)
+    {
+        $dpr = Dpr::with([
+            'project',
+            'user',
+            'workItems.activity',
+            'workItems.contractor',
+            'photos',
+            'labours.labourType',
+            'materials.material',
+            'materialReceived.material',
+            'materialReceived.vendor',
+            'materialRequired.material',
+            'machineryTools.machineryTool',
+            'siteIssues',
+            'tomorrowPlans.activity',
+            'workItems.block',
+            'workItems.floor',
+            'workItems.unit',
+            'workItems.room',
+            'workItems.subspace',
+            'workItems.activityMapping.division',
+        ])->findOrFail($id);
 
-    AuditHelper::log(
-    'DPR',
-    'Deleted',
-    'Dpr',
-    $dpr->id,
-    'DPR deleted',
-    $dpr->only([
-        'id',
-        'project_id',
-        'user_id',
-        'dpr_date',
-        'weather',
-        'remarks',
-        'status'
-    ]),
-    null
-);
-    $dpr->delete();
+        $this->ensureDprAccess($dpr);
 
-    return redirect('/dprs')
-        ->with('success', 'DPR deleted successfully.');
-}
-public function downloadPdf($id)
-{
-    $dpr = Dpr::with([
-        'project',
-        'user',
-        'workItems.activity',
-        'workItems.contractor',
-        'photos',
-        'labours.labourType',
-        'materials.material',
-        'materialReceived.material',
-        'materialReceived.vendor',
-        'materialRequired.material',
-        'machineryTools.machineryTool',
-        'siteIssues',
-        'tomorrowPlans.activity',
-        'workItems.block',
-        'workItems.floor',
-        'workItems.unit',
-        'workItems.room',
-        'workItems.subspace',
-        'workItems.activityMapping.division',
+        $pdf = Pdf::loadView('dprs.pdf', compact('dpr'));
 
-    ])->findOrFail($id);
+        $date = \Carbon\Carbon::parse($dpr->dpr_date)->format('d-m-Y');
 
-    $pdf = Pdf::loadView('dprs.pdf', compact('dpr'));
+        $fileName =
+            $date . '_' .
+            str_replace(' ', '-', $dpr->project->project_name) . '_' .
+            str_replace(' ', '-', $dpr->user->name) .
+            '.pdf';
 
-    $fileName =
-    $date =
-    \Carbon\Carbon::parse($dpr->dpr_date)
-        ->format('d-m-Y');
+        return $pdf->download($fileName);
+    }
 
-$fileName =
-    $date . '_' .
-    str_replace(' ', '-', $dpr->project->project_name) . '_' .
-    str_replace(' ', '-', $dpr->user->name) .
-    '.pdf';
+    public function getFloors($block)
+    {
+        return response()->json(
+            \App\Models\ProjectFloor::where('project_block_id', $block)
+                ->where('is_active', true)
+                ->orderBy('sequence')
+                ->get(['id', 'name'])
+        );
+    }
 
-return $pdf->download($fileName);
-}
+    public function getUnits($floor)
+    {
+        return response()->json(
+            \App\Models\ProjectUnit::where('project_floor_id', $floor)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
+    }
 
-public function getFloors($block)
-{
-    return response()->json(
-        \App\Models\ProjectFloor::where('project_block_id', $block)
-            ->where('is_active', true)
-            ->orderBy('sequence')
-            ->get(['id', 'name'])
-    );
-}
+    public function getRooms($unit)
+    {
+        return response()->json(
+            \App\Models\ProjectRoom::where('project_unit_id', $unit)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
+    }
 
-public function getUnits($floor)
-{
-    return response()->json(
-        \App\Models\ProjectUnit::where('project_floor_id', $floor)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name'])
-    );
-}
-
-public function getRooms($unit)
-{
-    return response()->json(
-        \App\Models\ProjectRoom::where('project_unit_id', $unit)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name'])
-    );
-}
-
-public function getSubspaces($room)
-{
-    return response()->json(
-        \App\Models\ProjectSubspace::where('project_room_id', $room)
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name'])
-    );
-}
+    public function getSubspaces($room)
+    {
+        return response()->json(
+            \App\Models\ProjectSubspace::where('project_room_id', $room)
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name'])
+        );
+    }
 }

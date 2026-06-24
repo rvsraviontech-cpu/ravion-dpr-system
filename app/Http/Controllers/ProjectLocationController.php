@@ -15,83 +15,99 @@ use App\Models\LocationUnitMaster;
 use App\Models\LocationRoomMaster;
 use App\Models\LocationSubspaceMaster;
 use App\Helpers\AuditHelper;
+use Illuminate\Support\Facades\DB;
 
 class ProjectLocationController extends Controller
 {
     public function index(Request $request)
-    {
-        $projects = Project::orderBy('project_name')->get();
+{
+    $projects = Project::orderBy('project_name')->get();
 
-        $selectedProjectId = $request->project_id;
+    $selectedProjectId = $request->project_id;
 
-        $blocks = collect();
-        $floors = collect();
-        $units = collect();
-        $rooms = collect();
-        $subspaces = collect();
+    $selectedProject = null;
+    $blocks = collect();
+    $floors = collect();
+    $units = collect();
+    $rooms = collect();
+    $subspaces = collect();
 
-        if ($selectedProjectId) {
-            $blocks = ProjectBlock::where('project_id', $selectedProjectId)
-                ->orderBy('name')
-                ->get();
+    if ($selectedProjectId) {
+        $selectedProject = Project::find($selectedProjectId);
 
-            $floors = ProjectFloor::where('project_id', $selectedProjectId)
-                ->orderBy('sequence')
-                ->orderBy('name')
-                ->get();
+        $blocks = ProjectBlock::where('project_id', $selectedProjectId)
+            ->orderBy('name')
+            ->get();
 
-            $units = ProjectUnit::where('project_id', $selectedProjectId)
-                ->orderBy('name')
-                ->get();
+        $floors = ProjectFloor::with('block')
+            ->where('project_id', $selectedProjectId)
+            ->orderBy('sequence')
+            ->orderBy('name')
+            ->get();
 
-            $rooms = ProjectRoom::where('project_id', $selectedProjectId)
-                ->orderBy('name')
-                ->get();
-
-            $subspaces = ProjectSubspace::where('project_id', $selectedProjectId)
-                ->orderBy('name')
-                ->get();
-
-                
-        }
-        $blockMasters = LocationBlockMaster::where('is_active', true)
+        $units = ProjectUnit::with(['block', 'floor'])
+    ->where('project_id', $selectedProjectId)
+    ->where('is_active', true)
+    ->orderBy('project_floor_id')
     ->orderBy('name')
     ->get();
 
-            $floorMasters = LocationFloorMaster::where('is_active', true)
-            ->orderBy('sequence')
-             ->orderBy('name')
-             ->get();
+$rooms = ProjectRoom::with(['block', 'floor', 'unit'])
+    ->where('project_id', $selectedProjectId)
+    ->where('is_active', true)
+    ->orderBy('project_unit_id')
+    ->orderBy('room_type')
+    ->orderBy('name')
+    ->get();
 
-            $unitMasters = LocationUnitMaster::where('is_active', true)
-            ->orderBy('name')
-            ->get();
-
-            $roomMasters = LocationRoomMaster::where('is_active', true)
-            ->orderBy('room_type')
-            ->orderBy('name')
-             ->get();
-
-            $subspaceMasters = LocationSubspaceMaster::where('is_active', true)
-             ->orderBy('type')
-            ->orderBy('name')
-            ->get();
-
-        return view('project-locations.index', compact(
-            'projects',
-            'selectedProjectId',
-            'blocks',
-            'floors',
-            'units',
-            'rooms',
-            'subspaces',
-            'blockMasters',
-            'floorMasters',
-            'unitMasters',
-            'roomMasters',
-            'subspaceMasters'
-        ));
+$subspaces = ProjectSubspace::with(['block', 'floor', 'unit', 'room'])
+    ->where('project_id', $selectedProjectId)
+    ->where('is_active', true)
+    ->orderBy('project_room_id')
+    ->orderBy('type')
+    ->orderBy('name')
+    ->get();
     }
+
+    $blockMasters = LocationBlockMaster::where('is_active', true)
+        ->orderBy('name')
+        ->get();
+
+    $floorMasters = LocationFloorMaster::where('is_active', true)
+        ->orderBy('sequence')
+        ->orderBy('name')
+        ->get();
+
+    $unitMasters = LocationUnitMaster::where('is_active', true)
+        ->orderBy('name')
+        ->get();
+
+    $roomMasters = LocationRoomMaster::where('is_active', true)
+        ->orderBy('room_type')
+        ->orderBy('name')
+        ->get();
+
+    $subspaceMasters = LocationSubspaceMaster::where('is_active', true)
+        ->orderBy('type')
+        ->orderBy('name')
+        ->get();
+
+    return view('project-locations.index', compact(
+        'projects',
+        'selectedProject',
+        'selectedProjectId',
+        'blocks',
+        'floors',
+        'units',
+        'rooms',
+        'subspaces',
+        'blockMasters',
+        'floorMasters',
+        'unitMasters',
+        'roomMasters',
+        'subspaceMasters'
+    ));
+}
 
     // STORE BLOCK
 
@@ -744,6 +760,538 @@ public function toggleSubspaceStatus(ProjectSubspace $projectSubspace)
     );
 }
 
+public function wizard(Project $project)
+{
+    $blockMasters = LocationBlockMaster::where('is_active', true)->orderBy('name')->get();
+    $floorMasters = LocationFloorMaster::where('is_active', true)->orderBy('sequence')->orderBy('name')->get();
+    $roomMasters = LocationRoomMaster::where('is_active', true)->orderBy('room_type')->orderBy('name')->get();
+    $subspaceMasters = LocationSubspaceMaster::where('is_active', true)->orderBy('type')->orderBy('name')->get();
+
+    return view('project-locations.wizard', compact(
+        'project',
+        'blockMasters',
+        'floorMasters',
+        'roomMasters',
+        'subspaceMasters'
+    ));
+}
+
+public function generateWizard(Request $request, Project $project)
+{
+    $request->validate([
+        'project_type' => 'required|string',
+        'block_type' => 'required|in:Block,Building,Tower,Villa,External Area,Not Applicable',
+        'blocks' => 'required|integer|min:1|max:20',
+        'units_per_floor' => 'required|integer|min:0|max:100',
+
+        'parking_type' => 'required|in:Ground Parking,Cellar Parking,No Parking',
+        'cellars' => 'nullable|integer|min:0|max:5',
+        'residential_floors' => 'required|integer|min:0|max:100',
+        'ground_has_residential' => 'required|boolean',
+
+        'shops' => 'nullable|integer|min:0|max:100',
+        'has_watchman_room' => 'required|boolean',
+        'has_security_room' => 'required|boolean',
+        'has_ground_washroom' => 'required|boolean',
+        'has_electrical_room' => 'required|boolean',
+        'has_pump_room' => 'required|boolean',
+        'has_meter_room' => 'required|boolean',
+        'has_dg_room' => 'required|boolean',
+
+        'bedrooms' => 'nullable|integer|min:0|max:20',
+        'has_master_bedroom' => 'required|boolean',
+        'bathrooms' => 'nullable|integer|min:0|max:20',
+        'balconies' => 'nullable|integer|min:0|max:20',
+
+        'has_living' => 'required|boolean',
+        'has_dining' => 'required|boolean',
+        'has_kitchen' => 'required|boolean',
+        'has_utility' => 'required|boolean',
+        'has_pooja' => 'required|boolean',
+        'has_study' => 'required|boolean',
+        'has_store' => 'required|boolean',
+        'has_home_office' => 'required|boolean',
+    ]);
+
+    $createdCounts = [
+        'blocks' => 0,
+        'floors' => 0,
+        'units' => 0,
+        'rooms' => 0,
+        'subspaces' => 0,
+    ];
+
+    DB::transaction(function () use ($request, $project, &$createdCounts) {
+
+        $subspaceMasters = LocationSubspaceMaster::where('is_active', true)
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get();
+
+        $cellars = $request->parking_type === 'Cellar Parking'
+            ? (int) ($request->cellars ?? 1)
+            : 0;
+
+        $residentialFloors = (int) $request->residential_floors;
+        $unitsPerFloor = (int) $request->units_per_floor;
+
+        for ($b = 1; $b <= (int) $request->blocks; $b++) {
+
+            $blockName = $request->block_type === 'Villa'
+                ? 'Villa ' . $b
+                : 'Block ' . chr(64 + $b);
+
+            $block = ProjectBlock::firstOrCreate(
+                [
+                    'project_id' => $project->id,
+                    'name' => $blockName,
+                ],
+                [
+                    'code' => strtoupper(str_replace(' ', '-', $blockName)),
+                    'type' => $request->block_type,
+                    'is_active' => true,
+                    'remarks' => 'Generated by structure wizard',
+                ]
+            );
+
+            if ($block->wasRecentlyCreated) {
+                $createdCounts['blocks']++;
+            }
+
+            // Cellars
+            for ($c = $cellars; $c >= 1; $c--) {
+                $floor = $this->createWizardFloor(
+                    $project,
+                    $block,
+                    'Cellar ' . $c,
+                    -$c,
+                    'Parking',
+                    $createdCounts
+                );
+
+                $this->createServiceUnitWithRooms(
+                    $project,
+                    $block,
+                    $floor,
+                    'Parking Zone',
+                    'Parking',
+                    [
+                        ['name' => 'Parking Area', 'type' => 'Parking'],
+                    ],
+                    $subspaceMasters,
+                    $createdCounts
+                );
+            }
+
+            // Ground Floor
+            $groundUsage = 'Residential Flats';
+
+            if ($request->parking_type === 'Ground Parking') {
+                $groundUsage = ((int) $request->ground_has_residential === 1)
+                    ? 'Mixed Use'
+                    : 'Parking';
+            } elseif ((int) $request->ground_has_residential !== 1) {
+                $groundUsage = 'Service Area';
+            }
+
+            $groundFloor = $this->createWizardFloor(
+                $project,
+                $block,
+                'Ground Floor',
+                0,
+                $groundUsage,
+                $createdCounts
+            );
+
+            // Ground extras
+            $groundRooms = [];
+
+            if ($request->parking_type === 'Ground Parking') {
+                $groundRooms[] = ['name' => 'Parking Area', 'type' => 'Parking'];
+            }
+
+            for ($s = 1; $s <= (int) ($request->shops ?? 0); $s++) {
+                $groundRooms[] = ['name' => 'Shop ' . $s, 'type' => 'Commercial'];
+            }
+
+            if ((int) $request->has_watchman_room === 1) {
+                $groundRooms[] = ['name' => 'Watchman Room', 'type' => 'Service Area'];
+            }
+
+            if ((int) $request->has_security_room === 1) {
+                $groundRooms[] = ['name' => 'Security Room', 'type' => 'Service Area'];
+            }
+
+            if ((int) $request->has_ground_washroom === 1) {
+                $groundRooms[] = ['name' => 'Washroom', 'type' => 'Toilet / Bathroom Spaces'];
+            }
+
+            if ((int) $request->has_electrical_room === 1) {
+                $groundRooms[] = ['name' => 'Electrical Room', 'type' => 'Service Area'];
+            }
+
+            if ((int) $request->has_pump_room === 1) {
+                $groundRooms[] = ['name' => 'Pump Room', 'type' => 'Service Area'];
+            }
+
+            if ((int) $request->has_meter_room === 1) {
+                $groundRooms[] = ['name' => 'Meter Room', 'type' => 'Service Area'];
+            }
+
+            if ((int) $request->has_dg_room === 1) {
+                $groundRooms[] = ['name' => 'DG Room', 'type' => 'Service Area'];
+            }
+
+            if (count($groundRooms)) {
+                $this->createServiceUnitWithRooms(
+                    $project,
+                    $block,
+                    $groundFloor,
+                    'Ground Floor Common Area',
+                    'Common Area',
+                    $groundRooms,
+                    $subspaceMasters,
+                    $createdCounts
+                );
+            }
+
+            // Ground residential flats if enabled
+            if ((int) $request->ground_has_residential === 1 && $unitsPerFloor > 0) {
+                $this->createResidentialUnitsForFloor(
+                    $project,
+                    $block,
+                    $groundFloor,
+                    0,
+                    $unitsPerFloor,
+                    $request,
+                    $subspaceMasters,
+                    $createdCounts
+                );
+            }
+
+            // Residential floors above ground: Floor 1 to Floor N
+            for ($f = 1; $f <= $residentialFloors; $f++) {
+                $floor = $this->createWizardFloor(
+                    $project,
+                    $block,
+                    'Floor ' . $f,
+                    $f,
+                    'Residential Flats',
+                    $createdCounts
+                );
+
+                if ($unitsPerFloor > 0) {
+                    $this->createResidentialUnitsForFloor(
+                        $project,
+                        $block,
+                        $floor,
+                        $f,
+                        $unitsPerFloor,
+                        $request,
+                        $subspaceMasters,
+                        $createdCounts
+                    );
+                }
+            }
+        }
+
+        $this->auditProjectLocation(
+            'Structure Generated',
+            'Project',
+            $project,
+            'Project structure generated using simple wizard',
+            null,
+            $createdCounts
+        );
+    });
+
+    return redirect()
+        ->route('project-locations.index', ['project_id' => $project->id])
+        ->with(
+            'success',
+            'Structure generated successfully. Blocks: ' . $createdCounts['blocks'] .
+            ', Floors: ' . $createdCounts['floors'] .
+            ', Units: ' . $createdCounts['units'] .
+            ', Rooms: ' . $createdCounts['rooms'] .
+            ', Sub-spaces: ' . $createdCounts['subspaces']
+        );
+}
+
+private function createWizardFloor(
+    Project $project,
+    ProjectBlock $block,
+    string $name,
+    int $sequence,
+    string $usageType,
+    array &$createdCounts
+) {
+    $floor = ProjectFloor::firstOrCreate(
+        [
+            'project_id' => $project->id,
+            'project_block_id' => $block->id,
+            'name' => $name,
+        ],
+        [
+            'sequence' => $sequence,
+            'usage_type' => $usageType,
+            'is_active' => true,
+            'remarks' => 'Generated by structure wizard',
+        ]
+    );
+
+    if ($floor->wasRecentlyCreated) {
+        $createdCounts['floors']++;
+    }
+
+    return $floor;
+}
+
+private function createResidentialUnitsForFloor(
+    Project $project,
+    ProjectBlock $block,
+    ProjectFloor $floor,
+    int $floorNumber,
+    int $unitsPerFloor,
+    Request $request,
+    $subspaceMasters,
+    array &$createdCounts
+) {
+    for ($u = 1; $u <= $unitsPerFloor; $u++) {
+        $unitNumber = $floorNumber === 0
+            ? str_pad($u, 3, '0', STR_PAD_LEFT)
+            : ($floorNumber * 100) + $u;
+
+        $unit = ProjectUnit::firstOrCreate(
+            [
+                'project_id' => $project->id,
+                'project_block_id' => $block->id,
+                'project_floor_id' => $floor->id,
+                'name' => 'Flat ' . $unitNumber,
+            ],
+            [
+                'type' => 'Flat / Unit',
+                'is_active' => true,
+                'remarks' => 'Generated by structure wizard',
+            ]
+        );
+
+        if ($unit->wasRecentlyCreated) {
+            $createdCounts['units']++;
+        }
+
+        $rooms = $this->buildFlatRooms($request);
+
+        foreach ($rooms as $roomData) {
+            $this->createRoomWithSubspaces(
+                $project,
+                $block,
+                $floor,
+                $unit,
+                $roomData['name'],
+                $roomData['type'],
+                $subspaceMasters,
+                $createdCounts
+            );
+        }
+    }
+}
+
+private function buildFlatRooms(Request $request): array
+{
+    $rooms = [];
+
+    if ((int) $request->has_living === 1) {
+        $rooms[] = ['name' => 'Living Room', 'type' => 'Living / Common Spaces'];
+    }
+
+    if ((int) $request->has_dining === 1) {
+        $rooms[] = ['name' => 'Dining', 'type' => 'Living / Common Spaces'];
+    }
+
+    if ((int) $request->has_kitchen === 1) {
+        $rooms[] = ['name' => 'Kitchen', 'type' => 'Kitchen / Utility Spaces'];
+    }
+
+    if ((int) $request->has_utility === 1) {
+        $rooms[] = ['name' => 'Utility', 'type' => 'Kitchen / Utility Spaces'];
+    }
+
+    if ((int) $request->has_pooja === 1) {
+        $rooms[] = ['name' => 'Pooja Room', 'type' => 'Living / Common Spaces'];
+    }
+
+    if ((int) $request->has_study === 1) {
+        $rooms[] = ['name' => 'Study Room', 'type' => 'Living / Common Spaces'];
+    }
+
+    if ((int) $request->has_store === 1) {
+        $rooms[] = ['name' => 'Store Room', 'type' => 'Kitchen / Utility Spaces'];
+    }
+
+    if ((int) $request->has_home_office === 1) {
+        $rooms[] = ['name' => 'Home Office', 'type' => 'Living / Common Spaces'];
+    }
+
+    $bedrooms = (int) ($request->bedrooms ?? 0);
+
+    for ($i = 1; $i <= $bedrooms; $i++) {
+        if ((int) $request->has_master_bedroom === 1 && $i === 1) {
+            $rooms[] = ['name' => 'Master Bedroom', 'type' => 'Bedroom Spaces'];
+        } else {
+            $rooms[] = ['name' => 'Bedroom ' . $i, 'type' => 'Bedroom Spaces'];
+        }
+    }
+
+    $bathrooms = (int) ($request->bathrooms ?? 0);
+
+    for ($i = 1; $i <= $bathrooms; $i++) {
+        $rooms[] = ['name' => 'Bathroom ' . $i, 'type' => 'Toilet / Bathroom Spaces'];
+    }
+
+    $balconies = (int) ($request->balconies ?? 0);
+
+    for ($i = 1; $i <= $balconies; $i++) {
+        $rooms[] = ['name' => 'Balcony ' . $i, 'type' => 'External / Common Spaces'];
+    }
+
+    return $rooms;
+}
+
+private function createServiceUnitWithRooms(
+    Project $project,
+    ProjectBlock $block,
+    ProjectFloor $floor,
+    string $unitName,
+    string $unitType,
+    array $rooms,
+    $subspaceMasters,
+    array &$createdCounts
+) {
+    $unit = ProjectUnit::firstOrCreate(
+        [
+            'project_id' => $project->id,
+            'project_block_id' => $block->id,
+            'project_floor_id' => $floor->id,
+            'name' => $unitName,
+        ],
+        [
+            'type' => $unitType,
+            'is_active' => true,
+            'remarks' => 'Generated by structure wizard',
+        ]
+    );
+
+    if ($unit->wasRecentlyCreated) {
+        $createdCounts['units']++;
+    }
+
+    foreach ($rooms as $roomData) {
+        $this->createRoomWithSubspaces(
+            $project,
+            $block,
+            $floor,
+            $unit,
+            $roomData['name'],
+            $roomData['type'],
+            $subspaceMasters,
+            $createdCounts
+        );
+    }
+}
+
+private function createRoomWithSubspaces(
+    Project $project,
+    ProjectBlock $block,
+    ProjectFloor $floor,
+    ProjectUnit $unit,
+    string $roomName,
+    string $roomType,
+    $subspaceMasters,
+    array &$createdCounts
+) {
+    $room = ProjectRoom::firstOrCreate(
+        [
+            'project_id' => $project->id,
+            'project_block_id' => $block->id,
+            'project_floor_id' => $floor->id,
+            'project_unit_id' => $unit->id,
+            'name' => $roomName,
+        ],
+        [
+            'room_type' => $roomType,
+            'is_active' => true,
+            'remarks' => 'Generated by structure wizard',
+        ]
+    );
+
+    if ($room->wasRecentlyCreated) {
+        $createdCounts['rooms']++;
+    }
+
+    foreach ($subspaceMasters as $subspaceMaster) {
+        $subspace = ProjectSubspace::firstOrCreate(
+            [
+                'project_id' => $project->id,
+                'project_block_id' => $block->id,
+                'project_floor_id' => $floor->id,
+                'project_unit_id' => $unit->id,
+                'project_room_id' => $room->id,
+                'name' => $subspaceMaster->name,
+            ],
+            [
+                'type' => $subspaceMaster->type,
+                'is_active' => true,
+                'remarks' => 'Generated by structure wizard',
+            ]
+        );
+
+        if ($subspace->wasRecentlyCreated) {
+            $createdCounts['subspaces']++;
+        }
+    }
+}
+
+public function convertFloorUsage(Request $request, ProjectFloor $projectFloor)
+{
+    $request->validate([
+        'usage_type' => 'required|in:Residential Flats,Parking,Shops / Commercial,Amenities,Service Area,Mixed Use',
+    ]);
+
+    $oldValues = $projectFloor->toArray();
+
+    $projectFloor->update([
+        'usage_type' => $request->usage_type,
+        'remarks' => trim(($projectFloor->remarks ?? '') . "\nUsage changed to: " . $request->usage_type),
+    ]);
+
+    if ($request->usage_type !== 'Residential Flats') {
+        ProjectUnit::where('project_floor_id', $projectFloor->id)->update([
+            'is_active' => false,
+        ]);
+
+        ProjectRoom::where('project_floor_id', $projectFloor->id)->update([
+            'is_active' => false,
+        ]);
+
+        ProjectSubspace::where('project_floor_id', $projectFloor->id)->update([
+            'is_active' => false,
+        ]);
+    }
+
+    $newValues = $projectFloor->fresh()->toArray();
+
+    $this->auditProjectLocation(
+        'Floor Usage Changed',
+        'ProjectFloor',
+        $projectFloor,
+        'Floor usage changed: ' . $projectFloor->name . ' → ' . $request->usage_type,
+        $oldValues,
+        $newValues
+    );
+
+    return back()->with('success', 'Floor usage updated successfully.');
+}
+
 private function auditProjectLocation(
     string $action,
     string $recordType,
@@ -760,6 +1308,59 @@ private function auditProjectLocation(
         $description,
         $oldValues,
         $newValues
+    );
+}
+
+public function ajaxBlocks(Project $project)
+{
+    return response()->json(
+        ProjectBlock::where('project_id', $project->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
+
+public function ajaxFloors(ProjectBlock $block)
+{
+    return response()->json(
+        ProjectFloor::where('project_block_id', $block->id)
+            ->where('is_active', true)
+            ->orderBy('sequence')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
+
+public function ajaxUnits(ProjectFloor $floor)
+{
+    return response()->json(
+        ProjectUnit::where('project_floor_id', $floor->id)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
+
+public function ajaxRooms(ProjectUnit $unit)
+{
+    return response()->json(
+        ProjectRoom::where('project_unit_id', $unit->id)
+            ->where('is_active', true)
+            ->orderBy('room_type')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+    );
+}
+
+public function ajaxSubspaces(ProjectRoom $room)
+{
+    return response()->json(
+        ProjectSubspace::where('project_room_id', $room->id)
+            ->where('is_active', true)
+            ->orderBy('type')
+            ->orderBy('name')
+            ->get(['id', 'name'])
     );
 }
 }

@@ -90,7 +90,7 @@
 
             <div class="work-item border rounded-lg p-3 mb-3 bg-gray-50">
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
 
                     <div>
                         <label class="{{ $labelClass }}">Activity Division</label>
@@ -106,39 +106,30 @@
                     </div>
 
                     <div>
-                        <label class="{{ $labelClass }}">Activity Mapping</label>
+                        <label class="{{ $labelClass }}">Activity</label>
                         <select name="activity_mapping_id[]"
-                                class="{{ $inputClass }} activity-mapping-select">
+                                class="{{ $inputClass }} activity-mapping-select"
+                                required>
                             <option value="">Select Activity</option>
                             @foreach($activityMappings as $mapping)
                                 <option value="{{ $mapping->id }}"
-                                        data-division="{{ $mapping->activity_division_id }}">
+                                        data-division="{{ $mapping->activity_division_id }}"
+                                        data-activity-id="{{ $mapping->activity_id }}">
                                     {{ $mapping->activity_name }} ({{ $mapping->unit }})
                                 </option>
                             @endforeach
                         </select>
-                    </div>
 
-                    <div>
-                        <label class="{{ $labelClass }}">Old Activity</label>
-                        <select name="activity_id[]"
-                                class="{{ $inputClass }}"
-                                required>
-                            <option value="">Select Activity</option>
-                            @foreach($activities as $activity)
-                                <option value="{{ $activity->id }}">
-                                    {{ $activity->activity_name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <input type="hidden"
+                               name="activity_id[]"
+                               class="activity-id-hidden">
                     </div>
 
                     <div>
                         <label class="{{ $labelClass }}">Contractor</label>
                         <select name="contractor_id[]"
-                                class="{{ $inputClass }}"
-                                required>
-                            <option value="">Select Contractor</option>
+                                class="{{ $inputClass }}">
+                            <option value="">Company Workers / No Contractor</option>
                             @foreach($contractors as $contractor)
                                 <option value="{{ $contractor->id }}">
                                     {{ $contractor->contractor_name }}
@@ -156,7 +147,7 @@
                                required>
                     </div>
 
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="{{ $labelClass }}">Work Remarks</label>
                         <input type="text"
                                name="work_remarks[]"
@@ -164,10 +155,10 @@
                                placeholder="Optional">
                     </div>
 
-                    <div class="md:col-span-2">
+                    <div class="md:col-span-3">
                         <details class="bg-white border rounded p-3">
                             <summary class="cursor-pointer font-semibold text-blue-700 text-sm">
-                                Detailed Location Optional
+                                Select Project Location
                             </summary>
 
                             <div class="grid grid-cols-1 md:grid-cols-5 gap-3 mt-3">
@@ -175,65 +166,40 @@
                                 <div>
                                     <label class="{{ $labelClass }}">Block</label>
                                     <select name="project_block_id[]"
-                                            class="{{ $inputClass }}">
-                                        <option value="">Block</option>
-                                        @foreach($projectBlocks as $block)
-                                            <option value="{{ $block->id }}">
-                                                {{ $block->name }}
-                                            </option>
-                                        @endforeach
+                                            class="{{ $inputClass }} block-select">
+                                        <option value="">Select Block</option>
                                     </select>
                                 </div>
 
                                 <div>
                                     <label class="{{ $labelClass }}">Floor</label>
                                     <select name="project_floor_id[]"
-                                            class="{{ $inputClass }}">
-                                        <option value="">Floor</option>
-                                        @foreach($projectFloors as $floor)
-                                            <option value="{{ $floor->id }}">
-                                                {{ $floor->name }}
-                                            </option>
-                                        @endforeach
+                                            class="{{ $inputClass }} floor-select">
+                                        <option value="">Select Floor</option>
                                     </select>
                                 </div>
 
                                 <div>
-                                    <label class="{{ $labelClass }}">Unit</label>
+                                    <label class="{{ $labelClass }}">Unit / Flat</label>
                                     <select name="project_unit_id[]"
-                                            class="{{ $inputClass }}">
-                                        <option value="">Unit</option>
-                                        @foreach($projectUnits as $unit)
-                                            <option value="{{ $unit->id }}">
-                                                {{ $unit->name }}
-                                            </option>
-                                        @endforeach
+                                            class="{{ $inputClass }} unit-select">
+                                        <option value="">Select Unit</option>
                                     </select>
                                 </div>
 
                                 <div>
                                     <label class="{{ $labelClass }}">Room</label>
                                     <select name="project_room_id[]"
-                                            class="{{ $inputClass }}">
-                                        <option value="">Room</option>
-                                        @foreach($projectRooms as $room)
-                                            <option value="{{ $room->id }}">
-                                                {{ $room->name }}
-                                            </option>
-                                        @endforeach
+                                            class="{{ $inputClass }} room-select">
+                                        <option value="">Select Room</option>
                                     </select>
                                 </div>
 
                                 <div>
                                     <label class="{{ $labelClass }}">Sub-space</label>
                                     <select name="project_subspace_id[]"
-                                            class="{{ $inputClass }}">
-                                        <option value="">Sub-space</option>
-                                        @foreach($projectSubspaces as $subspace)
-                                            <option value="{{ $subspace->id }}">
-                                                {{ $subspace->name }}
-                                            </option>
-                                        @endforeach
+                                            class="{{ $inputClass }} subspace-select">
+                                        <option value="">Select Sub-space</option>
                                     </select>
                                 </div>
 
@@ -263,88 +229,88 @@
 
     </div>
 
-   {{-- LABOUR --}}
-<details class="{{ $cardClass }}">
-    <summary class="text-xl font-bold cursor-pointer">
-        Labour Details
-    </summary>
+    {{-- LABOUR --}}
+    <details class="{{ $cardClass }}">
+        <summary class="text-xl font-bold cursor-pointer">
+            Labour Details
+        </summary>
 
-    <div class="mt-4" id="labour-items">
+        <div class="mt-4" id="labour-items">
 
-        <div class="labour-item border rounded-lg p-3 mb-3 bg-gray-50">
+            <div class="labour-item border rounded-lg p-3 mb-3 bg-gray-50">
 
-            <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
 
-                <div>
-                    <label class="{{ $labelClass }}">Labour Category</label>
-                    <select class="{{ $inputClass }} labour-category-select">
-                        <option value="">Select Category</option>
-                        @foreach($labourCategories as $category)
-                            <option value="{{ $category->id }}">
-                                {{ $category->category_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                    <div>
+                        <label class="{{ $labelClass }}">Labour Category</label>
+                        <select class="{{ $inputClass }} labour-category-select">
+                            <option value="">Select Category</option>
+                            @foreach($labourCategories as $category)
+                                <option value="{{ $category->id }}">
+                                    {{ $category->category_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <div>
-                    <label class="{{ $labelClass }}">Labour Type</label>
-                    <select name="labour_type[]"
-                            class="{{ $inputClass }} labour-type-select">
-                        <option value="">Select Labour Type</option>
-                        @foreach($labourTypes as $labourType)
-                            <option value="{{ $labourType->id }}"
-                                    data-category="{{ $labourType->labour_category_id }}">
-                                {{ $labourType->labour_type_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
+                    <div>
+                        <label class="{{ $labelClass }}">Labour Type</label>
+                        <select name="labour_type[]"
+                                class="{{ $inputClass }} labour-type-select">
+                            <option value="">Select Labour Type</option>
+                            @foreach($labourTypes as $labourType)
+                                <option value="{{ $labourType->id }}"
+                                        data-category="{{ $labourType->labour_category_id }}">
+                                    {{ $labourType->labour_type_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                <div>
-                    <label class="{{ $labelClass }}">Male</label>
-                    <input type="number"
-                           name="male_count[]"
-                           value="0"
-                           class="{{ $inputClass }}">
-                </div>
+                    <div>
+                        <label class="{{ $labelClass }}">Male</label>
+                        <input type="number"
+                               name="male_count[]"
+                               value="0"
+                               class="{{ $inputClass }}">
+                    </div>
 
-                <div>
-                    <label class="{{ $labelClass }}">Female</label>
-                    <input type="number"
-                           name="female_count[]"
-                           value="0"
-                           class="{{ $inputClass }}">
-                </div>
+                    <div>
+                        <label class="{{ $labelClass }}">Female</label>
+                        <input type="number"
+                               name="female_count[]"
+                               value="0"
+                               class="{{ $inputClass }}">
+                    </div>
 
-                <div>
-                    <label class="{{ $labelClass }}">Local</label>
-                    <input type="number"
-                           name="local_count[]"
-                           value="0"
-                           class="{{ $inputClass }}">
-                </div>
+                    <div>
+                        <label class="{{ $labelClass }}">Local</label>
+                        <input type="number"
+                               name="local_count[]"
+                               value="0"
+                               class="{{ $inputClass }}">
+                    </div>
 
-                <div>
-                    <label class="{{ $labelClass }}">Non-local</label>
-                    <input type="number"
-                           name="non_local_count[]"
-                           value="0"
-                           class="{{ $inputClass }}">
+                    <div>
+                        <label class="{{ $labelClass }}">Non-local</label>
+                        <input type="number"
+                               name="non_local_count[]"
+                               value="0"
+                               class="{{ $inputClass }}">
+                    </div>
+
                 </div>
 
             </div>
 
         </div>
 
-    </div>
-
-    <button type="button"
-            onclick="addLabourItem()"
-            class="bg-green-600 text-white px-4 py-2 rounded text-sm">
-        + Add More Labour
-    </button>
-</details>
+        <button type="button"
+                onclick="addLabourItem()"
+                class="bg-green-600 text-white px-4 py-2 rounded text-sm">
+            + Add More Labour
+        </button>
+    </details>
 
     {{-- MATERIALS --}}
     <details class="{{ $cardClass }}">
@@ -360,7 +326,7 @@
 
                 <div id="material-used-items">
                     <div class="material-used-item border rounded p-3 mb-3 bg-white">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
 
                             <div>
                                 <label class="{{ $labelClass }}">Category</label>
@@ -382,7 +348,8 @@
                                     <option value="">Select Material</option>
                                     @foreach($materials as $material)
                                         <option value="{{ $material->id }}"
-                                                data-category="{{ $material->material_category_id }}">
+                                                data-category="{{ $material->material_category_id }}"
+                                                data-unit="{{ $material->unit->unit_name ?? $material->unit->name ?? $material->unit_name ?? $material->unit ?? '' }}">
                                             {{ $material->material_name }}
                                         </option>
                                     @endforeach
@@ -395,6 +362,15 @@
                                        step="0.01"
                                        name="quantity_used[]"
                                        class="{{ $inputClass }}">
+                            </div>
+
+                            <div>
+                                <label class="{{ $labelClass }}">Unit</label>
+                                <input type="text"
+                                       name="used_unit[]"
+                                       class="{{ $inputClass }} material-unit-input"
+                                       readonly
+                                       placeholder="Auto">
                             </div>
 
                         </div>
@@ -436,7 +412,8 @@
                                     <option value="">Select Material</option>
                                     @foreach($materials as $material)
                                         <option value="{{ $material->id }}"
-                                                data-category="{{ $material->material_category_id }}">
+                                                data-category="{{ $material->material_category_id }}"
+                                                data-unit="{{ $material->unit->unit_name ?? $material->unit->name ?? $material->unit_name ?? $material->unit ?? '' }}">
                                             {{ $material->material_name }}
                                         </option>
                                     @endforeach
@@ -462,6 +439,15 @@
                                        step="0.01"
                                        name="quantity_received[]"
                                        class="{{ $inputClass }}">
+                            </div>
+
+                            <div>
+                                <label class="{{ $labelClass }}">Unit</label>
+                                <input type="text"
+                                       name="received_unit[]"
+                                       class="{{ $inputClass }} material-unit-input"
+                                       readonly
+                                       placeholder="Auto">
                             </div>
 
                             <div>
@@ -517,7 +503,8 @@
                                     <option value="">Select Material</option>
                                     @foreach($materials as $material)
                                         <option value="{{ $material->id }}"
-                                                data-category="{{ $material->material_category_id }}">
+                                                data-category="{{ $material->material_category_id }}"
+                                                data-unit="{{ $material->unit->unit_name ?? $material->unit->name ?? $material->unit_name ?? $material->unit ?? '' }}">
                                             {{ $material->material_name }}
                                         </option>
                                     @endforeach
@@ -530,6 +517,15 @@
                                        step="0.01"
                                        name="required_quantity[]"
                                        class="{{ $inputClass }}">
+                            </div>
+
+                            <div>
+                                <label class="{{ $labelClass }}">Unit</label>
+                                <input type="text"
+                                       name="required_unit[]"
+                                       class="{{ $inputClass }} material-unit-input"
+                                       readonly
+                                       placeholder="Auto">
                             </div>
 
                             <div>
@@ -556,7 +552,7 @@
                                        class="{{ $inputClass }}">
                             </div>
 
-                            <div class="md:col-span-2">
+                            <div>
                                 <label class="{{ $labelClass }}">Remarks</label>
                                 <input type="text"
                                        name="required_remarks[]"
@@ -804,10 +800,16 @@
 </form>
 
 <script>
+    const labourTypeOptions = Array.from(
+        document.querySelectorAll('.labour-type-select option')
+    ).map(option => option.cloneNode(true));
+
     function resetFields(container) {
         container.querySelectorAll('input, textarea').forEach(function (field) {
             if (field.type === 'number') {
                 field.value = field.defaultValue || '';
+            } else if (field.type === 'hidden') {
+                field.value = '';
             } else {
                 field.value = '';
             }
@@ -815,6 +817,10 @@
 
         container.querySelectorAll('select').forEach(function (field) {
             field.selectedIndex = 0;
+        });
+
+        container.querySelectorAll('.material-unit-input').forEach(function (field) {
+            field.value = '';
         });
     }
 
@@ -829,6 +835,8 @@
         bindActivityFiltering();
         bindMaterialCategoryFiltering();
         bindLabourCategoryFiltering();
+        bindAjaxLocationFiltering();
+        bindMaterialUnitAutoFill();
         updateWorkButtons();
     }
 
@@ -874,8 +882,9 @@
         document.querySelectorAll('.work-item').forEach(function (item) {
             const divisionSelect = item.querySelector('.activity-division-select');
             const mappingSelect = item.querySelector('.activity-mapping-select');
+            const hiddenActivity = item.querySelector('.activity-id-hidden');
 
-            if (!divisionSelect || !mappingSelect) {
+            if (!divisionSelect || !mappingSelect || !hiddenActivity) {
                 return;
             }
 
@@ -893,15 +902,28 @@
                 });
 
                 mappingSelect.value = '';
+                hiddenActivity.value = '';
+            };
+
+            mappingSelect.onchange = function () {
+                const selectedOption = this.options[this.selectedIndex];
+                hiddenActivity.value = selectedOption.dataset.activityId || '';
             };
         });
+    }
+
+    function getMaterialWrapper(element) {
+        return element.closest('.material-used-item') ||
+               element.closest('.material-received-item') ||
+               element.closest('.material-required-item');
     }
 
     function bindMaterialCategoryFiltering() {
         document.querySelectorAll('.material-category-select').forEach(function (categorySelect) {
             categorySelect.onchange = function () {
-                const parent = categorySelect.closest('.border');
-                const materialSelect = parent.querySelector('.material-select');
+                const wrapper = getMaterialWrapper(categorySelect);
+                const materialSelect = wrapper ? wrapper.querySelector('.material-select') : null;
+                const unitInput = wrapper ? wrapper.querySelector('.material-unit-input') : null;
                 const selectedCategory = categorySelect.value;
 
                 if (!materialSelect) {
@@ -919,45 +941,180 @@
                 });
 
                 materialSelect.value = '';
+
+                if (unitInput) {
+                    unitInput.value = '';
+                }
             };
+        });
+    }
+
+    function bindMaterialUnitAutoFill() {
+        document.querySelectorAll('.material-select').forEach(function(select) {
+            select.onchange = function () {
+                const selectedOption = this.options[this.selectedIndex];
+                const wrapper = getMaterialWrapper(this);
+                const unitInput = wrapper ? wrapper.querySelector('.material-unit-input') : null;
+
+                if (unitInput) {
+                    unitInput.value = selectedOption.dataset.unit || '';
+                }
+            };
+        });
+    }
+
+    function bindLabourCategoryFiltering() {
+        document.querySelectorAll('.labour-item').forEach(function(item) {
+            const categorySelect = item.querySelector('.labour-category-select');
+            const typeSelect = item.querySelector('.labour-type-select');
+
+            if (!categorySelect || !typeSelect) {
+                return;
+            }
+
+            categorySelect.onchange = function () {
+                const selectedCategory = this.value;
+
+                typeSelect.innerHTML = '';
+                typeSelect.add(new Option('Select Labour Type', ''));
+
+                labourTypeOptions.forEach(function(option) {
+                    if (
+                        option.value !== '' &&
+                        option.dataset.category === selectedCategory
+                    ) {
+                        typeSelect.add(option.cloneNode(true));
+                    }
+                });
+            };
+        });
+    }
+
+    function fillSelect(select, items, placeholder) {
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+
+        items.forEach(function(item) {
+            select.innerHTML += `<option value="${item.id}">${item.name}</option>`;
+        });
+    }
+
+    function bindAjaxLocationFiltering() {
+        const projectSelect = document.querySelector('select[name="project_id"]');
+
+        document.querySelectorAll('.work-item').forEach(function(item) {
+            const blockSelect = item.querySelector('.block-select');
+            const floorSelect = item.querySelector('.floor-select');
+            const unitSelect = item.querySelector('.unit-select');
+            const roomSelect = item.querySelector('.room-select');
+            const subspaceSelect = item.querySelector('.subspace-select');
+
+            if (!projectSelect || !blockSelect || !floorSelect || !unitSelect || !roomSelect || !subspaceSelect) {
+                return;
+            }
+
+            function clearBelow(level) {
+                if (level <= 1) fillSelect(floorSelect, [], 'Select Floor');
+                if (level <= 2) fillSelect(unitSelect, [], 'Select Unit');
+                if (level <= 3) fillSelect(roomSelect, [], 'Select Room');
+                if (level <= 4) fillSelect(subspaceSelect, [], 'Select Sub-space');
+            }
+
+            projectSelect.onchange = function() {
+                document.querySelectorAll('.work-item').forEach(function(workItem) {
+                    const b = workItem.querySelector('.block-select');
+                    const f = workItem.querySelector('.floor-select');
+                    const u = workItem.querySelector('.unit-select');
+                    const r = workItem.querySelector('.room-select');
+                    const s = workItem.querySelector('.subspace-select');
+
+                    fillSelect(b, [], 'Loading Blocks...');
+                    fillSelect(f, [], 'Select Floor');
+                    fillSelect(u, [], 'Select Unit');
+                    fillSelect(r, [], 'Select Room');
+                    fillSelect(s, [], 'Select Sub-space');
+
+                    if (!projectSelect.value) {
+                        fillSelect(b, [], 'Select Block');
+                        return;
+                    }
+
+                    fetch(`/ajax/projects/${projectSelect.value}/blocks`)
+                        .then(response => response.json())
+                        .then(data => fillSelect(b, data, 'Select Block'));
+                });
+            };
+
+            blockSelect.onchange = function() {
+                fillSelect(floorSelect, [], 'Loading Floors...');
+                clearBelow(2);
+
+                if (!this.value) {
+                    fillSelect(floorSelect, [], 'Select Floor');
+                    return;
+                }
+
+                fetch(`/ajax/blocks/${this.value}/floors`)
+                    .then(response => response.json())
+                    .then(data => fillSelect(floorSelect, data, 'Select Floor'));
+            };
+
+            floorSelect.onchange = function() {
+                fillSelect(unitSelect, [], 'Loading Units...');
+                clearBelow(3);
+
+                if (!this.value) {
+                    fillSelect(unitSelect, [], 'Select Unit');
+                    return;
+                }
+
+                fetch(`/ajax/floors/${this.value}/units`)
+                    .then(response => response.json())
+                    .then(data => fillSelect(unitSelect, data, 'Select Unit'));
+            };
+
+            unitSelect.onchange = function() {
+                fillSelect(roomSelect, [], 'Loading Rooms...');
+                clearBelow(4);
+
+                if (!this.value) {
+                    fillSelect(roomSelect, [], 'Select Room');
+                    return;
+                }
+
+                fetch(`/ajax/units/${this.value}/rooms`)
+                    .then(response => response.json())
+                    .then(data => fillSelect(roomSelect, data, 'Select Room'));
+            };
+
+            roomSelect.onchange = function() {
+                fillSelect(subspaceSelect, [], 'Loading Sub-spaces...');
+
+                if (!this.value) {
+                    fillSelect(subspaceSelect, [], 'Select Sub-space');
+                    return;
+                }
+
+                fetch(`/ajax/rooms/${this.value}/subspaces`)
+                    .then(response => response.json())
+                    .then(data => fillSelect(subspaceSelect, data, 'Select Sub-space'));
+            };
+
+            if (projectSelect.value && !blockSelect.dataset.loaded) {
+                blockSelect.dataset.loaded = '1';
+
+                fetch(`/ajax/projects/${projectSelect.value}/blocks`)
+                    .then(response => response.json())
+                    .then(data => fillSelect(blockSelect, data, 'Select Block'));
+            }
         });
     }
 
     bindActivityFiltering();
     bindMaterialCategoryFiltering();
     bindLabourCategoryFiltering();
+    bindAjaxLocationFiltering();
+    bindMaterialUnitAutoFill();
     updateWorkButtons();
-
-    const labourTypeOptions =
-    Array.from(document.querySelectorAll('.labour-type-select option'))
-        .map(option => option.cloneNode(true));
-
-function bindLabourCategoryFiltering() {
-    document.querySelectorAll('.labour-item').forEach(function(item) {
-        const categorySelect = item.querySelector('.labour-category-select');
-        const typeSelect = item.querySelector('.labour-type-select');
-
-        if (!categorySelect || !typeSelect) {
-            return;
-        }
-
-        categorySelect.onchange = function () {
-            const selectedCategory = this.value;
-
-            typeSelect.innerHTML = '';
-            typeSelect.add(new Option('Select Labour Type', ''));
-
-            labourTypeOptions.forEach(function(option) {
-                if (
-                    option.value !== '' &&
-                    option.dataset.category === selectedCategory
-                ) {
-                    typeSelect.add(option.cloneNode(true));
-                }
-            });
-        };
-    });
-}
 </script>
 
 @endsection

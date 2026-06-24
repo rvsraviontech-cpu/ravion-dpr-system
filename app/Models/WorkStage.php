@@ -4,20 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class UnitMaster extends Model
+class WorkStage extends Model
 {
     protected $fillable = [
-        'unit_name',
-        'unit_code',
-        'symbol',
-        'unit_type',
-        'decimal_allowed',
+        'code',
+        'name',
+        'sequence',
         'is_active',
         'remarks',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'decimal_allowed' => 'boolean',
     ];
 }

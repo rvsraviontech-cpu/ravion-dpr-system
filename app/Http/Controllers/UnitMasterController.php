@@ -17,7 +17,9 @@ class UnitMasterController extends Controller
 
             $query->where(function ($q) use ($search) {
                 $q->where('unit_name', 'like', "%{$search}%")
-                  ->orWhere('unit_code', 'like', "%{$search}%");
+                    ->orWhere('unit_code', 'like', "%{$search}%")
+                    ->orWhere('symbol', 'like', "%{$search}%")
+                    ->orWhere('unit_type', 'like', "%{$search}%");
             });
         }
 
@@ -25,28 +27,39 @@ class UnitMasterController extends Controller
             $query->where('is_active', $request->status);
         }
 
+        if ($request->filled('unit_type')) {
+            $query->where('unit_type', $request->unit_type);
+        }
+
         $units = $query
+            ->orderBy('unit_type')
             ->orderBy('unit_name')
             ->paginate(20)
             ->withQueryString();
 
-        return view('unit-masters.index', compact('units'));
+        $unitTypes = $this->unitTypes();
+
+        return view('unit-masters.index', compact(
+            'units',
+            'unitTypes'
+        ));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'unit_name' => 'required|string|max:255|unique:unit_masters,unit_name',
             'unit_code' => 'nullable|string|max:255|unique:unit_masters,unit_code',
+            'symbol' => 'nullable|string|max:50',
+            'unit_type' => 'nullable|string|max:100',
+            'decimal_allowed' => 'nullable|boolean',
             'remarks' => 'nullable|string',
         ]);
 
-        $unit = UnitMaster::create([
-            'unit_name' => $request->unit_name,
-            'unit_code' => $request->unit_code,
-            'is_active' => true,
-            'remarks' => $request->remarks,
-        ]);
+        $validated['is_active'] = true;
+        $validated['decimal_allowed'] = $request->has('decimal_allowed') ? 1 : 0;
+
+        $unit = UnitMaster::create($validated);
 
         AuditHelper::log(
             'Unit Masters',
@@ -65,26 +78,31 @@ class UnitMasterController extends Controller
 
     public function edit(UnitMaster $unitMaster)
     {
-        return view('unit-masters.edit', compact('unitMaster'));
+        $unitTypes = $this->unitTypes();
+
+        return view('unit-masters.edit', compact(
+            'unitMaster',
+            'unitTypes'
+        ));
     }
 
     public function update(Request $request, UnitMaster $unitMaster)
     {
-        $request->validate([
+        $validated = $request->validate([
             'unit_name' => 'required|string|max:255|unique:unit_masters,unit_name,' . $unitMaster->id,
             'unit_code' => 'nullable|string|max:255|unique:unit_masters,unit_code,' . $unitMaster->id,
+            'symbol' => 'nullable|string|max:50',
+            'unit_type' => 'nullable|string|max:100',
+            'decimal_allowed' => 'nullable|boolean',
             'is_active' => 'required|boolean',
             'remarks' => 'nullable|string',
         ]);
 
         $oldValues = $unitMaster->toArray();
 
-        $unitMaster->update([
-            'unit_name' => $request->unit_name,
-            'unit_code' => $request->unit_code,
-            'is_active' => $request->is_active,
-            'remarks' => $request->remarks,
-        ]);
+        $validated['decimal_allowed'] = $request->has('decimal_allowed') ? 1 : 0;
+
+        $unitMaster->update($validated);
 
         AuditHelper::log(
             'Unit Masters',
@@ -122,5 +140,21 @@ class UnitMasterController extends Controller
         );
 
         return back()->with('success', 'Unit status updated successfully.');
+    }
+
+    private function unitTypes(): array
+    {
+        return [
+            'Area',
+            'Volume',
+            'Length',
+            'Weight',
+            'Count',
+            'Packaging',
+            'Liquid',
+            'Time',
+            'Lump Sum',
+            'Other',
+        ];
     }
 }

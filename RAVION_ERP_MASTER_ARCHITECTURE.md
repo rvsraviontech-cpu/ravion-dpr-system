@@ -2326,3 +2326,343 @@ Approximately **78–80%** of the core ERP functionality is now complete.
 * DPR PDF
 * Notification System
 * UI/UX redesign
+
+# Ravion DPR ERP – Development Progress Update
+
+## Version
+
+v2.2
+
+**Date:** 23 June 2026
+
+---
+
+# Milestone Achieved
+
+The Master Data Foundation of Ravion DPR ERP has been redesigned and standardized.
+
+The ERP now follows a structured hierarchy where all operational modules consume centralized master data instead of hardcoded values.
+
+---
+
+# Completed Modules
+
+## Project Structure
+
+Completed.
+
+### Hierarchy
+
+Project
+
+→ Block / Building
+
+→ Floor
+
+→ Unit / Flat / Villa
+
+→ Room
+
+→ Sub-space / Element
+
+### Features
+
+* Automatic Project Structure Wizard
+* Manual Structure Creation
+* Ground Floor / Parking Logic
+* Cellar Parking Support
+* Floor Usage Configuration
+* Residential / Commercial Floor Types
+* Dynamic Structure Generation
+* Explorer View
+* Manual Editing
+* Project Statistics Dashboard
+
+---
+
+# Activity Masters
+
+Completed.
+
+## Activity Division Master
+
+Created as independent master.
+
+Examples
+
+* Earthwork
+* RCC
+* Masonry
+* Finishing
+* Plumbing
+* Electrical
+
+Features
+
+* Search
+* Filter
+* Active / Inactive
+* Audit Logs
+* Sequence Ordering
+
+---
+
+## Work Stage Master
+
+Created as independent master.
+
+Purpose
+
+Defines execution stages used throughout DPR and Planning.
+
+Examples
+
+* Pre Construction
+* Foundation
+* RCC
+* Masonry
+* Flooring
+* Painting
+
+Features
+
+* Search
+* Filter
+* Sequence
+* Active / Inactive
+* Audit Logs
+
+---
+
+## Activity Master
+
+Redesigned.
+
+Now linked to
+
+Activity Division
+
+*
+
+Work Stage
+
+*
+
+Unit Master
+
+instead of hardcoded values.
+
+Features
+
+* Division Filter
+* Search
+* Status Filter
+* Audit Logging
+* Clean UI
+* Future-ready for BOQ and DPR
+
+---
+
+# Unit Master
+
+Redesigned.
+
+Unit Master now contains standardized engineering units.
+
+Fields
+
+* Unit Name
+* Unit Code
+* Symbol
+* Unit Type
+* Decimal Allowed
+* Active Status
+* Remarks
+
+Supported Types
+
+* Area
+* Length
+* Volume
+* Weight
+* Count
+* Liquid
+* Packaging
+* Time
+* Lump Sum
+* Other
+
+Standard Units
+
+* Nos
+* Bag
+* Kilogram
+* Metric Tonne
+* Meter
+* Running Foot
+* Square Foot
+* Cubic Foot
+* Cubic Meter
+* Litre
+
+Purpose
+
+Single source of truth for
+
+* Activities
+* Materials
+* DPR
+* BOQ
+* Billing
+* Procurement
+* Inventory
+
+---
+
+# DPR Module Improvements
+
+Completed
+
+### Dynamic Project Structure Selection
+
+Project
+
+↓
+
+Block
+
+↓
+
+Floor
+
+↓
+
+Unit
+
+↓
+
+Room
+
+↓
+
+Sub-space
+
+All dropdowns now load dynamically based on the selected project.
+
+---
+
+### Material Section
+
+Improved.
+
+Material Units now come directly from Unit Master.
+
+Supports
+
+* Bag
+* Kg
+* Cum
+* Sqft
+* Nos
+
+No hardcoded units remain.
+
+---
+
+### Labour Module
+
+Current Status
+
+On Hold
+
+Reason
+
+Current labour attendance is maintained in a shared Google Sheet between Engineers and Accounts.
+
+Future Plan
+
+Google Sheets API integration.
+
+Workflow
+
+Google Sheet
+
+↓
+
+ERP Synchronization
+
+↓
+
+Labour Master
+
+↓
+
+DPR
+
+This avoids duplicate data entry.
+
+---
+
+# UI Improvements
+
+Completed
+
+* Cleaner Master Pages
+* Standardized Tables
+* Search
+* Filters
+* Status Badges
+* Modern CRUD Layout
+* Consistent Buttons
+* Improved Navigation
+
+---
+
+# Architecture Decision
+
+The ERP has officially adopted the following principle:
+
+> All operational modules must consume centralized Master Data.
+
+No module should contain hardcoded
+
+* Units
+* Work Stages
+* Activity Divisions
+* Activity Types
+
+This significantly improves maintainability and reporting consistency.
+
+---
+
+# Current Completion Status
+
+| Module             | Status                |
+| ------------------ | --------------------- |
+| Project Structure  | ✅ Complete            |
+| Activity Divisions | ✅ Complete            |
+| Work Stage Master  | ✅ Complete            |
+| Unit Master        | ✅ Complete            |
+| Activity Master    | 🔄 Final Integration  |
+| DPR Entry          | 🔄 Active Development |
+| Labour Integration | ⏸ On Hold             |
+| Materials          | 🔄 Active Development |
+
+---
+
+# Next Development Phase
+
+1. Complete Activity Master integration with Work Stage and Unit Master.
+2. Finalize DPR Create/Edit workflow using centralized masters.
+3. Integrate Google Sheets for Labour synchronization.
+4. Begin PMO Planning and Management Intelligence Layer.
+5. Implement BOQ and Billing modules using standardized master data.
+
+---
+
+# Project Status
+
+The Master Data Foundation is now approximately **95% complete**.
+
+This establishes a stable architecture for all remaining ERP modules and minimizes future structural changes.
+
