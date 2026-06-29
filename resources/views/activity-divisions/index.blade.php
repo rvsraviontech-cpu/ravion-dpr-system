@@ -2,194 +2,135 @@
 
 @section('content')
 
-<div class="flex justify-between items-center mb-6">
+<x-rds.resource.index
+    title="Activity Divisions"
+    description="Manage construction activity groups used throughout DPR, BOQ and Planning."
+    :breadcrumbs="[
+        ['label' => 'Dashboard', 'url' => route('dashboard')],
+        ['label' => 'Execution Masters'],
+        ['label' => 'Activity Divisions'],
+    ]"
+    :paginator="$activityDivisions"
+>
+    <x-slot name="actions">
+        <x-rds.button href="{{ route('activity-divisions.create') }}">
+            + New Division
+        </x-rds.button>
+    </x-slot>
 
-    <div>
+    @if(session('success'))
+        <x-rds.alert type="success">
+            {{ session('success') }}
+        </x-rds.alert>
+    @endif
 
-        <h1 class="text-3xl font-bold">
-            Activity Divisions
-        </h1>
-
-        <p class="text-gray-500">
-            Organize activities into logical construction divisions.
-        </p>
-
-    </div>
-
-    <a href="{{ route('activity-divisions.create') }}"
-       class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-
-        + New Division
-
-    </a>
-
-</div>
-
-@if(session('success'))
-
-<div class="bg-green-100 border border-green-300 text-green-700 p-3 rounded mb-5">
-
-    {{ session('success') }}
-
-</div>
-
-@endif
-
-<div class="bg-white rounded-lg shadow">
-
-    <div class="p-5 border-b">
-
-        <form>
-
-            <div class="grid grid-cols-3 gap-4">
-
-                <input
-                    type="text"
+    <x-slot name="toolbar">
+        <x-rds.filter-bar action="{{ route('activity-divisions.index') }}">
+            <div class="md:col-span-2">
+                <x-rds.input
                     name="search"
+                    label="Search"
                     value="{{ request('search') }}"
-                    placeholder="Search Division..."
-                    class="border rounded px-4 py-2">
-
-                <select
-                    name="status"
-                    class="border rounded px-4 py-2">
-
-                    <option value="">All Status</option>
-
-                    <option value="1"
-                        {{ request('status')=='1'?'selected':'' }}>
-                        Active
-                    </option>
-
-                    <option value="0"
-                        {{ request('status')=='0'?'selected':'' }}>
-                        Inactive
-                    </option>
-
-                </select>
-
-                <button class="bg-blue-600 text-white rounded">
-
-                    Filter
-
-                </button>
-
+                    placeholder="Search code, division or remarks..."
+                />
             </div>
 
-        </form>
+            <x-rds.select name="status" label="Status">
+                <option value="">All Status</option>
+                <option value="1" @selected(request('status') === '1')>Active</option>
+                <option value="0" @selected(request('status') === '0')>Inactive</option>
+            </x-rds.select>
 
-    </div>
+            <x-slot name="actions">
+                <x-rds.button type="submit">
+                    Filter
+                </x-rds.button>
 
-    <table class="w-full">
+                <x-rds.button
+                    variant="secondary"
+                    href="{{ route('activity-divisions.index') }}"
+                >
+                    Reset
+                </x-rds.button>
+            </x-slot>
+        </x-rds.filter-bar>
+    </x-slot>
 
-        <thead class="bg-gray-100">
+    @if($activityDivisions->count())
 
-        <tr>
+        <x-rds.table>
+            <x-slot name="head">
+                <x-rds.table-th>#</x-rds.table-th>
+                <x-rds.table-th>Code</x-rds.table-th>
+                <x-rds.table-th>Division</x-rds.table-th>
+                <x-rds.table-th>Sequence</x-rds.table-th>
+                <x-rds.table-th>Status</x-rds.table-th>
+                <x-rds.table-th align="right">Actions</x-rds.table-th>
+            </x-slot>
 
-            <th class="p-4 text-left">Code</th>
+            @foreach($activityDivisions as $division)
+                <tr class="hover:bg-gray-50">
+                    <x-rds.table-td>
+                        {{ $activityDivisions->firstItem() + $loop->index }}
+                    </x-rds.table-td>
 
-            <th class="p-4 text-left">Division</th>
+                    <x-rds.table-td>
+                        <x-rds.badge variant="info">
+                            {{ $division->code }}
+                        </x-rds.badge>
+                    </x-rds.table-td>
 
-            <th class="p-4 text-left">Sequence</th>
+                    <x-rds.table-td>
+                        <div class="font-semibold text-gray-900">
+                            {{ $division->name }}
+                        </div>
 
-            <th class="p-4 text-left">Status</th>
+                        @if($division->remarks)
+                            <div class="mt-1 text-xs text-gray-500">
+                                {{ Str::limit($division->remarks, 60) }}
+                            </div>
+                        @endif
+                    </x-rds.table-td>
 
-            <th class="p-4 text-center">Action</th>
+                    <x-rds.table-td>
+                        {{ $division->sequence }}
+                    </x-rds.table-td>
 
-        </tr>
+                    <x-rds.table-td>
+                        @if($division->is_active)
+                            <x-rds.badge variant="success">Active</x-rds.badge>
+                        @else
+                            <x-rds.badge variant="danger">Inactive</x-rds.badge>
+                        @endif
+                    </x-rds.table-td>
 
-        </thead>
+                    <x-rds.table-td align="right">
+                        <x-rds.action-menu
+                            :show="route('activity-divisions.show', $division)"
+                            :edit="route('activity-divisions.edit', $division)"
+                            :toggle="route('activity-divisions.destroy', $division)"
+                            :active="$division->is_active"
+                        />
+                    </x-rds.table-td>
+                </tr>
+            @endforeach
+        </x-rds.table>
 
-        <tbody>
+    @else
 
-        @forelse($activityDivisions as $division)
+        <x-rds.empty-state
+            title="No activity divisions found"
+            message="Create your first activity division or adjust your filters."
+        >
+            <x-slot name="action">
+                <x-rds.button href="{{ route('activity-divisions.create') }}">
+                    Create Division
+                </x-rds.button>
+            </x-slot>
+        </x-rds.empty-state>
 
-            <tr class="border-t hover:bg-gray-50">
+    @endif
 
-                <td class="p-4">
-                    {{ $division->code }}
-                </td>
-
-                <td class="p-4 font-semibold">
-                    {{ $division->name }}
-                </td>
-
-                <td class="p-4">
-                    {{ $division->sequence }}
-                </td>
-
-                <td class="p-4">
-
-                    @if($division->is_active)
-
-                        <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-
-                            Active
-
-                        </span>
-
-                    @else
-
-                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-
-                            Inactive
-
-                        </span>
-
-                    @endif
-
-                </td>
-
-                <td class="p-4 text-center">
-
-                    <a href="{{ route('activity-divisions.edit',$division) }}"
-                       class="bg-yellow-500 text-white px-3 py-1 rounded">
-
-                        Edit
-
-                    </a>
-
-                    <form
-                        action="{{ route('activity-divisions.destroy',$division) }}"
-                        method="POST"
-                        class="inline">
-
-                        @csrf
-                        @method('DELETE')
-
-                        <button
-                            onclick="return confirm('Change Status?')"
-                            class="bg-red-600 text-white px-3 py-1 rounded">
-
-                            {{ $division->is_active?'Deactivate':'Activate' }}
-
-                        </button>
-
-                    </form>
-
-                </td>
-
-            </tr>
-
-        @empty
-
-            <tr>
-
-                <td colspan="5"
-                    class="text-center p-8 text-gray-500">
-
-                    No Activity Divisions Found
-
-                </td>
-
-            </tr>
-
-        @endforelse
-
-        </tbody>
-
-    </table>
-
-</div>
+</x-rds.resource.index>
 
 @endsection

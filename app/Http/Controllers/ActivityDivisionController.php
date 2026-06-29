@@ -2,57 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use App\Framework\Controllers\BaseMasterController;
 use App\Models\ActivityDivision;
 use Illuminate\Http\Request;
-use App\Helpers\AuditHelper;
 
-class ActivityDivisionController extends Controller
+class ActivityDivisionController extends BaseMasterController
 {
-    public function index(Request $request)
+    protected string $model = ActivityDivision::class;
+
+    protected string $view = 'activity-divisions';
+
+    protected string $module = 'Activity Divisions';
+
+    protected string $entity = 'ActivityDivision';
+
+    protected string $nameField = 'name';
+
+    protected array $searchColumns = [
+        'code',
+        'name',
+        'remarks',
+    ];
+
+    protected array $filters = [
+        'status' => 'is_active',
+    ];
+
+    protected array $orderBy = [
+        'sequence' => 'asc',
+        'name' => 'asc',
+    ];
+
+        public function store(Request $request)
     {
-        $activityDivisions = ActivityDivision::query()
-            ->when($request->search, function ($query) use ($request) {
-                $query->where('code', 'like', '%' . $request->search . '%')
-                    ->orWhere('name', 'like', '%' . $request->search . '%');
-            })
-            ->when($request->status !== null && $request->status !== '', function ($query) use ($request) {
-                $query->where('is_active', $request->status);
-            })
-            ->orderBy('sequence')
-            ->orderBy('name')
-            ->get();
-
-        return view('activity-divisions.index', compact('activityDivisions'));
-    }
-
-    public function create()
-    {
-        return view('activity-divisions.create');
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'code' => 'required|string|max:255|unique:activity_divisions,code',
-            'name' => 'required|string|max:255',
-            'sequence' => 'nullable|integer|min:0',
-            'remarks' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
-        ]);
-
-        $validated['sequence'] = $validated['sequence'] ?? 0;
-        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        $validated = $this->validateDivision($request);
 
         $division = ActivityDivision::create($validated);
 
-        AuditHelper::log(
-            'Activity Divisions',
-            'Created',
-            'ActivityDivision',
+        $this->auditCreated(
+            $this->module,
+            $this->entity,
             $division->id,
-            'Activity division created: ' . $division->name,
-            null,
-            $division->toArray()
+            $division->name,
+            $this->auditValues($division)
         );
 
         return redirect()
@@ -60,36 +52,21 @@ class ActivityDivisionController extends Controller
             ->with('success', 'Activity division created successfully.');
     }
 
-    public function edit(ActivityDivision $activityDivision)
-    {
-        return view('activity-divisions.edit', compact('activityDivision'));
-    }
-
     public function update(Request $request, ActivityDivision $activityDivision)
     {
-        $validated = $request->validate([
-            'code' => 'required|string|max:255|unique:activity_divisions,code,' . $activityDivision->id,
-            'name' => 'required|string|max:255',
-            'sequence' => 'nullable|integer|min:0',
-            'remarks' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
-        ]);
+        $validated = $this->validateDivision($request, $activityDivision);
 
-        $oldValues = $activityDivision->toArray();
-
-        $validated['sequence'] = $validated['sequence'] ?? 0;
-        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        $oldValues = $this->auditValues($activityDivision);
 
         $activityDivision->update($validated);
 
-        AuditHelper::log(
-            'Activity Divisions',
-            'Updated',
-            'ActivityDivision',
+        $this->auditUpdated(
+            $this->module,
+            $this->entity,
             $activityDivision->id,
-            'Activity division updated: ' . $activityDivision->name,
+            $activityDivision->name,
             $oldValues,
-            $activityDivision->fresh()->toArray()
+            $this->auditValues($activityDivision->fresh())
         );
 
         return redirect()
@@ -99,24 +76,56 @@ class ActivityDivisionController extends Controller
 
     public function destroy(ActivityDivision $activityDivision)
     {
-        $oldValues = $activityDivision->toArray();
+        $oldValues = $this->auditValues($activityDivision);
 
         $activityDivision->update([
             'is_active' => !$activityDivision->is_active,
         ]);
 
-        AuditHelper::log(
-            'Activity Divisions',
-            $activityDivision->is_active ? 'Activated' : 'Deactivated',
-            'ActivityDivision',
+        $activityDivision->refresh();
+
+        $this->auditStatusChanged(
+            $this->module,
+            $this->entity,
             $activityDivision->id,
-            ($activityDivision->is_active ? 'Activity division activated: ' : 'Activity division deactivated: ') . $activityDivision->name,
+            $activityDivision->name,
+            $activityDivision->is_active,
             $oldValues,
-            $activityDivision->fresh()->toArray()
+            $this->auditValues($activityDivision)
         );
 
         return redirect()
             ->route('activity-divisions.index')
             ->with('success', 'Activity division status updated successfully.');
+    }
+
+    private function validateDivision(Request $request, ?ActivityDivision $activityDivision = null): array
+    {
+        $divisionId = $activityDivision?->id;
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:activity_divisions,code,' . $divisionId,
+            'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
+            'remarks' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $validated['sequence'] = $validated['sequence'] ?? 0;
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        return $validated;
+    }
+
+    private function auditValues(ActivityDivision $division): array
+    {
+        return $division->only([
+            'id',
+            'code',
+            'name',
+            'sequence',
+            'is_active',
+            'remarks',
+        ]);
     }
 }

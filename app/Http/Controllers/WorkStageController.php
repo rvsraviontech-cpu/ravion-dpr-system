@@ -2,57 +2,52 @@
 
 namespace App\Http\Controllers;
 
+use App\Framework\Controllers\BaseMasterController;
+use App\Framework\Traits\MasterAuditTrait;
 use App\Models\WorkStage;
 use Illuminate\Http\Request;
-use App\Helpers\AuditHelper;
 
-class WorkStageController extends Controller
+class WorkStageController extends BaseMasterController
 {
-    public function index(Request $request)
-    {
-        $workStages = WorkStage::query()
-            ->when($request->search, function ($query) use ($request) {
-                $query->where('code', 'like', '%' . $request->search . '%')
-                    ->orWhere('name', 'like', '%' . $request->search . '%');
-            })
-            ->when($request->status !== null && $request->status !== '', function ($query) use ($request) {
-                $query->where('is_active', $request->status);
-            })
-            ->orderBy('sequence')
-            ->orderBy('name')
-            ->get();
+    use MasterAuditTrait;
 
-        return view('work-stages.index', compact('workStages'));
-    }
+    protected string $model = WorkStage::class;
 
-    public function create()
-    {
-        return view('work-stages.create');
-    }
+    protected string $view = 'work-stages';
+
+    protected string $module = 'Work Stages';
+
+    protected string $entity = 'WorkStage';
+
+    protected string $nameField = 'name';
+
+    protected array $searchColumns = [
+        'code',
+        'name',
+        'remarks',
+    ];
+
+    protected array $filters = [
+        'status' => 'is_active',
+    ];
+
+    protected array $orderBy = [
+        'sequence' => 'asc',
+        'name' => 'asc',
+    ];
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'code' => 'required|string|max:255|unique:work_stages,code',
-            'name' => 'required|string|max:255',
-            'sequence' => 'nullable|integer|min:0',
-            'remarks' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
-        ]);
-
-        $validated['sequence'] = $validated['sequence'] ?? 0;
-        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        $validated = $this->validateWorkStage($request);
 
         $workStage = WorkStage::create($validated);
 
-        AuditHelper::log(
-            'Work Stages',
-            'Created',
-            'WorkStage',
+        $this->auditCreated(
+            $this->module,
+            $this->entity,
             $workStage->id,
-            'Work stage created: ' . $workStage->name,
-            null,
-            $workStage->toArray()
+            $workStage->name,
+            $this->auditValues($workStage)
         );
 
         return redirect()
@@ -60,36 +55,21 @@ class WorkStageController extends Controller
             ->with('success', 'Work stage created successfully.');
     }
 
-    public function edit(WorkStage $workStage)
-    {
-        return view('work-stages.edit', compact('workStage'));
-    }
-
     public function update(Request $request, WorkStage $workStage)
     {
-        $validated = $request->validate([
-            'code' => 'required|string|max:255|unique:work_stages,code,' . $workStage->id,
-            'name' => 'required|string|max:255',
-            'sequence' => 'nullable|integer|min:0',
-            'remarks' => 'nullable|string',
-            'is_active' => 'nullable|boolean',
-        ]);
+        $validated = $this->validateWorkStage($request, $workStage);
 
-        $oldValues = $workStage->toArray();
-
-        $validated['sequence'] = $validated['sequence'] ?? 0;
-        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+        $oldValues = $this->auditValues($workStage);
 
         $workStage->update($validated);
 
-        AuditHelper::log(
-            'Work Stages',
-            'Updated',
-            'WorkStage',
+        $this->auditUpdated(
+            $this->module,
+            $this->entity,
             $workStage->id,
-            'Work stage updated: ' . $workStage->name,
+            $workStage->name,
             $oldValues,
-            $workStage->fresh()->toArray()
+            $this->auditValues($workStage->fresh())
         );
 
         return redirect()
@@ -99,24 +79,56 @@ class WorkStageController extends Controller
 
     public function destroy(WorkStage $workStage)
     {
-        $oldValues = $workStage->toArray();
+        $oldValues = $this->auditValues($workStage);
 
         $workStage->update([
             'is_active' => !$workStage->is_active,
         ]);
 
-        AuditHelper::log(
-            'Work Stages',
-            $workStage->is_active ? 'Activated' : 'Deactivated',
-            'WorkStage',
+        $workStage->refresh();
+
+        $this->auditStatusChanged(
+            $this->module,
+            $this->entity,
             $workStage->id,
-            ($workStage->is_active ? 'Work stage activated: ' : 'Work stage deactivated: ') . $workStage->name,
+            $workStage->name,
+            $workStage->is_active,
             $oldValues,
-            $workStage->fresh()->toArray()
+            $this->auditValues($workStage)
         );
 
         return redirect()
             ->route('work-stages.index')
             ->with('success', 'Work stage status updated successfully.');
+    }
+
+    private function validateWorkStage(Request $request, ?WorkStage $workStage = null): array
+    {
+        $workStageId = $workStage?->id;
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:work_stages,code,' . $workStageId,
+            'name' => 'required|string|max:255',
+            'sequence' => 'nullable|integer|min:0',
+            'remarks' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
+        ]);
+
+        $validated['sequence'] = $validated['sequence'] ?? 0;
+        $validated['is_active'] = $request->has('is_active') ? 1 : 0;
+
+        return $validated;
+    }
+
+    private function auditValues(WorkStage $workStage): array
+    {
+        return $workStage->only([
+            'id',
+            'code',
+            'name',
+            'sequence',
+            'is_active',
+            'remarks',
+        ]);
     }
 }

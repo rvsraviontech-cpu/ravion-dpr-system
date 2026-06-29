@@ -23,6 +23,32 @@ return [
     ],
 
     [
+    'title' => 'Material Tracking',
+    'icon' => 'cube',
+    'items' => [
+        ['title' => 'Material Received', 'route' => 'material-received.index', 'permission' => 'material_received.view', 'icon' => 'truck'],
+        ['title' => 'Material Consumed', 'route' => 'material-consumed.index', 'permission' => 'material_consumed.view', 'icon' => 'cube'],
+        ['title' => 'Material Required', 'route' => 'material-requirements.index', 'permission' => 'material_required.view', 'icon' => 'document'],
+        ['title' => 'Stock Register', 'route' => 'stock-register.index', 'permission' => 'material_ledger.view', 'icon' => 'layers'],
+        ['title' => 'Material Ledger', 'route' => 'material-ledger.index', 'permission' => 'material_ledger.view', 'icon' => 'list'],
+        ['title' => 'Shortage Report', 'route' => 'material-shortage-report.index', 'permission' => 'material_shortage_report.view', 'icon' => 'warning'],
+    ],
+],
+
+[
+    'title' => 'Planning',
+    'icon' => 'calendar',
+    'items' => [
+        ['title' => 'Tomorrow Plan', 'route' => 'tomorrow-plans.index', 'permission' => 'tomorrow_plans.view', 'icon' => 'calendar'],
+        ['title' => 'Weekly Plan', 'route' => 'weekly-plans.index', 'permission' => 'weekly_plans.view', 'icon' => 'calendar'],
+        ['title' => 'Weekly Progress', 'route' => 'weekly-plans.progress-dashboard', 'permission' => 'weekly_plans.view', 'icon' => 'chart'],
+        ['title' => 'Monthly Plan', 'route' => 'monthly-plans.index', 'permission' => 'monthly_plans.view', 'icon' => 'calendar'],
+        ['title' => 'Monthly Progress', 'route' => 'monthly-plans.progress-dashboard', 'permission' => 'monthly_plans.view', 'icon' => 'chart'],
+        ['title' => 'Plan vs Actual', 'route' => 'plan-vs-actual.index', 'permission' => 'plan_vs_actual.view', 'icon' => 'chart'],
+    ],
+],
+
+    [
         'title' => 'Project Setup',
         'icon' => 'building',
         'items' => [

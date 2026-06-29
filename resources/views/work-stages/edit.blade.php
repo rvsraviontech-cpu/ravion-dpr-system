@@ -2,110 +2,95 @@
 
 @section('content')
 
-<div class="max-w-4xl mx-auto">
+<x-rds.resource.form
+    title="Edit Work Stage"
+    description="Update construction execution stage details."
+    method="PUT"
+    action="{{ route('work-stages.update', $workStage) }}"
+    :breadcrumbs="[
+        ['label' => 'Dashboard', 'url' => route('dashboard')],
+        ['label' => 'Execution Masters'],
+        ['label' => 'Work Stages', 'url' => route('work-stages.index')],
+        ['label' => 'Edit Work Stage'],
+    ]"
+>
+    @if ($errors->any())
+        <x-rds.alert type="error">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
+        </x-rds.alert>
+    @endif
 
-<h1 class="text-3xl font-bold mb-6">
-Edit Work Stage
-</h1>
+    <x-rds.section
+        title="Basic Information"
+        description="Work stages are used to group activities for DPR, planning and reporting."
+    >
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 
-<div class="bg-white rounded-lg shadow p-6">
+            <x-rds.input
+                name="code"
+                label="Code"
+                value="{{ old('code', $workStage->code) }}"
+                required
+            />
 
-<form
-action="{{ route('work-stages.update',$workStage) }}"
-method="POST">
+            <x-rds.input
+                type="number"
+                name="sequence"
+                label="Sequence"
+                value="{{ old('sequence', $workStage->sequence) }}"
+            />
 
-@csrf
-@method('PUT')
+            <div class="md:col-span-2">
+                <x-rds.input
+                    name="name"
+                    label="Work Stage Name"
+                    value="{{ old('name', $workStage->name) }}"
+                    required
+                />
+            </div>
 
-<div class="grid grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <x-rds.textarea
+                    name="remarks"
+                    label="Remarks"
+                    rows="3"
+                    value="{{ old('remarks', $workStage->remarks) }}"
+                />
+            </div>
 
-<div>
+            <div class="flex items-center pt-2 md:col-span-2">
+                <label class="inline-flex items-center gap-2">
+                    <input
+                        type="checkbox"
+                        name="is_active"
+                        value="1"
+                        class="rounded border-gray-300"
+                        @checked(old('is_active', $workStage->is_active))
+                    >
 
-<label class="block mb-2 font-semibold">
-Code
-</label>
+                    <span class="text-sm font-semibold text-gray-700">
+                        Active
+                    </span>
+                </label>
+            </div>
 
-<input
-type="text"
-name="code"
-value="{{ $workStage->code }}"
-class="w-full border rounded px-4 py-2">
+        </div>
+    </x-rds.section>
 
-</div>
+    <x-slot name="footer">
+        <x-rds.button
+            variant="secondary"
+            href="{{ route('work-stages.index') }}"
+        >
+            Cancel
+        </x-rds.button>
 
-<div>
-
-<label class="block mb-2 font-semibold">
-Sequence
-</label>
-
-<input
-type="number"
-name="sequence"
-value="{{ $workStage->sequence }}"
-class="w-full border rounded px-4 py-2">
-
-</div>
-
-<div class="col-span-2">
-
-<label class="block mb-2 font-semibold">
-Work Stage Name
-</label>
-
-<input
-type="text"
-name="name"
-value="{{ $workStage->name }}"
-class="w-full border rounded px-4 py-2">
-
-</div>
-
-<div class="col-span-2">
-
-<label class="block mb-2 font-semibold">
-Remarks
-</label>
-
-<textarea
-name="remarks"
-rows="3"
-class="w-full border rounded px-4 py-2">{{ $workStage->remarks }}</textarea>
-
-</div>
-
-<div class="col-span-2">
-
-<label>
-
-<input
-type="checkbox"
-name="is_active"
-{{ $workStage->is_active ? 'checked' : '' }}>
-
-Active
-
-</label>
-
-</div>
-
-</div>
-
-<div class="mt-6">
-
-<button
-class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded">
-
-Update Work Stage
-
-</button>
-
-</div>
-
-</form>
-
-</div>
-
-</div>
+        <x-rds.button type="submit">
+            Update Work Stage
+        </x-rds.button>
+    </x-slot>
+</x-rds.resource.form>
 
 @endsection

@@ -13,5 +13,7 @@ return [
         'sidebar_active_text' => '#0F2A52',
         'border' => '#E5E7EB',
         'header_bg' => '#FFFFFF',
+        'sidebar_icon_color' => 'text-blue-500',
+        'sidebar_icon_active_color' => 'text-blue-700',
     ],
 ];

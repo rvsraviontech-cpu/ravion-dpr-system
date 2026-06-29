@@ -82,7 +82,9 @@
                                    {{ $sectionActive ? 'bg-[#E8F1FF] text-[#0F2A52]' : 'text-gray-700 hover:bg-gray-100' }}">
 
                         <span class="flex items-center gap-3 min-w-0">
-                            <span class="{{ $sectionActive ? 'text-[#0F2A52]' : 'text-gray-400' }}">
+                            <span class="{{ $sectionActive ? config('ravion.theme.sidebar_icon_active_color', 
+                            'text-blue-700') : config('ravion.theme.sidebar_icon_color', 'text-sky-500') }}">
+
                                 {!! $icon($section['icon'] ?? 'square', 'w-4 h-4') !!}
                             </span>
 
@@ -119,7 +121,8 @@
                                             ? 'bg-[#E8F1FF] text-[#0F2A52] font-semibold'
                                             : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100' }}">
 
-                                <span class="{{ $active ? 'text-[#0F2A52]' : 'text-gray-400' }}">
+                                <span class="{{ $active ? config('ravion.theme.sidebar_icon_active_color', 
+                                'text-blue-700') : config('ravion.theme.sidebar_icon_color', 'text-sky-500') }}">
                                     {!! $icon($item['icon'] ?? 'square', 'w-3.5 h-3.5') !!}
                                 </span>
 

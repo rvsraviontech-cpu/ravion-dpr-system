@@ -2,186 +2,193 @@
 
 @section('content')
 
-<h1 class="text-3xl font-bold mb-6">
-    Activity Mapping Master
-</h1>
+<x-rds.resource.index
+    title="Activity Mapping Master"
+    description="Manage RH cost code mappings, Odoo readiness and activity intelligence."
+    :breadcrumbs="[
+        ['label' => 'Dashboard', 'url' => route('dashboard')],
+        ['label' => 'Execution Masters'],
+        ['label' => 'Activity Mappings'],
+    ]"
+    :paginator="$activityMappings"
+>
+    <x-slot name="actions">
+        <x-rds.button href="{{ route('activity-mappings.create') }}">
+            + Add Mapping
+        </x-rds.button>
+    </x-slot>
 
-@if(session('success'))
-    <div class="bg-green-100 text-green-800 p-4 rounded mb-4">
-        {{ session('success') }}
-    </div>
-@endif
+    @if(session('success'))
+        <x-rds.alert type="success">
+            {{ session('success') }}
+        </x-rds.alert>
+    @endif
 
-@if($errors->any())
-    <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
-        @foreach($errors->all() as $error)
-            <p>{{ $error }}</p>
-        @endforeach
-    </div>
-@endif
-
-<a href="{{ route('activity-mappings.create') }}"
-   class="bg-blue-600 text-white px-4 py-2 rounded inline-block mb-4">
-    Add New Mapping
-</a>
-
-<div class="bg-white p-6 rounded shadow mb-6">
-
-    <form method="GET"
-          action="{{ route('activity-mappings.index') }}"
-          class="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-        <input type="text"
-               name="search"
-               value="{{ request('search') }}"
-               placeholder="Search RH code / activity / unit"
-               class="border p-2 rounded">
-
-        <select name="division_id"
-                class="border p-2 rounded">
-            <option value="">All Divisions</option>
-
-            @foreach($divisions as $division)
-                <option value="{{ $division->id }}"
-                    {{ request('division_id') == $division->id ? 'selected' : '' }}>
-                    {{ $division->code }} - {{ $division->name }}
-                </option>
+    @if($errors->any())
+        <x-rds.alert type="error">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
             @endforeach
-        </select>
+        </x-rds.alert>
+    @endif
 
-        <select name="status"
-                class="border p-2 rounded">
-            <option value="">All Status</option>
-            <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>
-                Active
-            </option>
-            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>
-                Inactive
-            </option>
-        </select>
+    <x-slot name="toolbar">
+        <div class="space-y-4">
+            <x-rds.filter-bar action="{{ route('activity-mappings.index') }}">
+                <div class="md:col-span-2">
+                    <x-rds.input
+                        name="search"
+                        label="Search"
+                        value="{{ request('search') }}"
+                        placeholder="Search RH code, activity, unit or Odoo type..."
+                    />
+                </div>
 
-        <div class="flex gap-2">
+                <x-rds.select name="division_id" label="Division">
+                    <option value="">All Divisions</option>
+                    @foreach($divisions as $division)
+                        <option value="{{ $division->id }}" @selected(request('division_id') == $division->id)>
+                            {{ $division->code }} - {{ $division->name }}
+                        </option>
+                    @endforeach
+                </x-rds.select>
 
-    <button type="submit"
-            class="bg-blue-600 text-white px-4 py-2 rounded">
-        Filter
-    </button>
+                <x-rds.select name="status" label="Status">
+                    <option value="">All Status</option>
+                    <option value="1" @selected(request('status') === '1')>Active</option>
+                    <option value="0" @selected(request('status') === '0')>Inactive</option>
+                </x-rds.select>
 
-    <a href="{{ route('activity-mappings.index') }}"
-       class="bg-gray-500 text-white px-4 py-2 rounded">
-        Clear
-    </a>
+                <x-slot name="actions">
+                    <x-rds.button type="submit">
+                        Filter
+                    </x-rds.button>
 
-</div>
+                    <x-rds.button
+                        variant="secondary"
+                        href="{{ route('activity-mappings.index') }}"
+                    >
+                        Reset
+                    </x-rds.button>
+                </x-slot>
+            </x-rds.filter-bar>
 
-    </form>
+            <x-rds.card>
+                <form
+                    method="POST"
+                    action="{{ route('activity-mappings.import') }}"
+                    enctype="multipart/form-data"
+                    class="flex flex-col gap-3 md:flex-row md:items-end"
+                >
+                    @csrf
 
-</div>
+                    <div class="flex-1">
+                        <label class="mb-1 block text-sm font-medium text-gray-700">
+                            Import Activity Mappings
+                        </label>
 
-<div class="bg-white p-6 rounded shadow mb-6">
+                        <input
+                            type="file"
+                            name="file"
+                            accept=".xlsx,.xls"
+                            required
+                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        >
+                    </div>
 
-    <form method="POST"
-          action="{{ route('activity-mappings.import') }}"
-          enctype="multipart/form-data"
-          class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                    <x-rds.button type="submit" variant="success">
+                        Import Excel
+                    </x-rds.button>
+                </form>
+            </x-rds.card>
+        </div>
+    </x-slot>
 
-        @csrf
+    @if($activityMappings->count())
 
-        <input type="file"
-               name="file"
-               accept=".xlsx,.xls"
-               required
-               class="border p-2 rounded">
+        <x-rds.table>
+            <x-slot name="head">
+                <x-rds.table-th>#</x-rds.table-th>
+                <x-rds.table-th>Division</x-rds.table-th>
+                <x-rds.table-th>RH Code</x-rds.table-th>
+                <x-rds.table-th>Activity</x-rds.table-th>
+                <x-rds.table-th>Unit</x-rds.table-th>
+                <x-rds.table-th>Odoo Type</x-rds.table-th>
+                <x-rds.table-th>Status</x-rds.table-th>
+                <x-rds.table-th align="right">Actions</x-rds.table-th>
+            </x-slot>
 
-        <button type="submit"
-                class="bg-green-600 text-white px-4 py-2 rounded">
-            Import Excel
-        </button>
+            @foreach($activityMappings as $mapping)
+                <tr class="hover:bg-gray-50">
+                    <x-rds.table-td>
+                        {{ $activityMappings->firstItem() + $loop->index }}
+                    </x-rds.table-td>
 
-    </form>
+                    <x-rds.table-td>
+                        <div class="font-semibold text-gray-900">
+                            {{ $mapping->division?->code ?? '-' }}
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            {{ $mapping->division?->name ?? '-' }}
+                        </div>
+                    </x-rds.table-td>
 
-</div>
+                    <x-rds.table-td>
+                        <x-rds.badge variant="info">
+                            {{ $mapping->rh_cost_code }}
+                        </x-rds.badge>
+                    </x-rds.table-td>
 
-<div class="bg-white rounded shadow overflow-x-auto">
+                    <x-rds.table-td>
+                        <div class="font-semibold text-gray-900">
+                            {{ $mapping->activity_name }}
+                        </div>
+                    </x-rds.table-td>
 
-    <table class="w-full text-sm">
+                    <x-rds.table-td>
+                        {{ $mapping->unit ?? '-' }}
+                    </x-rds.table-td>
 
-        <thead class="bg-gray-100">
-            <tr>
-                <th class="p-3 text-left">#</th>    
-                <th class="p-3 text-left">Division</th>
-                <th class="p-3 text-left">RH Code</th>
-                <th class="p-3 text-left">Activity</th>
-                <th class="p-3 text-left">Unit</th>
-                <th class="p-3 text-left">Odoo Type</th>
-                <th class="p-3 text-left">Status</th>
-                <th class="p-3 text-left">Actions</th>
-            </tr>
-        </thead>
+                    <x-rds.table-td>
+                        {{ $mapping->odoo_type ?? '-' }}
+                    </x-rds.table-td>
 
-        <tbody>
-            @forelse($activityMappings as $index => $mapping)
-                <tr class="border-t">
-                    <td class="p-3">
-                        {{ $activityMappings->firstItem() + $index }}
-                    </td>
-                    <td class="p-3">
-                        {{ $mapping->division?->code }}<br>
-                        <span class="text-gray-500">
-                            {{ $mapping->division?->name }}
-                        </span>
-                    </td>
-
-                    <td class="p-3 font-semibold">
-                        {{ $mapping->rh_cost_code }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $mapping->activity_name }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $mapping->unit }}
-                    </td>
-
-                    <td class="p-3">
-                        {{ $mapping->odoo_type }}
-                    </td>
-
-                    <td class="p-3">
+                    <x-rds.table-td>
                         @if($mapping->is_active)
-                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded">
-                                Active
-                            </span>
+                            <x-rds.badge variant="success">Active</x-rds.badge>
                         @else
-                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded">
-                                Inactive
-                            </span>
+                            <x-rds.badge variant="danger">Inactive</x-rds.badge>
                         @endif
-                    </td>
-                    <td class="p-3">
-    <a href="{{ route('activity-mappings.edit', $mapping) }}"
-       class="bg-yellow-500 text-white px-3 py-1 rounded">
-        Edit
-    </a>
-</td>
+                    </x-rds.table-td>
+
+                    <x-rds.table-td align="right">
+                        <x-rds.resource.action-menu>
+                            <x-rds.resource.action-item
+                                href="{{ route('activity-mappings.edit', $mapping) }}"
+                            >
+                                Edit
+                            </x-rds.resource.action-item>
+                        </x-rds.resource.action-menu>
+                    </x-rds.table-td>
                 </tr>
-            @empty
-                <tr>
-                    <td colspan="8"
-                        class="p-6 text-center text-gray-500">
-                        No activity mappings found.
-                    </td>
-                </tr>
-            @endforelse
-        </tbody>
+            @endforeach
+        </x-rds.table>
 
-    </table>
+    @else
 
-</div>
+        <x-rds.empty-state
+            title="No activity mappings found"
+            message="Create your first mapping, import Excel data, or adjust your filters."
+        >
+            <x-slot name="action">
+                <x-rds.button href="{{ route('activity-mappings.create') }}">
+                    Add Mapping
+                </x-rds.button>
+            </x-slot>
+        </x-rds.empty-state>
 
-<div class="mt-4">
-    {{ $activityMappings->links() }}
-</div>
+    @endif
+
+</x-rds.resource.index>
 
 @endsection

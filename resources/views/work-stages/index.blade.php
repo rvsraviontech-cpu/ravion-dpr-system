@@ -2,186 +2,135 @@
 
 @section('content')
 
-<div class="max-w-7xl mx-auto">
-
-    <div class="flex justify-between items-center mb-6">
-
-        <div>
-            <h1 class="text-3xl font-bold">Work Stages</h1>
-            <p class="text-gray-500">
-                Construction execution stages used by Activities, DPR, Planning and Reports.
-            </p>
-        </div>
-
-        <a href="{{ route('work-stages.create') }}"
-           class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded">
-
-            + Create Work Stage
-
-        </a>
-
-    </div>
+<x-rds.resource.index
+    title="Work Stages"
+    description="Construction execution stages used by Activities, DPR, Planning and Reports."
+    :breadcrumbs="[
+        ['label' => 'Dashboard', 'url' => route('dashboard')],
+        ['label' => 'Execution Masters'],
+        ['label' => 'Work Stages'],
+    ]"
+    :paginator="$workStages"
+>
+    <x-slot name="actions">
+        <x-rds.button href="{{ route('work-stages.create') }}">
+            + New Work Stage
+        </x-rds.button>
+    </x-slot>
 
     @if(session('success'))
-        <div class="bg-green-100 border border-green-300 text-green-700 p-3 rounded mb-5">
+        <x-rds.alert type="success">
             {{ session('success') }}
-        </div>
+        </x-rds.alert>
     @endif
 
-    <div class="bg-white rounded-lg shadow">
+    <x-slot name="toolbar">
+        <x-rds.filter-bar action="{{ route('work-stages.index') }}">
+            <div class="md:col-span-2">
+                <x-rds.input
+                    name="search"
+                    label="Search"
+                    value="{{ request('search') }}"
+                    placeholder="Search code, work stage or remarks..."
+                />
+            </div>
 
-        <div class="border-b p-5">
+            <x-rds.select name="status" label="Status">
+                <option value="">All Status</option>
+                <option value="1" @selected(request('status') === '1')>Active</option>
+                <option value="0" @selected(request('status') === '0')>Inactive</option>
+            </x-rds.select>
 
-            <form>
+            <x-slot name="actions">
+                <x-rds.button type="submit">
+                    Filter
+                </x-rds.button>
 
-                <div class="grid grid-cols-3 gap-4">
+                <x-rds.button
+                    variant="secondary"
+                    href="{{ route('work-stages.index') }}"
+                >
+                    Reset
+                </x-rds.button>
+            </x-slot>
+        </x-rds.filter-bar>
+    </x-slot>
 
-                    <input
-                        type="text"
-                        name="search"
-                        value="{{ request('search') }}"
-                        placeholder="Search Work Stage..."
-                        class="border rounded px-4 py-2">
+    @if($workStages->count())
 
-                    <select
-                        name="status"
-                        class="border rounded px-4 py-2">
+        <x-rds.table>
+            <x-slot name="head">
+                <x-rds.table-th>#</x-rds.table-th>
+                <x-rds.table-th>Code</x-rds.table-th>
+                <x-rds.table-th>Work Stage</x-rds.table-th>
+                <x-rds.table-th>Sequence</x-rds.table-th>
+                <x-rds.table-th>Status</x-rds.table-th>
+                <x-rds.table-th align="right">Actions</x-rds.table-th>
+            </x-slot>
 
-                        <option value="">All Status</option>
+            @foreach($workStages as $stage)
+                <tr class="hover:bg-gray-50">
+                    <x-rds.table-td>
+                        {{ $workStages->firstItem() + $loop->index }}
+                    </x-rds.table-td>
 
-                        <option value="1"
-                            {{ request('status')=='1'?'selected':'' }}>
-                            Active
-                        </option>
+                    <x-rds.table-td>
+                        <x-rds.badge variant="info">
+                            {{ $stage->code }}
+                        </x-rds.badge>
+                    </x-rds.table-td>
 
-                        <option value="0"
-                            {{ request('status')=='0'?'selected':'' }}>
-                            Inactive
-                        </option>
+                    <x-rds.table-td>
+                        <div class="font-semibold text-gray-900">
+                            {{ $stage->name }}
+                        </div>
 
-                    </select>
-
-                    <button
-                        class="bg-blue-600 text-white rounded">
-
-                        Filter
-
-                    </button>
-
-                </div>
-
-            </form>
-
-        </div>
-
-        <table class="w-full">
-
-            <thead class="bg-gray-100">
-
-                <tr>
-
-                    <th class="p-4 text-left">Sequence</th>
-
-                    <th class="p-4 text-left">Code</th>
-
-                    <th class="p-4 text-left">Work Stage</th>
-
-                    <th class="p-4 text-left">Status</th>
-
-                    <th class="p-4 text-center">Action</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-            @forelse($workStages as $stage)
-
-                <tr class="border-t hover:bg-gray-50">
-
-                    <td class="p-4">
-                        {{ $stage->sequence }}
-                    </td>
-
-                    <td class="p-4 font-mono">
-                        {{ $stage->code }}
-                    </td>
-
-                    <td class="p-4 font-semibold">
-                        {{ $stage->name }}
-                    </td>
-
-                    <td class="p-4">
-
-                        @if($stage->is_active)
-
-                            <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                                Active
-                            </span>
-
-                        @else
-
-                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-                                Inactive
-                            </span>
-
+                        @if($stage->remarks)
+                            <div class="mt-1 text-xs text-gray-500">
+                                {{ Str::limit($stage->remarks, 60) }}
+                            </div>
                         @endif
+                    </x-rds.table-td>
 
-                    </td>
+                    <x-rds.table-td>
+                        {{ $stage->sequence }}
+                    </x-rds.table-td>
 
-                    <td class="p-4 text-center">
+                    <x-rds.table-td>
+                        @if($stage->is_active)
+                            <x-rds.badge variant="success">Active</x-rds.badge>
+                        @else
+                            <x-rds.badge variant="danger">Inactive</x-rds.badge>
+                        @endif
+                    </x-rds.table-td>
 
-                        <a href="{{ route('work-stages.edit',$stage) }}"
-                           class="bg-yellow-500 text-white px-3 py-1 rounded">
-
-                            Edit
-
-                        </a>
-
-                        <form
-                            action="{{ route('work-stages.destroy',$stage) }}"
-                            method="POST"
-                            class="inline">
-
-                            @csrf
-                            @method('DELETE')
-
-                            <button
-                                onclick="return confirm('Change Status?')"
-                                class="bg-red-600 text-white px-3 py-1 rounded">
-
-                                {{ $stage->is_active?'Deactivate':'Activate' }}
-
-                            </button>
-
-                        </form>
-
-                    </td>
-
+                    <x-rds.table-td align="right">
+                        <x-rds.action-menu
+                            :show="route('work-stages.show', $stage)"
+                            :edit="route('work-stages.edit', $stage)"
+                            :toggle="route('work-stages.destroy', $stage)"
+                            :active="$stage->is_active"
+                        />
+                    </x-rds.table-td>
                 </tr>
+            @endforeach
+        </x-rds.table>
 
-            @empty
+    @else
 
-                <tr>
+        <x-rds.empty-state
+            title="No work stages found"
+            message="Create your first work stage or adjust your filters."
+        >
+            <x-slot name="action">
+                <x-rds.button href="{{ route('work-stages.create') }}">
+                    Create Work Stage
+                </x-rds.button>
+            </x-slot>
+        </x-rds.empty-state>
 
-                    <td colspan="5"
-                        class="text-center text-gray-500 p-10">
+    @endif
 
-                        No Work Stages Found
-
-                    </td>
-
-                </tr>
-
-            @endforelse
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-</div>
+</x-rds.resource.index>
 
 @endsection

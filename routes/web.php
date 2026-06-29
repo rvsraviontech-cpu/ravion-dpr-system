@@ -82,11 +82,10 @@ Route::get('/ajax/floors/{floor}/units', [ProjectLocationController::class, 'aja
 Route::get('/ajax/units/{unit}/rooms', [ProjectLocationController::class, 'ajaxRooms'])->name('ajax.unit.rooms');
 Route::get('/ajax/rooms/{room}/subspaces', [ProjectLocationController::class, 'ajaxSubspaces'])->name('ajax.room.subspaces');
 Route::resource('activity-divisions', ActivityDivisionController::class)
-    ->middleware('permission:activity_masters.manage');
+    ->middleware('permission:activities.manage');
 
-    Route::resource('work-stages', WorkStageController::class)
-    ->middleware('permission:activity_masters.manage');
-
+Route::resource('work-stages', WorkStageController::class)
+    ->middleware('permission:activities.manage');
 
     /*
     |--------------------------------------------------------------------------
