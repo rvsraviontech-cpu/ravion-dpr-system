@@ -8,15 +8,17 @@
         'class' => 'mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm'
     ]) }}
 >
-    <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div class="grid flex-1 grid-cols-1 gap-4 md:grid-cols-4">
+    <div class="flex flex-wrap items-end gap-4">
+
+        <div class="flex-1 min-w-[240px]">
             {{ $slot }}
         </div>
 
         @isset($actions)
-            <div class="flex items-center gap-2">
+            <div class="flex items-end gap-2">
                 {{ $actions }}
             </div>
         @endisset
+
     </div>
 </form>

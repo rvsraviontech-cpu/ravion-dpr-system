@@ -2,70 +2,32 @@
 
 @section('content')
 
-<h1 class="text-3xl font-bold mb-6">
-    Edit Contractor
-</h1>
+<x-rds.resource.form
+    title="Edit Contractor"
+    description="Update contractor profile, service categories and registration details."
+    method="PUT"
+    action="{{ route('contractors.update', $contractor) }}"
+    :breadcrumbs="[
+        ['label' => 'Dashboard', 'url' => route('dashboard')],
+        ['label' => 'Labour & Contractors'],
+        ['label' => 'Contractors', 'url' => route('contractors.index')],
+        ['label' => 'Edit Contractor'],
+    ]"
+>
+    @if ($errors->any())
+        <x-rds.alert type="error">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
+        </x-rds.alert>
+    @endif
 
-<div class="bg-white rounded shadow p-6">
+    @include('contractors._form')
 
-<form action="/contractors/{{ $contractor->id }}"
-      method="POST">
-
-    @csrf
-    @method('PUT')
-
-    <div class="grid grid-cols-2 gap-6">
-
-        <div>
-
-            <label class="block mb-2">
-                Contractor Name
-            </label>
-
-            <input type="text"
-                   name="contractor_name"
-                   value="{{ $contractor->contractor_name }}"
-                   class="w-full border rounded px-4 py-2">
-
-        </div>
-
-        <div>
-
-            <label class="block mb-2">
-                Mobile
-            </label>
-
-            <input type="text"
-                   name="mobile"
-                   value="{{ $contractor->mobile }}"
-                   class="w-full border rounded px-4 py-2">
-
-        </div>
-
-        <div>
-
-            <label class="block mb-2">
-                Work Category
-            </label>
-
-            <input type="text"
-                   name="work_category"
-                   value="{{ $contractor->work_category }}"
-                   class="w-full border rounded px-4 py-2">
-
-        </div>
-
-    </div>
-
-    <button type="submit"
-            class="mt-6 bg-blue-600 text-white px-6 py-2 rounded">
-
-        Update Contractor
-
-    </button>
-
-</form>
-
-</div>
+    <x-slot name="footer">
+        <x-rds.button variant="secondary" href="{{ route('contractors.index') }}">Cancel</x-rds.button>
+        <x-rds.button type="submit">Update Contractor</x-rds.button>
+    </x-slot>
+</x-rds.resource.form>
 
 @endsection

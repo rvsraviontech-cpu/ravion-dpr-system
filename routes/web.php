@@ -50,6 +50,7 @@ use App\Http\Controllers\UnitMasterController;
 use App\Http\Controllers\BrandMasterController;
 use App\Http\Controllers\ActivityDivisionController;
 use App\Http\Controllers\WorkStageController;
+use App\Http\Controllers\ContractorServiceCategoryController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -208,6 +209,9 @@ Route::resource('work-stages', WorkStageController::class)
     Route::post('/labour-types/{labourType}/toggle', [LabourTypeController::class, 'toggle'])
         ->name('labour-types.toggle')
         ->middleware('permission:labour_types.view');
+
+        Route::resource('contractor-service-categories', ContractorServiceCategoryController::class)
+    ->middleware('permission:contractors.view');
 
 
     /*

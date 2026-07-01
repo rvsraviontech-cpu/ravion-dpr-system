@@ -98,6 +98,7 @@ return [
             ['title' => 'Labour Types', 'route' => 'labour-types.index', 'permission' => 'labour_types.view', 'icon' => 'users'],
             ['title' => 'Contractors', 'route' => 'contractors.index', 'permission' => 'contractors.view', 'icon' => 'briefcase'],
             ['title' => 'Machinery / Tools', 'route' => 'machinery-tools.index', 'permission' => 'machinery_tools.view', 'icon' => 'wrench'],
+            ['title' => 'Service Categories', 'route' => 'contractor-service-categories.index', 'permission' => 'contractors.view', 'icon' => 'list'],
         ],
     ],
 

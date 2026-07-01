@@ -1,42 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Create Contractor</title>
-</head>
-<body>
+@extends('layouts.app')
 
-<h1>Create Contractor</h1>
+@section('content')
 
-<form action="{{ route('contractors.store') }}" method="POST">
+<x-rds.resource.form
+    title="Register Contractor"
+    description="Register contractor details, service categories, location and compliance information."
+    action="{{ route('contractors.store') }}"
+    :breadcrumbs="[
+        ['label' => 'Dashboard', 'url' => route('dashboard')],
+        ['label' => 'Labour & Contractors'],
+        ['label' => 'Contractors', 'url' => route('contractors.index')],
+        ['label' => 'Register Contractor'],
+    ]"
+>
+    @if ($errors->any())
+        <x-rds.alert type="error">
+            @foreach($errors->all() as $error)
+                <div>{{ $error }}</div>
+            @endforeach
+        </x-rds.alert>
+    @endif
 
-    @csrf
+    @include('contractors._form')
 
-    <div>
-        <label>Contractor Name</label><br>
-        <input type="text" name="contractor_name">
-    </div>
+    <x-slot name="footer">
+        <x-rds.button variant="secondary" href="{{ route('contractors.index') }}">Cancel</x-rds.button>
+        <x-rds.button type="submit">Save Contractor</x-rds.button>
+    </x-slot>
+</x-rds.resource.form>
 
-    <br>
-
-    <div>
-        <label>Mobile</label><br>
-        <input type="text" name="mobile">
-    </div>
-
-    <br>
-
-    <div>
-        <label>Work Category</label><br>
-        <input type="text" name="work_category">
-    </div>
-
-    <br>
-
-    <button type="submit">
-        Save Contractor
-    </button>
-
-</form>
-
-</body>
-</html>
+@endsection
