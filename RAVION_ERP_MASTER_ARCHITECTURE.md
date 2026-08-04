@@ -2666,3 +2666,242 @@ The Master Data Foundation is now approximately **95% complete**.
 
 This establishes a stable architecture for all remaining ERP modules and minimizes future structural changes.
 
+---
+
+# Version 2.4
+**Release Date:** 01 July 2026
+
+## Module
+Labour & Contractors
+
+## Status
+✅ Production Deployed
+
+---
+
+# Overview
+
+The Labour & Contractors module has been redesigned to better align with real-world construction workflows and contractor management. The previous Work Stage based classification has been replaced with Work Divisions (Activity Divisions), making contractor allocation much more practical during execution.
+
+---
+
+# Contractor Service Categories Refactoring
+
+## Previous Structure
+
+Contractor
+    ↓
+Work Stage
+    ↓
+Service Category
+
+## Current Structure
+
+Contractor
+    ├── Work Divisions (Multiple)
+    └── Service Categories (Optional)
+
+---
+
+# Business Decision
+
+Following management review, Work Stages are no longer used for contractor classification.
+
+Contractors are now classified using Work Divisions such as:
+
+- Earthwork
+- RCC Structure
+- Masonry
+- Plastering
+- Electrical
+- Plumbing
+- Flooring
+- Waterproofing
+- HVAC
+- Doors & Windows
+- Safety
+- Scaffolding
+- etc.
+
+Service Categories remain optional and are intended for future contractor specialization and reporting.
+
+---
+
+# Database Changes
+
+## contractor_service_categories
+
+Added
+
+- activity_division_id
+
+Relationship
+
+ContractorServiceCategory
+→ belongsTo(ActivityDivision)
+
+---
+
+## contractor_divisions
+
+New Pivot Table
+
+Columns
+
+- contractor_id
+- activity_division_id
+- created_at
+- updated_at
+
+Relationships
+
+Contractor
+→ belongsToMany(ActivityDivision)
+
+ActivityDivision
+→ belongsToMany(Contractor)
+
+---
+
+# Contractor Registration Improvements
+
+The Contractor Registration screen has been redesigned.
+
+## Sections
+
+### Basic Information
+
+- Contractor Code
+- Contractor Name
+- Company
+- Mobile
+- Email
+
+### Work Divisions
+
+- Searchable Multi Select
+- Multiple Division Selection
+
+### Service Categories
+
+- Optional
+- Automatically filtered based on selected Work Divisions
+
+### Address
+
+- City
+- District
+- State
+- PIN Code
+- Address
+
+### Compliance
+
+- GST
+- PAN
+- Aadhaar
+- License
+- Experience
+- Rating
+
+---
+
+# Contractor Listing Improvements
+
+Added
+
+- Work Division column
+- Compact contractor display
+- Company information
+- Improved phone display
+- Better contractor code badges
+- Responsive layout
+
+Work Divisions now display only business-friendly names instead of internal RH/Odoo codes.
+
+Example
+
+PLASTERING
+
+DOORS & WINDOWS
+
+ELECTRICAL SYSTEM
+
++1 more
+
+---
+
+# Search & Filters
+
+Contractor List now supports filtering by:
+
+- Search
+- Work Division
+- City
+- Status
+
+All filters are displayed in a single responsive row.
+
+---
+
+# RDS Enhancements
+
+Updated Resources
+
+- Contractor Index
+- Contractor Create
+- Contractor Edit
+- Contractor Show
+- Contractor Service Category Index
+- Contractor Service Category Create
+- Contractor Service Category Edit
+- Contractor Service Category Show
+- Filter Bar
+- Multi Select Component
+
+---
+
+# Production Deployment
+
+Deployment Date
+
+01 July 2026
+
+Deployment Status
+
+✅ Live Production
+
+Modules Included
+
+- Contractor Service Categories
+- Contractor Registration
+- Contractor Work Division Mapping
+- Contractor Filters
+- Contractor Listing Improvements
+- UI Standardization
+- Sidebar Updates
+- Database Migrations
+
+---
+
+# Current Module Status
+
+✅ Labour Types — Completed
+
+✅ Contractor Service Categories — Completed
+
+✅ Contractors — Completed
+
+✅ Work Division Mapping — Completed
+
+✅ Activity Division Integration — Completed
+
+✅ Contractor Search & Filters — Completed
+
+✅ RDS Standardization — Completed
+
+✅ Production Deployment — Completed
+
+---
+
+

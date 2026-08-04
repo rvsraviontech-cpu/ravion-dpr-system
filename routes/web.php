@@ -51,6 +51,19 @@ use App\Http\Controllers\BrandMasterController;
 use App\Http\Controllers\ActivityDivisionController;
 use App\Http\Controllers\WorkStageController;
 use App\Http\Controllers\ContractorServiceCategoryController;
+use App\Http\Controllers\AttendanceStatusController;
+use App\Http\Controllers\GenderController;
+use App\Http\Controllers\ManpowerSourceController;
+use App\Http\Controllers\SkillCategoryController;
+use App\Http\Controllers\DesignationRoleController;
+use App\Http\Controllers\WorkingStatusController;
+use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\LabourController;
+use App\Http\Controllers\LabourAttendanceController;
+use App\Http\Controllers\LabourAttendanceCorrectionController;
+use App\Http\Controllers\AttendanceCorrectionController;
+use App\Http\Controllers\LabourAttendanceRegisterController;
+use App\Http\Controllers\WeeklyWageSheetController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -134,6 +147,8 @@ Route::resource('work-stages', WorkStageController::class)
         ->middleware('permission:reports.view');
 
 
+
+
     /*
     |--------------------------------------------------------------------------
     | Masters
@@ -176,6 +191,39 @@ Route::resource('work-stages', WorkStageController::class)
     Route::resource('machinery-tools', MachineryToolController::class)
         ->middleware('permission:machinery_tools.view');
 
+        Route::middleware([
+    'permission:attendance_register.view',
+])->group(function (): void {
+    Route::get(
+        '/labour-attendance-register',
+        [LabourAttendanceRegisterController::class, 'index']
+    )->name('labour-attendance-register.index');
+});
+
+Route::middleware([
+    'permission:attendance_register.view',
+])->group(function (): void {
+
+    Route::get(
+        '/labour-attendance-register',
+        [LabourAttendanceRegisterController::class, 'index']
+    )->name('labour-attendance-register.index');
+
+    Route::get(
+        '/labour-attendance-register/export/excel',
+        [LabourAttendanceRegisterController::class, 'exportExcel']
+    )
+        ->middleware('permission:attendance_register.export')
+        ->name('labour-attendance-register.export-excel');
+
+    Route::get(
+        '/labour-attendance-register/export/pdf',
+        [LabourAttendanceRegisterController::class, 'exportPdf']
+    )
+        ->middleware('permission:attendance_register.export')
+        ->name('labour-attendance-register.export-pdf');
+});
+
 
     /*
     |--------------------------------------------------------------------------
@@ -212,6 +260,435 @@ Route::resource('work-stages', WorkStageController::class)
 
         Route::resource('contractor-service-categories', ContractorServiceCategoryController::class)
     ->middleware('permission:contractors.view');
+
+    /*
+|--------------------------------------------------------------------------
+| Attendance Status Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('attendance-statuses', AttendanceStatusController::class)
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/attendance-statuses/{attendanceStatus}/toggle-status',
+    [AttendanceStatusController::class, 'toggleStatus']
+)
+    ->name('attendance-statuses.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Labour Attendance
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/labour-attendances',
+    [LabourAttendanceController::class, 'index']
+)
+    ->name('labour-attendances.index')
+    ->middleware('permission:labour_attendances.view');
+
+Route::get(
+    '/labour-attendances/create',
+    [LabourAttendanceController::class, 'create']
+)
+    ->name('labour-attendances.create')
+    ->middleware('permission:labour_attendances.create');
+
+Route::post(
+    '/labour-attendances',
+    [LabourAttendanceController::class, 'store']
+)
+    ->name('labour-attendances.store')
+    ->middleware('permission:labour_attendances.create');
+
+Route::get(
+    '/labour-attendances/{labourAttendance}',
+    [LabourAttendanceController::class, 'show']
+)
+    ->name('labour-attendances.show')
+    ->middleware('permission:labour_attendances.view');
+
+Route::get(
+    '/labour-attendances/{labourAttendance}/edit',
+    [LabourAttendanceController::class, 'edit']
+)
+    ->name('labour-attendances.edit')
+    ->middleware('permission:labour_attendances.edit');
+
+Route::put(
+    '/labour-attendances/{labourAttendance}',
+    [LabourAttendanceController::class, 'update']
+)
+    ->name('labour-attendances.update')
+    ->middleware('permission:labour_attendances.edit');
+
+Route::patch(
+    '/labour-attendances/{labourAttendance}/submit',
+    [LabourAttendanceController::class, 'submit']
+)
+    ->name('labour-attendances.submit')
+    ->middleware('permission:labour_attendances.submit');
+
+Route::patch(
+    '/labour-attendances/{labourAttendance}/approve',
+    [LabourAttendanceController::class, 'approve']
+)
+    ->name('labour-attendances.approve')
+    ->middleware('permission:labour_attendances.approve');
+
+Route::patch(
+    '/labour-attendances/{labourAttendance}/reject',
+    [LabourAttendanceController::class, 'reject']
+)
+    ->name('labour-attendances.reject')
+    ->middleware('permission:labour_attendances.reject');
+
+Route::patch(
+    '/labour-attendances/{labourAttendance}/toggle-status',
+    [LabourAttendanceController::class, 'toggleStatus']
+)
+    ->name('labour-attendances.toggle-status')
+    ->middleware('permission:labour_attendances.toggle_status');
+
+    Route::patch(
+    '/labour-attendances/{labourAttendance}/reopen',
+    [LabourAttendanceController::class, 'reopen']
+)
+->name('labour-attendances.reopen')
+->middleware('permission:labour_attendances.reopen');
+
+/*
+|--------------------------------------------------------------------------
+| Labour Attendance Corrections
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/labour-attendance-corrections',
+    [LabourAttendanceCorrectionController::class, 'index']
+)
+    ->name('labour-attendance-corrections.index')
+    ->middleware('permission:labour_attendances.view');
+
+    /*
+|--------------------------------------------------------------------------
+| Attendance Corrections
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'permission:attendance_corrections.view'
+])->group(function () {
+
+    Route::resource(
+        'attendance-corrections',
+        AttendanceCorrectionController::class
+    );
+
+    Route::post(
+        'attendance-corrections/{attendanceCorrection}/submit',
+        [AttendanceCorrectionController::class, 'submit']
+    )->name('attendance-corrections.submit');
+
+    Route::post(
+        'attendance-corrections/{attendanceCorrection}/approve',
+        [AttendanceCorrectionController::class, 'approve']
+    )->name('attendance-corrections.approve');
+
+    Route::post(
+        'attendance-corrections/{attendanceCorrection}/reject',
+        [AttendanceCorrectionController::class, 'reject']
+    )->name('attendance-corrections.reject');
+
+    Route::post(
+        'attendance-corrections/{attendanceCorrection}/apply',
+        [AttendanceCorrectionController::class, 'apply']
+    )->name('attendance-corrections.apply');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Labour Attendance AJAX
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/ajax/projects/{project}/labours',
+    [LabourAttendanceController::class, 'projectLabours']
+)
+    ->name('ajax.projects.labours')
+    ->middleware('permission:labour_attendances.view');
+
+Route::get(
+    '/ajax/attendance-statuses',
+    [LabourAttendanceController::class, 'attendanceStatuses']
+)
+    ->name('ajax.attendance-statuses')
+    ->middleware('permission:labour_attendances.view');
+
+    /*
+    ---------------------
+    WAGES CALCULATION
+    ----------------------
+     */
+
+    Route::middleware([
+    'permission:weekly_wage_sheets.view',
+])->group(function (): void {
+
+    Route::get(
+        '/weekly-wage-sheets',
+        [WeeklyWageSheetController::class, 'index']
+    )->name('weekly-wage-sheets.index');
+
+    Route::get(
+        '/weekly-wage-sheets/create',
+        [WeeklyWageSheetController::class, 'create']
+    )
+        ->middleware('permission:weekly_wage_sheets.create')
+        ->name('weekly-wage-sheets.create');
+
+    Route::post(
+        '/weekly-wage-sheets',
+        [WeeklyWageSheetController::class, 'store']
+    )
+        ->middleware('permission:weekly_wage_sheets.create')
+        ->name('weekly-wage-sheets.store');
+
+    Route::get(
+        '/weekly-wage-sheets/{weeklyWageSheet}',
+        [WeeklyWageSheetController::class, 'show']
+    )->name('weekly-wage-sheets.show');
+
+    Route::post(
+        '/weekly-wage-sheets/{weeklyWageSheet}/generate',
+        [WeeklyWageSheetController::class, 'generate']
+    )
+        ->middleware('permission:weekly_wage_sheets.calculate')
+        ->name('weekly-wage-sheets.generate');
+
+    Route::put(
+        '/weekly-wage-sheets/{weeklyWageSheet}/adjustments',
+        [WeeklyWageSheetController::class, 'updateAdjustments']
+    )
+        ->middleware('permission:weekly_wage_sheets.manage_adjustments')
+        ->name('weekly-wage-sheets.adjustments.update');
+
+    Route::post(
+        '/weekly-wage-sheets/{weeklyWageSheet}/charges',
+        [WeeklyWageSheetController::class, 'storeCharge']
+    )
+        ->middleware('permission:weekly_wage_sheets.manage_charges')
+        ->name('weekly-wage-sheets.charges.store');
+
+    Route::delete(
+        '/weekly-wage-sheets/{weeklyWageSheet}/charges/{charge}',
+        [WeeklyWageSheetController::class, 'destroyCharge']
+    )
+        ->middleware('permission:weekly_wage_sheets.manage_charges')
+        ->name('weekly-wage-sheets.charges.destroy');
+
+    Route::post(
+        '/weekly-wage-sheets/{weeklyWageSheet}/submit',
+        [WeeklyWageSheetController::class, 'submit']
+    )
+        ->middleware('permission:weekly_wage_sheets.submit')
+        ->name('weekly-wage-sheets.submit');
+
+    Route::post(
+        '/weekly-wage-sheets/{weeklyWageSheet}/approve',
+        [WeeklyWageSheetController::class, 'approve']
+    )
+        ->middleware('permission:weekly_wage_sheets.approve')
+        ->name('weekly-wage-sheets.approve');
+
+    Route::post(
+        '/weekly-wage-sheets/{weeklyWageSheet}/reject',
+        [WeeklyWageSheetController::class, 'reject']
+    )
+        ->middleware('permission:weekly_wage_sheets.reject')
+        ->name('weekly-wage-sheets.reject');
+
+    Route::post(
+        '/weekly-wage-sheets/{weeklyWageSheet}/mark-paid',
+        [WeeklyWageSheetController::class, 'markPaid']
+    )
+        ->middleware('permission:weekly_wage_sheets.mark_paid')
+        ->name('weekly-wage-sheets.mark-paid');
+});
+
+Route::get(
+    '/weekly-wage-sheets/{weeklyWageSheet}/export/excel',
+    [WeeklyWageSheetController::class, 'exportExcel']
+)
+    ->middleware('permission:weekly_wage_sheets.export')
+    ->name('weekly-wage-sheets.export-excel');
+
+Route::get(
+    '/weekly-wage-sheets/{weeklyWageSheet}/export/pdf',
+    [WeeklyWageSheetController::class, 'exportPdf']
+)
+    ->middleware('permission:weekly_wage_sheets.export')
+    ->name('weekly-wage-sheets.export-pdf');
+
+    /*
+|--------------------------------------------------------------------------
+| Gender Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('genders', GenderController::class)
+    ->except(['destroy'])
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/genders/{gender}/toggle-status',
+    [GenderController::class, 'toggleStatus']
+)
+    ->name('genders.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Manpower Source Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('manpower-sources', ManpowerSourceController::class)
+    ->except(['destroy'])
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/manpower-sources/{manpowerSource}/toggle-status',
+    [ManpowerSourceController::class, 'toggleStatus']
+)
+    ->name('manpower-sources.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Skill Category Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('skill-categories', SkillCategoryController::class)
+    ->except(['destroy'])
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/skill-categories/{skillCategory}/toggle-status',
+    [SkillCategoryController::class, 'toggleStatus']
+)
+    ->name('skill-categories.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Designation Role Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('designation-roles', DesignationRoleController::class)
+    ->except(['destroy'])
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/designation-roles/{designationRole}/toggle-status',
+    [DesignationRoleController::class, 'toggleStatus']
+)
+    ->name('designation-roles.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Working Status Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('working-statuses', WorkingStatusController::class)
+    ->except(['destroy'])
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/working-statuses/{workingStatus}/toggle-status',
+    [WorkingStatusController::class, 'toggleStatus']
+)
+    ->name('working-statuses.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Shift Master
+|--------------------------------------------------------------------------
+*/
+
+Route::resource('shifts', ShiftController::class)
+    ->except(['destroy'])
+    ->middleware('permission:labour_master_data.view');
+
+Route::patch(
+    '/shifts/{shift}/toggle-status',
+    [ShiftController::class, 'toggleStatus']
+)
+    ->name('shifts.toggle-status')
+    ->middleware('permission:labour_master_data.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Labour Master
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/labours', [LabourController::class, 'index'])
+    ->name('labours.index')
+    ->middleware('permission:labour_masters.view');
+
+Route::get('/labours/create', [LabourController::class, 'create'])
+    ->name('labours.create')
+    ->middleware('permission:labour_masters.create');
+
+Route::post('/labours', [LabourController::class, 'store'])
+    ->name('labours.store')
+    ->middleware('permission:labour_masters.create');
+
+Route::get('/labours/{labour}', [LabourController::class, 'show'])
+    ->name('labours.show')
+    ->middleware('permission:labour_masters.view');
+
+Route::get('/labours/{labour}/edit', [LabourController::class, 'edit'])
+    ->name('labours.edit')
+    ->middleware('permission:labour_masters.edit');
+
+Route::put('/labours/{labour}', [LabourController::class, 'update'])
+    ->name('labours.update')
+    ->middleware('permission:labour_masters.edit');
+
+Route::patch('/labours/{labour}/toggle-status', [LabourController::class, 'toggleStatus'])
+    ->name('labours.toggle-status')
+    ->middleware('permission:labour_masters.toggle_status');
+
+/*
+|--------------------------------------------------------------------------
+| Labour Master AJAX
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/ajax/labour-categories/{labourCategory}/labour-types',
+    [LabourController::class, 'labourTypes']
+)
+    ->name('ajax.labour-category.labour-types')
+    ->middleware('permission:labour_masters.view');
+
+Route::get(
+    '/ajax/designation-roles',
+    [LabourController::class, 'designationRoles']
+)
+    ->name('ajax.designation-roles')
+    ->middleware('permission:labour_masters.view');
 
 
     /*
@@ -316,6 +793,19 @@ Route::resource('work-stages', WorkStageController::class)
     Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
         ->name('dprs.reject')
         ->middleware('permission:dpr_reviews.reject');
+
+        /*
+|--------------------------------------------------------------------------
+| DPR Attendance AJAX
+|--------------------------------------------------------------------------
+*/
+
+Route::get(
+    '/ajax/dprs/labour-attendance',
+    [DprController::class, 'labourAttendance']
+)
+    ->name('ajax.dprs.labour-attendance')
+    ->middleware('permission:dpr.view');
 
 
     /*

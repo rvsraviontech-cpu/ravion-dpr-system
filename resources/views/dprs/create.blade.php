@@ -229,88 +229,11 @@
 
     </div>
 
-    {{-- LABOUR --}}
-    <details class="{{ $cardClass }}">
-        <summary class="text-xl font-bold cursor-pointer">
-            Labour Details
-        </summary>
+   {{-- LABOUR ATTENDANCE --}}
+@include('dprs.partials.labour-attendance')
 
-        <div class="mt-4" id="labour-items">
 
-            <div class="labour-item border rounded-lg p-3 mb-3 bg-gray-50">
 
-                <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
-
-                    <div>
-                        <label class="{{ $labelClass }}">Labour Category</label>
-                        <select class="{{ $inputClass }} labour-category-select">
-                            <option value="">Select Category</option>
-                            @foreach($labourCategories as $category)
-                                <option value="{{ $category->id }}">
-                                    {{ $category->category_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="{{ $labelClass }}">Labour Type</label>
-                        <select name="labour_type[]"
-                                class="{{ $inputClass }} labour-type-select">
-                            <option value="">Select Labour Type</option>
-                            @foreach($labourTypes as $labourType)
-                                <option value="{{ $labourType->id }}"
-                                        data-category="{{ $labourType->labour_category_id }}">
-                                    {{ $labourType->labour_type_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="{{ $labelClass }}">Male</label>
-                        <input type="number"
-                               name="male_count[]"
-                               value="0"
-                               class="{{ $inputClass }}">
-                    </div>
-
-                    <div>
-                        <label class="{{ $labelClass }}">Female</label>
-                        <input type="number"
-                               name="female_count[]"
-                               value="0"
-                               class="{{ $inputClass }}">
-                    </div>
-
-                    <div>
-                        <label class="{{ $labelClass }}">Local</label>
-                        <input type="number"
-                               name="local_count[]"
-                               value="0"
-                               class="{{ $inputClass }}">
-                    </div>
-
-                    <div>
-                        <label class="{{ $labelClass }}">Non-local</label>
-                        <input type="number"
-                               name="non_local_count[]"
-                               value="0"
-                               class="{{ $inputClass }}">
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <button type="button"
-                onclick="addLabourItem()"
-                class="bg-green-600 text-white px-4 py-2 rounded text-sm">
-            + Add More Labour
-        </button>
-    </details>
 
     {{-- MATERIALS --}}
     <details class="{{ $cardClass }}">

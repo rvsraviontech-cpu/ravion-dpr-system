@@ -19,6 +19,14 @@ return [
             ['title' => 'DPR Entries', 'route' => 'dprs.index', 'permission' => 'dpr.view', 'icon' => 'document'],
             ['title' => 'Labour Reporting', 'route' => 'labour-reports.index', 'permission' => 'labour_reports.view', 'icon' => 'users'],
             ['title' => 'Site Issues', 'route' => 'site-issues.index', 'permission' => 'site_issues.view', 'icon' => 'warning'],
+            ['title' => 'Labour Attendance', 'route' => 'labour-attendances.index',  'permission' => 'labour_attendances.view', ],
+            ['title' => 'Attendance Corrections','route' => 'attendance-corrections.index', 'permission' => 'attendance_corrections.view','icon' => 'history',],
+            ['title' => 'Attendance Register', 'route' => 'labour-attendance-register.index','permission' => 'attendance_register.view','icon' => 'calendar',],
+            ['title' => 'Weekly Wage Sheets',
+    'route' => 'weekly-wage-sheets.index',
+    'permission' => 'weekly_wage_sheets.view',
+    'icon' => 'currency',
+],
         ],
     ],
 
@@ -91,27 +99,98 @@ return [
         ],
     ],
 
-    [
-        'title' => 'Labour & Contractors',
-        'icon' => 'users',
-        'items' => [
-            ['title' => 'Labour Types', 'route' => 'labour-types.index', 'permission' => 'labour_types.view', 'icon' => 'users'],
-            ['title' => 'Contractors', 'route' => 'contractors.index', 'permission' => 'contractors.view', 'icon' => 'briefcase'],
-            ['title' => 'Machinery / Tools', 'route' => 'machinery-tools.index', 'permission' => 'machinery_tools.view', 'icon' => 'wrench'],
-            ['title' => 'Service Categories', 'route' => 'contractor-service-categories.index', 'permission' => 'contractors.view', 'icon' => 'list'],
-        ],
-    ],
+   [
+    'title' => 'Labour & Contractors',
+    'icon'  => 'users',
 
-    [
-        'title' => 'PMO & Verification',
-        'icon' => 'shield',
-        'items' => [
-            ['title' => 'Material Verification', 'route' => 'material-verifications.index', 'permission' => 'material_verification.view', 'icon' => 'check'],
-            ['title' => 'Mapping Queue', 'route' => 'mapping-pending-queue.index', 'permission' => 'mapping_queue.view', 'icon' => 'queue'],
-            ['title' => 'PMO DPR Reviews', 'route' => 'pmo.dprs', 'permission' => 'dpr_reviews.view', 'icon' => 'review'],
-        ],
-    ],
+    'items' => [
 
+        [
+            'title' => 'Labour Master',
+            'route' => 'labours.index',
+            'permission' => 'labour_masters.view',
+            'icon' => 'users',
+        ],
+
+        [
+            'title' => 'Labour Types',
+            'route' => 'labour-types.index',
+            'permission' => 'labour_types.view',
+            'icon' => 'users',
+        ],
+
+        [
+            'title' => 'Attendance Statuses',
+            'route' => 'attendance-statuses.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'list',
+        ],
+
+        [
+            'title' => 'Genders',
+            'route' => 'genders.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'users',
+        ],
+
+        [
+            'title' => 'Manpower Sources',
+            'route' => 'manpower-sources.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'briefcase',
+        ],
+
+        [
+            'title' => 'Skill Categories',
+            'route' => 'skill-categories.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'list',
+        ],
+
+        [
+            'title' => 'Designation Roles',
+            'route' => 'designation-roles.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'list',
+        ],
+
+        [
+            'title' => 'Working Statuses',
+            'route' => 'working-statuses.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'list',
+        ],
+
+        [
+            'title' => 'Shifts',
+            'route' => 'shifts.index',
+            'permission' => 'labour_master_data.view',
+            'icon' => 'clock',
+        ],
+
+        [
+            'title' => 'Contractors',
+            'route' => 'contractors.index',
+            'permission' => 'contractors.view',
+            'icon' => 'briefcase',
+        ],
+
+        [
+            'title' => 'Machinery / Tools',
+            'route' => 'machinery-tools.index',
+            'permission' => 'machinery_tools.view',
+            'icon' => 'wrench',
+        ],
+
+        [
+            'title' => 'Service Categories',
+            'route' => 'contractor-service-categories.index',
+            'permission' => 'contractors.view',
+            'icon' => 'list',
+        ],
+
+    ],
+],
     [
         'title' => 'Administration',
         'icon' => 'cog',

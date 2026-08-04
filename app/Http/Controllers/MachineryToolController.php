@@ -47,7 +47,7 @@ AuditHelper::log(
     null,
     $machineryTool->toArray()
 );
-        );
+       
 
         return redirect('/machinery-tools')
             ->with(

@@ -3,7 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Project extends Model
 {
@@ -27,7 +30,7 @@ class Project extends Model
         'odoo_analytic_account_code',
         'remarks',
         'latitude',
-'longitude',
+        'longitude',
     ];
 
     protected $casts = [
@@ -36,43 +39,95 @@ class Project extends Model
         'contract_value' => 'decimal:2',
     ];
 
-    public function users()
+    /*
+    |--------------------------------------------------------------------------
+    | User Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class);
     }
 
-    public function assignedPmo()
+    public function assignedPmo(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'assigned_pmo_id');
+        return $this->belongsTo(
+            User::class,
+            'assigned_pmo_id'
+        );
     }
 
-    public function dprs()
+    /*
+    |--------------------------------------------------------------------------
+    | DPR Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function dprs(): HasMany
     {
         return $this->hasMany(Dpr::class);
     }
 
-    public function blocks()
+    /*
+    |--------------------------------------------------------------------------
+    | Project Location Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function blocks(): HasMany
     {
         return $this->hasMany(ProjectBlock::class);
     }
 
-    public function floors()
+    public function floors(): HasMany
     {
         return $this->hasMany(ProjectFloor::class);
     }
 
-    public function units()
+    public function units(): HasMany
     {
         return $this->hasMany(ProjectUnit::class);
     }
 
-    public function rooms()
+    public function rooms(): HasMany
     {
         return $this->hasMany(ProjectRoom::class);
     }
 
-    public function subspaces()
+    public function subspaces(): HasMany
     {
         return $this->hasMany(ProjectSubspace::class);
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Labour Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function currentLabours(): HasMany
+    {
+        return $this->hasMany(
+            Labour::class,
+            'current_project_id'
+        );
+    }
+
+    public function labourAttendances(): HasMany
+    {
+        return $this->hasMany(
+            LabourAttendance::class
+        );
+    }
+
+    /**
+ * Scope: projects currently available for operational use.
+ */
+public function scopeActive(Builder $query): Builder
+{
+    return $query->where('status', 'Active');
+}
+
+    
 }

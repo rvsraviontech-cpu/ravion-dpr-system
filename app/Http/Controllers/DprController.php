@@ -22,6 +22,10 @@ use App\Models\DprMachineryTool;
 use App\Models\TomorrowPlan;
 use App\Models\SiteIssue;
 use App\Helpers\AuditHelper;
+use App\Models\LabourAttendance;
+use App\Models\DprManualLabour;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class DprController extends Controller
 {
@@ -127,103 +131,367 @@ class DprController extends Controller
     }
 
     public function create()
-    {
-        $projects = $this->isEngineer()
-            ? auth()->user()->projects
-            : Project::where('status', 1)->get();
-
-        $activities = Activity::where('is_active', true)->orderBy('activity_name')->get();
-        $contractors = Contractor::where('status', 1)->orderBy('contractor_name')->get();
-        $materials = Material::where('is_active', true)->orderBy('material_name')->get();
-        $vendors = Vendor::where('is_active', true)->orderBy('vendor_name')->get();
-        $machineries = MachineryTool::all();
-
-        $projectBlocks = \App\Models\ProjectBlock::where('is_active', true)->get();
-        $projectFloors = \App\Models\ProjectFloor::where('is_active', true)->get();
-        $projectUnits = \App\Models\ProjectUnit::where('is_active', true)->get();
-        $projectRooms = \App\Models\ProjectRoom::where('is_active', true)->get();
-        $projectSubspaces = \App\Models\ProjectSubspace::where('is_active', true)->get();
-
-        $activityMappings = \App\Models\ActivityMapping::with('division')
-            ->where('is_active', true)
-            ->orderBy('activity_name')
+{
+    if ($this->isEngineer()) {
+        $projects = auth()->user()
+            ->projects()
+            ->whereNotIn('projects.status', [
+                'Completed',
+                'Handed Over',
+                'Closed',
+            ])
+            ->orderBy('projects.project_name')
             ->get();
-
-        $activityDivisions = \App\Models\ActivityDivision::where('is_active', true)
-            ->orderBy('sequence')
+    } else {
+        $projects = Project::query()
+            ->whereNotIn('status', [
+                'Completed',
+                'Handed Over',
+                'Closed',
+            ])
+            ->orderBy('project_name')
             ->get();
-
-        $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
-            ->orderBy('category_name')
-            ->get();
-
-        $labourCategories = \App\Models\LabourCategory::where('is_active', true)
-            ->orderBy('category_name')
-            ->get();
-
-        $labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
-            ->orderBy('labour_type_name')
-            ->get();
-
-        return view('dprs.create', compact(
-            'projects',
-            'activities',
-            'contractors',
-            'materials',
-            'vendors',
-            'machineries',
-            'projectBlocks',
-            'projectFloors',
-            'projectUnits',
-            'projectRooms',
-            'projectSubspaces',
-            'activityMappings',
-            'activityDivisions',
-            'materialCategories',
-            'labourCategories',
-            'labourTypes'
-        ));
     }
+
+    $activities = Activity::where('is_active', true)
+        ->orderBy('activity_name')
+        ->get();
+
+    $contractors = Contractor::where('status', 1)
+        ->orderBy('contractor_name')
+        ->get();
+
+    $materials = Material::where('is_active', true)
+        ->orderBy('material_name')
+        ->get();
+
+    $vendors = Vendor::where('is_active', true)
+        ->orderBy('vendor_name')
+        ->get();
+
+    $machineries = MachineryTool::all();
+
+    $projectBlocks = \App\Models\ProjectBlock::where('is_active', true)
+        ->get();
+
+    $projectFloors = \App\Models\ProjectFloor::where('is_active', true)
+        ->get();
+
+    $projectUnits = \App\Models\ProjectUnit::where('is_active', true)
+        ->get();
+
+    $projectRooms = \App\Models\ProjectRoom::where('is_active', true)
+        ->get();
+
+    $projectSubspaces = \App\Models\ProjectSubspace::where('is_active', true)
+        ->get();
+
+    $activityMappings = \App\Models\ActivityMapping::with('division')
+        ->where('is_active', true)
+        ->orderBy('activity_name')
+        ->get();
+
+    $activityDivisions = \App\Models\ActivityDivision::where('is_active', true)
+        ->orderBy('sequence')
+        ->get();
+
+    $materialCategories = \App\Models\MaterialCategory::where('is_active', true)
+        ->orderBy('category_name')
+        ->get();
+
+    $labourCategories = \App\Models\LabourCategory::where('is_active', true)
+        ->orderBy('category_name')
+        ->get();
+
+    $labourTypes = \App\Models\LabourType::whereNotNull('labour_category_id')
+        ->orderBy('labour_type_name')
+        ->get();
+
+        $labours = \App\Models\Labour::query()
+    ->where('is_active', true)
+    ->orderBy('id')
+    ->get();
+
+$attendanceStatuses = \App\Models\AttendanceStatus::query()
+    ->where('is_active', true)
+    ->orderBy('id')
+    ->get();
+
+$shifts = \App\Models\Shift::query()
+    ->where('is_active', true)
+    ->orderBy('id')
+    ->get();
+
+    return view('dprs.create', compact(
+        'projects',
+        'activities',
+        'contractors',
+        'materials',
+        'vendors',
+        'machineries',
+        'projectBlocks',
+        'projectFloors',
+        'projectUnits',
+        'projectRooms',
+        'projectSubspaces',
+        'activityMappings',
+        'activityDivisions',
+        'materialCategories',
+        'labourCategories',
+        'labourTypes',
+        'labours',
+'attendanceStatuses',
+'shifts',
+    ));
+}
 
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'project_id' => 'required|exists:projects,id',
             'dpr_date' => 'required|date',
             'weather' => 'nullable|string|max:255',
             'remarks' => 'nullable|string',
+
+            'activity_id' => 'required|array|min:1',
             'activity_id.*' => 'required|exists:activities,id',
             'contractor_id.*' => 'nullable|exists:contractors,id',
             'quantity_completed.*' => 'required|numeric|min:0',
+
+            'labour_attendance_ids' => 'nullable|array',
+            'labour_attendance_ids.*' => [
+                'integer',
+                'distinct',
+                'exists:labour_attendances,id',
+            ],
+
+            'manual_labours' => 'nullable|array',
+            'manual_labours.*.labour_id' => [
+                'required',
+                'integer',
+                'distinct',
+                'exists:labours,id',
+            ],
+            'manual_labours.*.attendance_status_id' => [
+                'required',
+                'integer',
+                'exists:attendance_statuses,id',
+            ],
+            'manual_labours.*.shift_id' => [
+                'required',
+                'integer',
+                'exists:shifts,id',
+            ],
+            'manual_labours.*.normal_hours' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:24',
+            ],
+            'manual_labours.*.ot_hours' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:24',
+            ],
+            'manual_labours.*.reason' => [
+                'required',
+                'string',
+                'in:missed_attendance,late_joining,replacement_labour,emergency_labour,attendance_not_created,attendance_incomplete,other',
+            ],
+            'manual_labours.*.remarks' => [
+                'required',
+                'string',
+                'max:1000',
+            ],
+
             'photos.*' => 'nullable|image|mimes:jpg,jpeg,png|max:5120',
         ]);
 
-        $this->ensureEngineerProjectAccess($request->project_id);
+        $this->ensureEngineerProjectAccess($validated['project_id']);
 
-        DB::transaction(function () use ($request, &$dpr) {
+        $attendanceIds = collect(
+            $validated['labour_attendance_ids'] ?? []
+        )
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        $manualLabours = collect(
+            $validated['manual_labours'] ?? []
+        )
+            ->filter(
+                fn (array $row): bool =>
+                    ! empty($row['labour_id'])
+            )
+            ->values();
+
+        $linkedAttendances = collect();
+
+        if ($attendanceIds->isNotEmpty()) {
+            $linkedAttendances = LabourAttendance::query()
+                ->with([
+                    'details:id,labour_attendance_id,labour_id',
+                ])
+                ->whereIn('id', $attendanceIds)
+                ->where('project_id', $validated['project_id'])
+                ->whereDate(
+                    'attendance_date',
+                    $validated['dpr_date']
+                )
+                ->where('is_active', true)
+                ->whereIn('status', [
+                    'submitted',
+                    'approved',
+                    'reopened',
+                ])
+                ->get();
+
+            if (
+                $linkedAttendances->count()
+                !== $attendanceIds->count()
+            ) {
+                throw ValidationException::withMessages([
+                    'labour_attendance_ids' =>
+                        'One or more Labour Attendance sheets are invalid, inactive, or do not belong to the selected project and DPR date.',
+                ]);
+            }
+        }
+
+        $attendanceLabourIds = $linkedAttendances
+            ->flatMap(
+                fn (LabourAttendance $attendance) =>
+                    $attendance->details->pluck('labour_id')
+            )
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->unique()
+            ->values();
+
+        $manualLabourIds = $manualLabours
+            ->pluck('labour_id')
+            ->filter()
+            ->map(fn ($id): int => (int) $id)
+            ->values();
+
+        $duplicateManualLabourIds = $manualLabourIds
+            ->duplicates()
+            ->unique()
+            ->values();
+
+        if ($duplicateManualLabourIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'manual_labours' =>
+                    'The same labour cannot be added more than once as a manual DPR exception.',
+            ]);
+        }
+
+        $attendanceOverlapIds = $manualLabourIds
+            ->intersect($attendanceLabourIds)
+            ->unique()
+            ->values();
+
+        if ($attendanceOverlapIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'manual_labours' =>
+                    'A labourer already present in the linked Labour Attendance cannot also be added manually.',
+            ]);
+        }
+
+        DB::transaction(function () use (
+            $request,
+            $validated,
+            $attendanceIds,
+            $manualLabours,
+            &$dpr
+        ) {
             $dpr = Dpr::create([
-                'project_id' => $request->project_id,
+                'project_id' => $validated['project_id'],
                 'user_id' => auth()->id(),
-                'dpr_date' => $request->dpr_date,
-                'weather' => $request->weather,
-                'remarks' => $request->remarks,
+                'dpr_date' => $validated['dpr_date'],
+                'weather' => $validated['weather'] ?? null,
+                'remarks' => $validated['remarks'] ?? null,
                 'status' => 'Pending',
                 'pmo_remarks' => null,
             ]);
 
-            foreach ($request->activity_id as $index => $activityId) {
+            foreach (
+                $validated['activity_id']
+                as $index => $activityId
+            ) {
                 DprWorkItem::create([
                     'dpr_id' => $dpr->id,
                     'activity_id' => $activityId,
-                    'activity_mapping_id' => $request->activity_mapping_id[$index] ?? null,
-                    'project_block_id' => $request->project_block_id[$index] ?? null,
-                    'project_floor_id' => $request->project_floor_id[$index] ?? null,
-                    'project_unit_id' => $request->project_unit_id[$index] ?? null,
-                    'project_room_id' => $request->project_room_id[$index] ?? null,
-                    'project_subspace_id' => $request->project_subspace_id[$index] ?? null,
-                    'contractor_id' => $request->contractor_id[$index] ?? null,
-                    'quantity_completed' => $request->quantity_completed[$index],
-                    'remarks' => $request->work_remarks[$index] ?? null,
+                    'activity_mapping_id' =>
+                        $request->activity_mapping_id[$index]
+                        ?? null,
+                    'project_block_id' =>
+                        $request->project_block_id[$index]
+                        ?? null,
+                    'project_floor_id' =>
+                        $request->project_floor_id[$index]
+                        ?? null,
+                    'project_unit_id' =>
+                        $request->project_unit_id[$index]
+                        ?? null,
+                    'project_room_id' =>
+                        $request->project_room_id[$index]
+                        ?? null,
+                    'project_subspace_id' =>
+                        $request->project_subspace_id[$index]
+                        ?? null,
+                    'contractor_id' =>
+                        $request->contractor_id[$index]
+                        ?? null,
+                    'quantity_completed' =>
+                        $request->quantity_completed[$index],
+                    'remarks' =>
+                        $request->work_remarks[$index]
+                        ?? null,
+                ]);
+            }
+
+            if ($attendanceIds->isNotEmpty()) {
+                $pivotData = $attendanceIds
+                    ->mapWithKeys(
+                        fn (int $attendanceId): array => [
+                            $attendanceId => [
+                                'created_by' => auth()->id(),
+                            ],
+                        ]
+                    )
+                    ->all();
+
+                $dpr->labourAttendances()->attach($pivotData);
+            }
+
+            foreach ($manualLabours as $manualLabour) {
+                DprManualLabour::create([
+                    'dpr_id' => $dpr->id,
+                    'labour_id' =>
+                        (int) $manualLabour['labour_id'],
+                    'attendance_status_id' =>
+                        (int) $manualLabour[
+                            'attendance_status_id'
+                        ],
+                    'shift_id' =>
+                        (int) $manualLabour['shift_id'],
+                    'normal_hours' =>
+                        (float) $manualLabour[
+                            'normal_hours'
+                        ],
+                    'ot_hours' =>
+                        (float) (
+                            $manualLabour['ot_hours']
+                            ?? 0
+                        ),
+                    'reason' =>
+                        $manualLabour['reason'],
+                    'remarks' =>
+                        trim($manualLabour['remarks']),
+                    'created_by' => auth()->id(),
+                    'updated_by' => auth()->id(),
                 ]);
             }
 
@@ -238,32 +506,9 @@ class DprController extends Controller
                 }
             }
 
-            if ($request->labour_type) {
-                foreach ($request->labour_type as $index => $labourTypeId) {
-                    if (!$labourTypeId) {
-                        continue;
-                    }
-
-                    $male = $request->male_count[$index] ?? 0;
-                    $female = $request->female_count[$index] ?? 0;
-                    $local = $request->local_count[$index] ?? 0;
-                    $nonLocal = $request->non_local_count[$index] ?? 0;
-
-                    DprLabour::create([
-                        'dpr_id' => $dpr->id,
-                        'labour_type_id' => $labourTypeId,
-                        'male_count' => $male,
-                        'female_count' => $female,
-                        'local_count' => $local,
-                        'non_local_count' => $nonLocal,
-                        'total_count' => $male + $female,
-                    ]);
-                }
-            }
-
             if ($request->material_id) {
                 foreach ($request->material_id as $index => $materialId) {
-                    if (!$materialId) {
+                    if (! $materialId) {
                         continue;
                     }
 
@@ -277,7 +522,7 @@ class DprController extends Controller
 
             if ($request->received_material_id) {
                 foreach ($request->received_material_id as $index => $materialId) {
-                    if (!$materialId) {
+                    if (! $materialId) {
                         continue;
                     }
 
@@ -294,7 +539,7 @@ class DprController extends Controller
 
             if ($request->required_material_id) {
                 foreach ($request->required_material_id as $index => $materialId) {
-                    if (!$materialId) {
+                    if (! $materialId) {
                         continue;
                     }
 
@@ -312,7 +557,7 @@ class DprController extends Controller
 
             if ($request->machinery_tool_id) {
                 foreach ($request->machinery_tool_id as $index => $machineId) {
-                    if (!$machineId) {
+                    if (! $machineId) {
                         continue;
                     }
 
@@ -329,7 +574,7 @@ class DprController extends Controller
 
             if ($request->issue_type) {
                 foreach ($request->issue_type as $index => $issueType) {
-                    if (!$issueType) {
+                    if (! $issueType) {
                         continue;
                     }
 
@@ -348,7 +593,7 @@ class DprController extends Controller
 
             if ($request->plan_activity_id) {
                 foreach ($request->plan_activity_id as $index => $activityId) {
-                    if (!$activityId) {
+                    if (! $activityId) {
                         continue;
                     }
 
@@ -356,12 +601,11 @@ class DprController extends Controller
                         'dpr_id' => $dpr->id,
                         'activity_id' => $activityId,
                         'planned_quantity' => $request->planned_quantity[$index] ?? 0,
-                        'unit' => $request->planned_unit[$index] ?? null,
+                        'unit' => $request->planned_unit[$index] ?? $request->used_unit[$index] ?? null,
                         'planned_labour' => $request->planned_labour[$index] ?? null,
                         'materials_required' => $request->planned_materials[$index] ?? null,
                         'machinery_required' => $request->planned_machinery[$index] ?? null,
                         'risks_constraints' => $request->planned_risks[$index] ?? null,
-                        'unit' => $request->used_unit[$index] ?? null,
                     ]);
                 }
             }
@@ -373,16 +617,24 @@ class DprController extends Controller
                 $dpr->id,
                 'DPR submitted by engineer for PMO review',
                 null,
-                $dpr->only([
-                    'id',
-                    'project_id',
-                    'user_id',
-                    'dpr_date',
-                    'weather',
-                    'remarks',
-                    'status',
-                    'pmo_remarks',
-                ])
+                array_merge(
+                    $dpr->only([
+                        'id',
+                        'project_id',
+                        'user_id',
+                        'dpr_date',
+                        'weather',
+                        'remarks',
+                        'status',
+                        'pmo_remarks',
+                    ]),
+                    [
+                        'linked_labour_attendance_ids' =>
+                            $attendanceIds->all(),
+                        'manual_labour_count' =>
+                            $manualLabours->count(),
+                    ]
+                )
             );
         });
 
@@ -888,6 +1140,180 @@ class DprController extends Controller
 
         return $pdf->download($fileName);
     }
+
+    /**
+ * Return Labour Attendance sheets matching the selected DPR project and date.
+ */
+public function labourAttendance(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'project_id' => [
+            'required',
+            'integer',
+            'exists:projects,id',
+        ],
+        'attendance_date' => [
+            'required',
+            'date',
+        ],
+    ]);
+
+    $projectId = (int) $validated['project_id'];
+    $attendanceDate = $validated['attendance_date'];
+
+    $this->ensureEngineerProjectAccess($projectId);
+
+    $attendances = LabourAttendance::query()
+        ->with([
+            'project',
+            'shift',
+            'details.labour',
+            'details.attendanceStatus',
+            'details.designationRole',
+            'details.contractor',
+        ])
+        ->where('project_id', $projectId)
+        ->whereDate('attendance_date', $attendanceDate)
+        ->where('is_active', true)
+        ->whereIn('status', [
+            'submitted',
+            'approved',
+            'reopened',
+        ])
+        ->orderBy('shift_id')
+        ->orderBy('id')
+        ->get();
+
+    if ($attendances->isEmpty()) {
+        return response()->json([
+            'success' => true,
+            'attendance_found' => false,
+            'message' => 'No submitted or approved Labour Attendance was found for the selected project and date.',
+            'attendance_count' => 0,
+            'attendance_ids' => [],
+            'attendances' => [],
+        ]);
+    }
+
+    $attendanceData = $attendances->map(function (
+        LabourAttendance $attendance
+    ): array {
+        $details = $attendance->details;
+
+        $normalHours = (float) $details->sum(
+            fn ($detail) => (float) ($detail->normal_hours ?? 0)
+        );
+
+        $otHours = (float) $details->sum(
+            fn ($detail) => (float) ($detail->ot_hours ?? 0)
+        );
+
+        $labourDetails = $details->map(function ($detail): array {
+            return [
+                'id' => $detail->id,
+                'labour_id' => $detail->labour_id,
+
+                'labour_name' =>
+                    $detail->labour?->full_name
+                    ?? $detail->labour?->name
+                    ?? 'Unknown Labour',
+
+                'labour_code' =>
+                    $detail->labour?->labour_code
+                    ?? null,
+
+                'designation' =>
+                    $detail->designationRole?->name
+                    ?? $detail->designationRole?->designation_name
+                    ?? $detail->designationRole?->role_name
+                    ?? null,
+
+                'contractor' =>
+                    $detail->contractor?->contractor_name
+                    ?? $detail->contractor?->name
+                    ?? null,
+
+                'attendance_status' =>
+                    $detail->attendanceStatus?->name
+                    ?? $detail->attendanceStatus?->status_name
+                    ?? $detail->attendanceStatus?->code
+                    ?? 'Not Specified',
+
+                'attendance_status_code' =>
+                    $detail->attendanceStatus?->code
+                    ?? null,
+
+                'normal_hours' =>
+                    (float) ($detail->normal_hours ?? 0),
+
+                'ot_hours' =>
+                    (float) ($detail->ot_hours ?? 0),
+
+                'remarks' => $detail->remarks,
+            ];
+        })->values();
+
+        return [
+            'id' => $attendance->id,
+
+            'attendance_number' =>
+                $attendance->attendance_number,
+
+            'attendance_date' =>
+                optional($attendance->attendance_date)
+                    ->format('Y-m-d'),
+
+            'shift_id' => $attendance->shift_id,
+
+            'shift' =>
+                $attendance->shift?->shift_name
+                ?? $attendance->shift?->name
+                ?? 'General Shift',
+
+            'status' => $attendance->status,
+
+            'display_status' =>
+                $attendance->display_status
+                ?? ucfirst($attendance->status),
+
+            'is_approved' =>
+                strtolower((string) $attendance->status) === 'approved',
+
+            'total_labour' => $details->count(),
+
+            'normal_hours' => round($normalHours, 2),
+
+            'ot_hours' => round($otHours, 2),
+
+            'total_hours' =>
+                round($normalHours + $otHours, 2),
+
+            'remarks' => $attendance->remarks,
+
+            'view_url' => route(
+                'labour-attendances.show',
+                $attendance
+            ),
+
+            'details' => $labourDetails,
+        ];
+    })->values();
+
+    return response()->json([
+        'success' => true,
+        'attendance_found' => true,
+        'message' => $attendances->count() === 1
+            ? 'One Labour Attendance sheet was found.'
+            : "{$attendances->count()} Labour Attendance sheets were found.",
+
+        'attendance_count' => $attendances->count(),
+
+        'attendance_ids' =>
+            $attendances->pluck('id')->values(),
+
+        'attendances' => $attendanceData,
+    ]);
+}
 
     public function getFloors($block)
     {

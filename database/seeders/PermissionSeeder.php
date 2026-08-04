@@ -47,6 +47,8 @@ class PermissionSeeder extends Seeder
 
             ['module' => 'Labour Types', 'name' => 'labour_types.view'],
             ['module' => 'Labour Types', 'name' => 'labour_types.manage'],
+            ['module' => 'Labour Master Data', 'name' => 'labour_master_data.view'],
+            ['module' => 'Labour Master Data', 'name' => 'labour_master_data.manage'],
 
             // DPR
             ['module' => 'DPR', 'name' => 'dpr.view'],
@@ -61,6 +63,174 @@ class PermissionSeeder extends Seeder
             ['module' => 'Labour Reports', 'name' => 'labour_reports.create'],
             ['module' => 'Labour Reports', 'name' => 'labour_reports.edit'],
             ['module' => 'Labour Reports', 'name' => 'labour_reports.approve'],
+
+            // Labour Master
+            ['module' => 'Labour Master','name' => 'labour_masters.view',],
+            [ 'module' => 'Labour Master',   'name' => 'labour_masters.create',],
+            [    'module' => 'Labour Master',    'name' => 'labour_masters.edit',],
+            
+[
+    'module' => 'Labour Master',
+    'name' => 'labour_masters.toggle_status',
+],
+
+[
+    'module' => 'Labour Master',
+    'name' => 'labour_masters.financial_view',
+],
+
+[
+    'module' => 'Labour Master',
+    'name' => 'labour_masters.financial_manage',
+    
+],
+// Labour Attendance
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.view',
+],
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.create',
+],
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.edit',
+],
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.submit',
+],
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.approve',
+],
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.reject',
+],
+
+[
+    'module' => 'Labour Attendance',
+    'name' => 'labour_attendances.toggle_status',
+],
+
+/*
+|--------------------------------------------------------------------------
+| Attendance Corrections
+|--------------------------------------------------------------------------
+*/
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.view',
+],
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.create',
+],
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.edit',
+],
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.submit',
+],
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.approve',
+],
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.apply',
+],
+
+[
+    'module' => 'Attendance Corrections',
+    'name' => 'attendance_corrections.delete',
+],
+
+
+ // Attendance Register
+[
+    'module' => 'Attendance Register',
+    'name' => 'attendance_register.view',
+],
+
+[
+    'module' => 'Attendance Register',
+    'name' => 'attendance_register.export',
+],
+
+// Weekly Wage Sheets
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.view',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.create',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.calculate',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.edit',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.submit',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.approve',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.reject',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.mark_paid',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.export',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.manage_charges',
+],
+
+[
+    'module' => 'Weekly Wage Sheets',
+    'name' => 'weekly_wage_sheets.manage_adjustments',
+],
+
 
             // Material Received
             ['module' => 'Material Received', 'name' => 'material_received.view'],
