@@ -292,46 +292,53 @@ class LabourAttendanceController extends Controller
      * Show the Labour Attendance edit page.
      */
     public function edit(
-        LabourAttendance $labourAttendance
-    ): View|RedirectResponse {
-        ProjectAccess::authorize(
-            (int) $labourAttendance->project_id
-        );
+    LabourAttendance $labourAttendance
+): View|RedirectResponse {
+    ProjectAccess::authorize(
+        (int) $labourAttendance->project_id
+    );
 
-        if (! $labourAttendance->canBeEdited()) {
-            return redirect()
-                ->route(
-                    'labour-attendances.show',
-                    $labourAttendance
-                )
-                ->with(
-                    'error',
-                    "This attendance sheet cannot be edited because its status is {$labourAttendance->display_status}."
-                );
-        }
-
-        $labourAttendance->load([
-            'details' => function ($query): void {
-                $query
-                    ->with([
-                        'labour',
-                        'attendanceStatus',
-                        'workingStatus',
-                    ])
-                    ->orderBy('id');
-            },
-        ]);
-
-        return view(
-            'labour-attendances.edit',
-            array_merge(
-                [
-                    'labourAttendance' => $labourAttendance,
-                ],
-                $this->getFormOptions()
+    if (! $labourAttendance->canBeEdited()) {
+        return redirect()
+            ->route(
+                'labour-attendances.show',
+                $labourAttendance
             )
-        );
+            ->with(
+                'error',
+                "This attendance sheet cannot be edited because its status is {$labourAttendance->display_status}."
+            );
     }
+
+    $labourAttendance->load([
+        'project',
+        'shift',
+
+        'details' => function ($query): void {
+            $query
+                ->where('is_active', true)
+                ->with([
+                    'labour',
+                    'attendanceStatus',
+                    'workingStatus',
+                ])
+                ->orderBy('id');
+        },
+    ]);
+
+    return view(
+        'labour-attendances.edit',
+        array_merge(
+            [
+                'labourAttendance' =>
+                    $labourAttendance,
+            ],
+            $this->getFormOptions()
+        )
+    );
+}
+
+
 
     /**
      * Update the specified Labour Attendance sheet.
@@ -339,150 +346,137 @@ class LabourAttendanceController extends Controller
      * @throws Throwable
      */
     public function update(
-        UpdateLabourAttendanceRequest $request,
-        LabourAttendance $labourAttendance
-    ): RedirectResponse {
-        ProjectAccess::authorize(
-            (int) $labourAttendance->project_id
-        );
+    UpdateLabourAttendanceRequest $request,
+    LabourAttendance $labourAttendance
+): RedirectResponse {
+    ProjectAccess::authorize(
+        (int) $labourAttendance->project_id
+    );
 
-        if (! $labourAttendance->canBeEdited()) {
-            return redirect()
-                ->route(
-                    'labour-attendances.show',
-                    $labourAttendance
-                )
-                ->with(
-                    'error',
-                    'This attendance sheet can no longer be edited.'
-                );
-        }
-
-        $validated = $request->validated();
-
-        ProjectAccess::authorize(
-            (int) $validated['project_id']
-        );
-
-        try {
-            DB::transaction(
-                function () use (
-                    $validated,
-                    $labourAttendance
-                ): void {
-                    $labourAttendance->load(
-                        $this->attendanceRelationships()
-                    );
-
-                    $oldValues =
-                        $this->auditValues($labourAttendance);
-
-                    $this->assertAttendanceCompositionUnchanged(
-                        $labourAttendance,
-                        $validated['details']
-                    );
-
-                    $labourAttendance->update([
-                        'project_id' =>
-                            (int) $validated['project_id'],
-
-                        'attendance_date' =>
-                            $validated['attendance_date'],
-
-                        'shift_id' =>
-                            ! empty($validated['shift_id'])
-                                ? (int) $validated['shift_id']
-                                : null,
-
-                        'remarks' =>
-                            $this->nullableTrim(
-                                $validated['remarks'] ?? null
-                            ),
-
-                        /*
- * Rejected and Reopened sheets remain editable until
- * the engineer resubmits them. We preserve the workflow
- * reason fields for audit visibility.
- */
-'status' => $labourAttendance->status,
-
-'rejection_reason' =>
-    $labourAttendance->rejection_reason,
-
-'rejected_by' =>
-    $labourAttendance->rejected_by,
-
-'rejected_at' =>
-    $labourAttendance->rejected_at,
-
-'reopen_reason' =>
-    $labourAttendance->reopen_reason,
-
-'reopened_by' =>
-    $labourAttendance->reopened_by,
-
-'reopened_at' =>
-    $labourAttendance->reopened_at,
-
-                        'updated_by' => auth()->id(),
-                    ]);
-
-                    /*
-                     * Labour composition is locked during normal editing.
-                     * Update the existing rows in place instead of soft-deleting
-                     * and recreating them. The unique database key on
-                     * (labour_attendance_id, labour_id) also includes
-                     * soft-deleted rows, so recreating the same labour row
-                     * would cause a duplicate-key exception.
-                     */
-                    $this->updateExistingDetails(
-                        $labourAttendance,
-                        $validated['details']
-                    );
-
-                    $labourAttendance->recalculateSummary();
-
-                    $labourAttendance->refresh();
-
-                    $labourAttendance->load(
-                        $this->attendanceRelationships()
-                    );
-
-                    AuditHelper::log(
-                        'Labour Attendance',
-                        'Updated',
-                        LabourAttendance::class,
-                        $labourAttendance->id,
-                        "Labour Attendance '{$labourAttendance->attendance_number}' was updated.",
-                        $oldValues,
-                        $this->auditValues($labourAttendance)
-                    );
-                }
+    if (! $labourAttendance->canBeEdited()) {
+        return redirect()
+            ->route(
+                'labour-attendances.show',
+                $labourAttendance
+            )
+            ->with(
+                'error',
+                'This attendance sheet can no longer be edited.'
             );
-
-            return redirect()
-                ->route(
-                    'labour-attendances.show',
-                    $labourAttendance
-                )
-                ->with(
-                    'success',
-                    'Labour Attendance updated successfully.'
-                );
-        } catch (ValidationException $exception) {
-            throw $exception;
-        } catch (Throwable $exception) {
-            report($exception);
-
-            return back()
-                ->withInput()
-                ->with(
-                    'error',
-                    'Unable to update the Labour Attendance sheet. Please review the information and try again.'
-                );
-        }
     }
 
+    $validated = $request->validated();
+
+    ProjectAccess::authorize(
+        (int) $validated['project_id']
+    );
+
+    try {
+        DB::transaction(
+            function () use (
+                $validated,
+                $labourAttendance
+            ): void {
+                $labourAttendance->load(
+                    $this->attendanceRelationships()
+                );
+
+                $oldValues =
+                    $this->auditValues(
+                        $labourAttendance
+                    );
+
+                $labourAttendance->update([
+                    'project_id' =>
+                        (int) $validated['project_id'],
+
+                    'attendance_date' =>
+                        $validated['attendance_date'],
+
+                    'shift_id' =>
+                        ! empty($validated['shift_id'])
+                            ? (int) $validated['shift_id']
+                            : null,
+
+                    'remarks' =>
+                        $this->nullableTrim(
+                            $validated['remarks'] ?? null
+                        ),
+
+                    'status' =>
+                        $labourAttendance->status,
+
+                    'rejection_reason' =>
+                        $labourAttendance->rejection_reason,
+
+                    'rejected_by' =>
+                        $labourAttendance->rejected_by,
+
+                    'rejected_at' =>
+                        $labourAttendance->rejected_at,
+
+                    'reopen_reason' =>
+                        $labourAttendance->reopen_reason,
+
+                    'reopened_by' =>
+                        $labourAttendance->reopened_by,
+
+                    'reopened_at' =>
+                        $labourAttendance->reopened_at,
+
+                    'updated_by' =>
+                        auth()->id(),
+                ]);
+
+                $this->syncEditableDraftDetails(
+    $labourAttendance,
+    $validated['details'] ?? []
+);
+
+                $labourAttendance->recalculateSummary();
+
+                $labourAttendance->refresh();
+
+                $labourAttendance->load(
+                    $this->attendanceRelationships()
+                );
+
+                AuditHelper::log(
+                    'Labour Attendance',
+                    'Updated',
+                    LabourAttendance::class,
+                    $labourAttendance->id,
+                    "Labour Attendance '{$labourAttendance->attendance_number}' was updated.",
+                    $oldValues,
+                    $this->auditValues(
+                        $labourAttendance
+                    )
+                );
+            }
+        );
+
+        return redirect()
+            ->route(
+                'labour-attendances.show',
+                $labourAttendance
+            )
+            ->with(
+                'success',
+                'Labour Attendance updated successfully.'
+            );
+    } catch (ValidationException $exception) {
+        throw $exception;
+    } catch (Throwable $exception) {
+        report($exception);
+
+        return back()
+            ->withInput()
+            ->with(
+                'error',
+                'Unable to update the Labour Attendance sheet. Please review the information and try again.'
+            );
+    }
+}
     /**
      * Submit a Draft or Rejected attendance sheet for approval.
      */
@@ -1754,4 +1748,174 @@ private function getFormOptions(): array
             ? null
             : $value;
     }
+
+    private function syncEditableDraftDetails(
+    LabourAttendance $attendance,
+    array $details
+): void {
+    $this->assertLaboursAvailableForAttendance(
+        $attendance,
+        $details
+    );
+
+    $submittedDetails = collect($details)
+        ->keyBy(
+            fn (array $detail): int =>
+                (int) $detail['labour_id']
+        );
+
+    $submittedLabourIds = $submittedDetails
+        ->keys()
+        ->map(fn ($id): int => (int) $id)
+        ->values();
+
+    $rowsToRemove = $attendance
+        ->details()
+        ->where('is_active', true)
+        ->when(
+            $submittedLabourIds->isNotEmpty(),
+            fn ($query) =>
+                $query->whereNotIn(
+                    'labour_id',
+                    $submittedLabourIds
+                )
+        )
+        ->get();
+
+    foreach ($rowsToRemove as $rowToRemove) {
+        $rowToRemove->update([
+            'is_active' => false,
+            'updated_by' => auth()->id(),
+        ]);
+
+        $rowToRemove->delete();
+    }
+
+    if ($submittedDetails->isEmpty()) {
+        return;
+    }
+
+    $labours = Labour::query()
+        ->whereIn(
+            'id',
+            $submittedLabourIds
+        )
+        ->get()
+        ->keyBy('id');
+
+    foreach (
+        $submittedDetails
+        as $labourId => $detailData
+    ) {
+        $labourId = (int) $labourId;
+
+        /** @var Labour|null $labour */
+        $labour = $labours->get(
+            $labourId
+        );
+
+        if (! $labour) {
+            throw ValidationException::withMessages([
+                'details' => [
+                    "Labour #{$labourId} could not be found.",
+                ],
+            ]);
+        }
+
+        $attendanceDetail =
+            LabourAttendanceDetail::withTrashed()
+                ->where(
+                    'labour_attendance_id',
+                    $attendance->id
+                )
+                ->where(
+                    'labour_id',
+                    $labourId
+                )
+                ->first();
+
+        $isNewOrRestored =
+            ! $attendanceDetail
+            || $attendanceDetail->trashed();
+
+        if (! $attendanceDetail) {
+            $attendanceDetail =
+                new LabourAttendanceDetail();
+
+            $attendanceDetail->labour_attendance_id =
+                $attendance->id;
+
+            $attendanceDetail->labour_id =
+                $labourId;
+
+            $attendanceDetail->created_by =
+                auth()->id();
+        } elseif ($attendanceDetail->trashed()) {
+            $attendanceDetail->restore();
+        }
+
+        if ($isNewOrRestored) {
+            $snapshot =
+                LabourAttendanceDetail::snapshotFromLabour(
+                    $labour
+                );
+
+            foreach (
+                $snapshot
+                as $column => $value
+            ) {
+                $attendanceDetail->{$column} =
+                    $value;
+            }
+        }
+
+        $attendanceDetail->attendance_status_id =
+            (int) $detailData['attendance_status_id'];
+
+        $attendanceDetail->working_status_id =
+            ! empty($detailData['working_status_id'] ?? null)
+                ? (int) $detailData['working_status_id']
+                : null;
+
+        $attendanceDetail->check_in_time =
+            $this->nullableTrim(
+                $detailData['check_in_time'] ?? null
+            );
+
+        $attendanceDetail->check_out_time =
+            $this->nullableTrim(
+                $detailData['check_out_time'] ?? null
+            );
+
+        $attendanceDetail->normal_hours =
+            (float) (
+                $detailData['normal_hours']
+                ?? 0
+            );
+
+        $attendanceDetail->ot_hours =
+            (float) (
+                $detailData['ot_hours']
+                ?? 0
+            );
+
+        $attendanceDetail->attendance_source =
+            $detailData['attendance_source']
+            ?? $attendanceDetail->attendance_source
+            ?? 'manual';
+
+        $attendanceDetail->remarks =
+            $this->nullableTrim(
+                $detailData['remarks'] ?? null
+            );
+
+        $attendanceDetail->is_active =
+            true;
+
+        $attendanceDetail->updated_by =
+            auth()->id();
+
+        $attendanceDetail->save();
+    }
+}
 }

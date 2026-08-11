@@ -2,270 +2,332 @@
 
 @section('content')
 
-<div class="flex justify-between items-center mb-6">
+@php
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+@endphp
+
+<div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
     <div>
-        <h1 class="text-3xl font-bold">
-            Brand Masters
+        <h1 class="text-3xl font-bold text-gray-800">
+            Material Brands
         </h1>
 
-        <p class="text-gray-500 mt-1">
-            Manage standard brands used in Material Master.
+        <p class="mt-1 text-gray-500">
+            Manage reusable brands for each Material Type.
         </p>
     </div>
 
-    <button
-        onclick="document.getElementById('addModal').classList.remove('hidden')"
-        class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded">
+    <a href="{{ route('brand-masters.create') }}"
+       class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700">
         + Add Brand
-    </button>
+    </a>
 
 </div>
 
 @if(session('success'))
-<div class="bg-green-100 text-green-700 p-4 rounded mb-6">
-    {{ session('success') }}
-</div>
+    <div class="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+        {{ session('success') }}
+    </div>
 @endif
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-    <div class="bg-white rounded shadow p-5">
-        <div class="text-gray-500">Total Brands</div>
-        <div class="text-3xl font-bold mt-2">{{ $brands->total() }}</div>
+@if(session('error'))
+    <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+        {{ session('error') }}
     </div>
+@endif
 
-    <div class="bg-white rounded shadow p-5">
-        <div class="text-gray-500">Active</div>
-        <div class="text-3xl font-bold text-green-600 mt-2">
-            {{ \App\Models\BrandMaster::where('is_active', 1)->count() }}
+<div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+
+    <form method="GET"
+          action="{{ route('brand-masters.index') }}"
+          class="grid grid-cols-1 gap-4 md:grid-cols-5">
+
+        <div>
+            <label class="mb-1 block text-sm font-semibold text-gray-700">
+                Search
+            </label>
+
+            <input type="text"
+                   name="search"
+                   value="{{ request('search') }}"
+                   placeholder="Brand or Material Type"
+                   class="{{ $inputClass }}">
         </div>
-    </div>
 
-    <div class="bg-white rounded shadow p-5">
-        <div class="text-gray-500">Inactive</div>
-        <div class="text-3xl font-bold text-red-600 mt-2">
-            {{ \App\Models\BrandMaster::where('is_active', 0)->count() }}
+        <div>
+            <label class="mb-1 block text-sm font-semibold text-gray-700">
+                Material Group
+            </label>
+
+            <select id="material_group"
+                    name="material_group"
+                    class="{{ $inputClass }}">
+
+                <option value="">All Groups</option>
+
+                @foreach($materialGroups as $group)
+                    <option value="{{ $group }}"
+                        {{ request('material_group') === $group ? 'selected' : '' }}>
+                        {{ $group }}
+                    </option>
+                @endforeach
+
+            </select>
         </div>
-    </div>
 
-</div>
+        <div>
+            <label class="mb-1 block text-sm font-semibold text-gray-700">
+                Material Type
+            </label>
 
-<div class="bg-white rounded shadow p-5 mb-6">
+            <select id="material_type_id"
+                    name="material_type_id"
+                    class="{{ $inputClass }}">
 
-    <form method="GET">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <option value="">All Material Types</option>
 
-            <div>
-                <label class="font-semibold block mb-2">Search</label>
-                <input type="text"
-                       name="search"
-                       value="{{ request('search') }}"
-                       placeholder="Brand Name / Code"
-                       class="border rounded p-3 w-full">
-            </div>
+                @foreach($materialTypes as $materialType)
+                    <option value="{{ $materialType->id }}"
+                            data-group="{{ $materialType->material_group }}"
+                        {{ (string) request('material_type_id') === (string) $materialType->id ? 'selected' : '' }}>
+                        {{ $materialType->material_type_name }}
+                    </option>
+                @endforeach
 
-            <div>
-                <label class="font-semibold block mb-2">Status</label>
-                <select name="status" class="border rounded p-3 w-full">
-                    <option value="">All</option>
-                    <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
-                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactive</option>
-                </select>
-            </div>
+            </select>
+        </div>
 
-            <div class="flex items-end gap-2">
-                <button class="bg-blue-600 text-white px-5 py-3 rounded">
-                    Filter
-                </button>
+        <div>
+            <label class="mb-1 block text-sm font-semibold text-gray-700">
+                Status
+            </label>
 
-                <a href="{{ route('brand-masters.index') }}"
-                   class="bg-gray-500 text-white px-5 py-3 rounded">
-                    Clear
-                </a>
-            </div>
+            <select name="status"
+                    class="{{ $inputClass }}">
+
+                <option value="">All Statuses</option>
+
+                <option value="1"
+                    {{ request('status') === '1' ? 'selected' : '' }}>
+                    Active
+                </option>
+
+                <option value="0"
+                    {{ request('status') === '0' ? 'selected' : '' }}>
+                    Inactive
+                </option>
+
+            </select>
+        </div>
+
+        <div class="flex items-end gap-2">
+
+            <button type="submit"
+                    class="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
+                Filter
+            </button>
+
+            <a href="{{ route('brand-masters.index') }}"
+               class="rounded-lg bg-gray-500 px-4 py-2 font-semibold text-white hover:bg-gray-600">
+                Clear
+            </a>
 
         </div>
+
     </form>
 
 </div>
 
-<div class="bg-white rounded shadow overflow-hidden">
+<div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-    <table class="w-full">
+    <div class="overflow-x-auto">
 
-        <thead class="bg-gray-100">
-            <tr>
-                <th class="p-4 text-left">#</th>
-                <th class="p-4 text-left">Category</th>
-                <th class="p-4 text-left">Brand Name</th>
-                <th class="p-4 text-left">Code</th>
-                <th class="p-4 text-center">Status</th>
-                <th class="p-4 text-center">Actions</th>
-                
-            </tr>
-        </thead>
+        <table class="min-w-full text-sm">
 
-        <tbody>
-
-            @forelse($brands as $brand)
-
-                <tr class="border-b">
-
-                    <td class="p-4">
-                        {{ $loop->iteration + ($brands->currentPage() - 1) * $brands->perPage() }}
-                    </td>
-                    <td class="p-4">
-    {{ $brand->category?->category_name ?? '-' }}
-</td>
-
-                    <td class="p-4 font-semibold">
-                        {{ $brand->brand_name }}
-
-                        @if($brand->remarks)
-                            <div class="text-xs text-gray-500 mt-1">
-                                {{ $brand->remarks }}
-                            </div>
-                        @endif
-                    </td>
-
-                    <td class="p-4">
-                        {{ $brand->brand_code ?? '-' }}
-                    </td>
-
-                    <td class="text-center">
-                        @if($brand->is_active)
-                            <span class="bg-green-100 text-green-700 px-3 py-1 rounded">
-                                Active
-                            </span>
-                        @else
-                            <span class="bg-red-100 text-red-700 px-3 py-1 rounded">
-                                Inactive
-                            </span>
-                        @endif
-                    </td>
-
-                    <td class="text-center">
-
-                        <a href="{{ route('brand-masters.edit', $brand) }}"
-                           class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">
-                            Edit
-                        </a>
-
-                        <form action="{{ route('brand-masters.toggle-status', $brand) }}"
-                              method="POST"
-                              class="inline">
-
-                            @csrf
-                            @method('PATCH')
-
-                            <button onclick="return confirm('Change brand status?')"
-                                    class="ml-2 px-4 py-2 rounded text-white
-                                    {{ $brand->is_active
-                                        ? 'bg-red-600 hover:bg-red-700'
-                                        : 'bg-green-600 hover:bg-green-700' }}">
-                                {{ $brand->is_active ? 'Deactivate' : 'Activate' }}
-                            </button>
-
-                        </form>
-
-                    </td>
-
-                </tr>
-
-            @empty
+            <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
 
                 <tr>
-                    <td colspan="6" class="text-center p-10 text-gray-500">
-                        No Brands Found
-                    </td>
+                    <th class="px-4 py-3 text-left">#</th>
+                    <th class="px-4 py-3 text-left">Material Group</th>
+                    <th class="px-4 py-3 text-left">Material Type</th>
+                    <th class="px-4 py-3 text-left">Brand</th>
+                    <th class="px-4 py-3 text-center">Default Unit</th>
+                    <th class="px-4 py-3 text-center">Sequence</th>
+                    <th class="px-4 py-3 text-center">Status</th>
+                    <th class="px-4 py-3 text-left">Remarks</th>
+                    <th class="px-4 py-3 text-center">Actions</th>
                 </tr>
 
-            @endforelse
+            </thead>
 
-        </tbody>
+            <tbody class="divide-y divide-gray-200">
 
-    </table>
+                @forelse($brands as $index => $brand)
 
-    <div class="p-4">
-        {{ $brands->links() }}
+                    <tr class="hover:bg-gray-50">
+
+                        <td class="px-4 py-3">
+                            {{ $brands->firstItem() + $index }}
+                        </td>
+
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            {{ $brand->materialType?->material_group ?? '-' }}
+                        </td>
+
+                        <td class="px-4 py-3 font-semibold text-gray-800">
+                            {{ $brand->materialType?->material_type_name ?? '-' }}
+                        </td>
+
+                        <td class="px-4 py-3">
+                            <span class="font-semibold text-gray-800">
+                                {{ $brand->brand_name }}
+                            </span>
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            {{ $brand->materialType?->unit?->unit_name ?? '-' }}
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+                            {{ $brand->sequence }}
+                        </td>
+
+                        <td class="px-4 py-3 text-center">
+
+                            @if($brand->is_active)
+                                <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                                    Active
+                                </span>
+                            @else
+                                <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
+                                    Inactive
+                                </span>
+                            @endif
+
+                        </td>
+
+                        <td class="px-4 py-3">
+                            {{ $brand->remarks ?? '-' }}
+                        </td>
+
+                        <td class="px-4 py-3">
+
+                            <div class="flex flex-wrap justify-center gap-2">
+
+                                <a href="{{ route('brand-masters.edit', $brand) }}"
+                                   class="rounded bg-yellow-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-yellow-600">
+                                    Edit
+                                </a>
+
+                                <form method="POST"
+                                      action="{{ route('brand-masters.toggle-status', $brand) }}"
+                                      class="inline">
+
+                                    @csrf
+                                    @method('PATCH')
+
+                                    <button type="submit"
+                                            onclick="return confirm('Change this brand status?')"
+                                            class="rounded px-3 py-1.5 text-xs font-semibold text-white
+                                            {{ $brand->is_active
+                                                ? 'bg-red-600 hover:bg-red-700'
+                                                : 'bg-green-600 hover:bg-green-700' }}">
+
+                                        {{ $brand->is_active
+                                            ? 'Deactivate'
+                                            : 'Activate' }}
+
+                                    </button>
+
+                                </form>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                @empty
+
+                    <tr>
+                        <td colspan="9"
+                            class="px-6 py-10 text-center text-gray-500">
+                            No material brands found.
+                        </td>
+                    </tr>
+
+                @endforelse
+
+            </tbody>
+
+        </table>
+
     </div>
 
-</div>
-
-<div id="addModal"
-     class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-
-    <div class="bg-white rounded-xl shadow-2xl w-full max-w-md p-6 mx-4">
-
-        <h2 class="text-2xl font-bold mb-6">
-            Add Brand
-        </h2>
-
-        <form method="POST" action="{{ route('brand-masters.store') }}">
-
-            @csrf
-            <div class="mb-4">
-    <label class="block font-semibold mb-2">
-        Material Category
-    </label>
-
-    <select
-        name="material_category_id"
-        class="border rounded w-full p-3"
-        required>
-
-        <option value="">
-            Select Material Category
-        </option>
-
-        @foreach($categories as $category)
-            <option value="{{ $category->id }}">
-                {{ $category->category_name }}
-            </option>
-        @endforeach
-
-    </select>
-</div>
-
-            <div class="mb-4">
-                <label class="font-semibold block mb-2">Brand Name</label>
-                <input type="text"
-                       name="brand_name"
-                       class="border rounded w-full p-3"
-                       required>
-            </div>
-
-            <div class="mb-4">
-                <label class="font-semibold block mb-2">Brand Code</label>
-                <input type="text"
-                       name="brand_code"
-                       class="border rounded w-full p-3">
-            </div>
-
-            <div class="mb-6">
-                <label class="font-semibold block mb-2">Remarks</label>
-                <textarea name="remarks"
-                          rows="3"
-                          class="border rounded w-full p-3"></textarea>
-            </div>
-
-            <div class="flex justify-end gap-3">
-                <button type="button"
-                        onclick="document.getElementById('addModal').classList.add('hidden')"
-                        class="bg-gray-500 text-white px-5 py-2 rounded">
-                    Cancel
-                </button>
-
-                <button class="bg-blue-600 text-white px-5 py-2 rounded">
-                    Save
-                </button>
-            </div>
-
-        </form>
-
-    </div>
+    @if($brands->hasPages())
+        <div class="border-t border-gray-200 px-4 py-4">
+            {{ $brands->links() }}
+        </div>
+    @endif
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const groupSelect =
+        document.getElementById('material_group');
+
+    const typeSelect =
+        document.getElementById('material_type_id');
+
+    if (!groupSelect || !typeSelect) {
+        return;
+    }
+
+    const originalOptions = Array.from(
+        typeSelect.querySelectorAll('option')
+    ).map(option => option.cloneNode(true));
+
+    const selectedTypeId =
+        @json((string) request('material_type_id', ''));
+
+    function filterMaterialTypes(preserveSelection = true) {
+        const selectedGroup = groupSelect.value;
+
+        typeSelect.innerHTML = '';
+        typeSelect.add(new Option('All Material Types', ''));
+
+        originalOptions.forEach(function (option) {
+            if (option.value === '') {
+                return;
+            }
+
+            if (
+                selectedGroup === ''
+                || option.dataset.group === selectedGroup
+            ) {
+                const clonedOption = option.cloneNode(true);
+
+                if (
+                    preserveSelection
+                    && clonedOption.value === selectedTypeId
+                ) {
+                    clonedOption.selected = true;
+                }
+
+                typeSelect.add(clonedOption);
+            }
+        });
+    }
+
+    groupSelect.addEventListener('change', function () {
+        filterMaterialTypes(false);
+        typeSelect.value = '';
+    });
+
+    filterMaterialTypes(true);
+});
+</script>
 
 @endsection

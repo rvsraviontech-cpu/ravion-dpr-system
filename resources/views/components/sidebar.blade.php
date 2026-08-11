@@ -62,7 +62,14 @@
 
             @php
                 $visibleItems = collect($section['items'])
-                    ->filter(fn($item) => $canSee($item['permission']) && Route::has($item['route']));
+                    ->filter(function ($item) use ($canSee) {
+    $permission = $item['permission'] ?? null;
+    $route = $item['route'] ?? null;
+
+    return $route
+        && Route::has($route)
+        && $canSee($permission);
+});
 
                 $sectionActive = $visibleItems->contains(function ($item) {
                     return request()->routeIs($item['route'])

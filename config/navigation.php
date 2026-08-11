@@ -84,8 +84,39 @@ return [
             ['title' => 'Materials', 'route' => 'materials.index', 'permission' => 'materials.view', 'icon' => 'cube'],
             ['title' => 'Unit Masters', 'route' => 'unit-masters.index', 'permission' => 'materials.view', 'icon' => 'scale'],
             ['title' => 'Vendors', 'route' => 'vendors.index', 'permission' => 'vendors.view', 'icon' => 'truck'],
-        ],
+            
+    
+
+        [
+    'title' => 'Material Types',
+    'route' => 'material-types.index',
+    'permission' => 'material_types.view',
+],
+
+[
+    'title' => 'Material Brands',
+    'route' => 'brand-masters.index',
+    'permission' => 'brand_masters.view',
+],
+
+[
+    'title' => 'Material Specifications',
+    'route' => 'material-specifications.index',
+    'permission' => 'material_specifications.view',
+],
+
+[
+    'title' => 'Material Grades / Ratings',
+    'route' => 'material-grades.index',
+    'permission' => 'material_grades.view',
+],
+
+       
+
     ],
+],
+       
+    
 
     [
         'title' => 'Location Masters',

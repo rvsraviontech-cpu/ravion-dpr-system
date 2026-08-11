@@ -64,6 +64,12 @@ use App\Http\Controllers\LabourAttendanceCorrectionController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\LabourAttendanceRegisterController;
 use App\Http\Controllers\WeeklyWageSheetController;
+use App\Http\Controllers\MaterialSpecificationController;
+use App\Http\Controllers\MaterialTypeController;
+use App\Http\Controllers\MaterialGradeController;
+use App\Http\Controllers\DprWorkItemController;
+use App\Http\Controllers\WorkDoneController;
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -146,8 +152,161 @@ Route::resource('work-stages', WorkStageController::class)
         ->name('engineer-productivity')
         ->middleware('permission:reports.view');
 
+Route::middleware(['auth'])->group(function () {
+
+    Route::resource(
+        'activity-material-mappings',
+        App\Http\Controllers\ActivityMaterialMappingController::class
+    );
+
+});
+
+Route::resource(
+    'material-specifications',
+    MaterialSpecificationController::class
+);
+
+Route::resource(
+    'material-types',
+    MaterialTypeController::class
+);
 
 
+Route::resource(
+    'material-grades',
+    MaterialGradeController::class
+);
+
+Route::patch(
+    'material-received/{materialReceived}/accountant-verify',
+    [MaterialReceivedController::class, 'accountantVerify']
+)
+    ->middleware('permission:material_received.accountant_verify')
+    ->name('material-received.accountant-verify');
+
+  /*  Route::prefix('work-done')
+    ->name('work-done.')
+    ->group(function () {
+        Route::get('/', [DprWorkItemController::class, 'index'])
+            ->name('index');
+
+        Route::get('/create', [DprWorkItemController::class, 'create'])
+            ->name('create');
+
+        Route::post('/', [DprWorkItemController::class, 'store'])
+            ->name('store');
+
+        Route::get('/{workDone}', [DprWorkItemController::class, 'show'])
+            ->name('show');
+
+        Route::get('/{workDone}/edit', [DprWorkItemController::class, 'edit'])
+            ->name('edit');
+
+        Route::put('/{workDone}', [DprWorkItemController::class, 'update'])
+            ->name('update');
+
+        Route::delete('/{workDone}', [DprWorkItemController::class, 'destroy'])
+            ->name('destroy');*/
+
+        Route::delete(
+            '/{workDone}/photos/{photo}',
+            [DprWorkItemController::class, 'destroyPhoto']
+        )->name('photos.destroy');
+
+        
+    
+
+    /*
+|--------------------------------------------------------------------------
+| Work Done v2 / Daily Work Execution
+|--------------------------------------------------------------------------
+|
+| Replace the OLD work-done route group that points to DprWorkItemController
+| with this block. Keep this inside your existing auth / role / permission
+| middleware area.
+|
+*/
+
+Route::prefix('work-done')
+    ->name('work-done.')
+    ->group(function () {
+
+        Route::get(
+            '/available-materials',
+            [WorkDoneController::class, 'availableMaterials']
+        )->name('available-materials');
+
+        Route::get(
+            '/',
+            [WorkDoneController::class, 'index']
+        )->name('index');
+
+        Route::get(
+            '/create',
+            [WorkDoneController::class, 'create']
+        )->name('create');
+
+        Route::post(
+            '/',
+            [WorkDoneController::class, 'store']
+        )->name('store');
+
+        Route::get(
+            '/{workDone}',
+            [WorkDoneController::class, 'show']
+        )->name('show');
+
+        Route::get(
+            '/{workDone}/edit',
+            [WorkDoneController::class, 'edit']
+        )->name('edit');
+
+        Route::put(
+            '/{workDone}',
+            [WorkDoneController::class, 'update']
+        )->name('update');
+
+        Route::delete(
+            '/{workDone}',
+            [WorkDoneController::class, 'destroy']
+        )->name('destroy');
+    });
+
+// BRAND MASTER CONTROLLER ROUTES
+
+Route::middleware(['auth'])->group(function () {
+
+    Route::get(
+        '/brand-masters',
+        [BrandMasterController::class, 'index']
+    )->name('brand-masters.index');
+
+    Route::get(
+        '/brand-masters/create',
+        [BrandMasterController::class, 'create']
+    )->name('brand-masters.create');
+
+    Route::post(
+        '/brand-masters',
+        [BrandMasterController::class, 'store']
+    )->name('brand-masters.store');
+
+    Route::get(
+        '/brand-masters/{brandMaster}/edit',
+        [BrandMasterController::class, 'edit']
+    )->name('brand-masters.edit');
+
+    Route::put(
+        '/brand-masters/{brandMaster}',
+        [BrandMasterController::class, 'update']
+    )->name('brand-masters.update');
+
+    Route::patch(
+        '/brand-masters/{brandMaster}/toggle-status',
+        [BrandMasterController::class, 'toggleStatus']
+    )->name('brand-masters.toggle-status');
+
+});
 
     /*
     |--------------------------------------------------------------------------
@@ -774,6 +933,13 @@ Route::get(
     | DPR
     |--------------------------------------------------------------------------
     */
+
+    Route::get(
+    '/dprs/execution-data',
+    [DprController::class, 'executionData']
+)->name('dprs.execution-data');
+
+
 
     Route::resource('dprs', DprController::class)
         ->middleware('permission:dpr.view');

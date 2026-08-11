@@ -2,213 +2,387 @@
 
 @section('content')
 
-<div class="flex justify-between items-center mb-6">
-    <div>
-        <h1 class="text-3xl font-bold text-gray-800">Site Issues / Delays</h1>
-        <p class="text-gray-500 mt-1">
-            Track site issues, delays, risks, dependencies and escalations.
-        </p>
+@php
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+@endphp
+
+<div class="mx-auto max-w-full">
+
+    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+                Site Issues Register
+            </h1>
+
+            <p class="mt-1 text-gray-500">
+                Track site issues, delays, risks, responsibility, escalation and closure status.
+            </p>
+        </div>
+
+        <a href="{{ route('site-issues.create') }}"
+           class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-700">
+            + Add Site Issue
+        </a>
     </div>
 
-    <a href="{{ route('site-issues.create') }}"
-       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-        + Add Site Issue
-    </a>
-</div>
+    @if(session('success'))
+        <div class="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+            {{ session('success') }}
+        </div>
+    @endif
 
-@if(session('success'))
-    <div class="bg-green-100 text-green-800 p-4 rounded mb-4">
-        {{ session('success') }}
-    </div>
-@endif
+    @if(session('error'))
+        <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+            {{ session('error') }}
+        </div>
+    @endif
 
-@if(session('error'))
-    <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
-        {{ session('error') }}
-    </div>
-@endif
-
-<div class="bg-white p-4 rounded shadow mb-6">
     <form method="GET"
           action="{{ route('site-issues.index') }}"
-          class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
-        <div>
-            <label class="block text-sm font-semibold mb-1">Issue Date</label>
-            <input type="date"
-                   name="issue_date"
-                   value="{{ request('issue_date') }}"
-                   class="border p-2 rounded w-full">
-        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-7">
 
-        <div>
-            <label class="block text-sm font-semibold mb-1">Project</label>
-            <select name="project_id" class="border p-2 rounded w-full">
-                <option value="">All Projects</option>
-                @foreach($projects as $project)
-                    <option value="{{ $project->id }}"
-                        {{ request('project_id') == $project->id ? 'selected' : '' }}>
-                        {{ $project->project_name }}
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Issue Date
+                </label>
+
+                <input type="date"
+                       name="issue_date"
+                       value="{{ request('issue_date') }}"
+                       class="{{ $inputClass }}">
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Project
+                </label>
+
+                <select name="project_id"
+                        class="{{ $inputClass }}">
+                    <option value="">All Projects</option>
+
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}"
+                            {{ (string) request('project_id') === (string) $project->id ? 'selected' : '' }}>
+                            {{ $project->project_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Priority
+                </label>
+
+                <select name="priority"
+                        class="{{ $inputClass }}">
+                    <option value="">All Priorities</option>
+
+                    @foreach($priorities as $priority)
+                        <option value="{{ $priority }}"
+                            {{ request('priority') === $priority ? 'selected' : '' }}>
+                            {{ $priority }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Status
+                </label>
+
+                <select name="status"
+                        class="{{ $inputClass }}">
+                    <option value="">All Statuses</option>
+
+                    @foreach($statuses as $status)
+                        <option value="{{ $status }}"
+                            {{ request('status') === $status ? 'selected' : '' }}>
+                            {{ $status }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    DPR Link
+                </label>
+
+                <select name="dpr_link"
+                        class="{{ $inputClass }}">
+                    <option value="">All</option>
+
+                    <option value="unlinked"
+                        {{ request('dpr_link') === 'unlinked' ? 'selected' : '' }}>
+                        Not Linked
                     </option>
-                @endforeach
-            </select>
+
+                    <option value="linked"
+                        {{ request('dpr_link') === 'linked' ? 'selected' : '' }}>
+                        Linked
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Search
+                </label>
+
+                <input type="text"
+                       name="search"
+                       value="{{ request('search') }}"
+                       class="{{ $inputClass }}"
+                       placeholder="Title, project, activity">
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit"
+                        class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                    Filter
+                </button>
+
+                <a href="{{ route('site-issues.index') }}"
+                   class="rounded-lg bg-gray-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700">
+                    Clear
+                </a>
+            </div>
+
         </div>
-
-        <div>
-            <label class="block text-sm font-semibold mb-1">Priority</label>
-            <select name="priority" class="border p-2 rounded w-full">
-                <option value="">All Priority</option>
-                <option value="Low" {{ request('priority') == 'Low' ? 'selected' : '' }}>Low</option>
-                <option value="Medium" {{ request('priority') == 'Medium' ? 'selected' : '' }}>Medium</option>
-                <option value="High" {{ request('priority') == 'High' ? 'selected' : '' }}>High</option>
-                <option value="Critical" {{ request('priority') == 'Critical' ? 'selected' : '' }}>Critical</option>
-            </select>
-        </div>
-
-        <div>
-            <label class="block text-sm font-semibold mb-1">Status</label>
-            <select name="status" class="border p-2 rounded w-full">
-                <option value="">All Status</option>
-                <option value="Open" {{ request('status') == 'Open' ? 'selected' : '' }}>Open</option>
-                <option value="In Progress" {{ request('status') == 'In Progress' ? 'selected' : '' }}>In Progress</option>
-                <option value="Resolved" {{ request('status') == 'Resolved' ? 'selected' : '' }}>Resolved</option>
-            </select>
-        </div>
-
-        <div class="flex items-end gap-2">
-            <button type="submit"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-                Filter
-            </button>
-
-            <a href="{{ route('site-issues.index') }}"
-               class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                Clear
-            </a>
-        </div>
-
     </form>
-</div>
 
-<div class="bg-white rounded shadow overflow-hidden">
-    <div class="overflow-x-auto">
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-        <table class="min-w-full text-sm">
+        <div class="border-b border-gray-200 px-5 py-4">
+            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800">
+                        Site Issues
+                    </h2>
 
-            <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
-                <tr>
-                    <th class="p-3 text-left">#</th>
-                    <th class="p-3 text-left">Date</th>
-                    <th class="p-3 text-left">Project</th>
-                    <th class="p-3 text-left">Issue</th>
-                    <th class="p-3 text-left">Type</th>
-                    <th class="p-3 text-left">Priority</th>
-                    <th class="p-3 text-left">Responsible</th>
-                    <th class="p-3 text-left">Target Date</th>
-                    <th class="p-3 text-left">Status</th>
-                    <th class="p-3 text-left">Escalation</th>
-                    <th class="p-3 text-left">Actions</th>
-                </tr>
-            </thead>
+                    <p class="text-sm text-gray-500">
+                        One row represents one independently tracked issue.
+                    </p>
+                </div>
 
-            <tbody class="divide-y divide-gray-200">
+                <div class="text-sm text-gray-500">
+                    Showing
+                    <span class="font-semibold text-gray-700">
+                        {{ $siteIssues->firstItem() ?? 0 }}–{{ $siteIssues->lastItem() ?? 0 }}
+                    </span>
+                    of
+                    <span class="font-semibold text-gray-700">
+                        {{ $siteIssues->total() }}
+                    </span>
+                </div>
+            </div>
+        </div>
 
-            @forelse($siteIssues as $index => $issue)
+        <div class="overflow-x-auto">
 
-                <tr class="hover:bg-gray-50">
+            <table class="min-w-[1150px] w-full text-sm">
 
-                    <td class="p-3">
-                        {{ $siteIssues->firstItem() + $index }}
-                    </td>
+                <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                    <tr>
+                        <th class="w-14 px-4 py-3 text-center">#</th>
+                        <th class="px-4 py-3 text-left">Date</th>
+                        <th class="px-4 py-3 text-left">Project</th>
+                        <th class="px-4 py-3 text-left">Issue</th>
+                        <th class="px-4 py-3 text-left">Type / Priority</th>
+                        <th class="px-4 py-3 text-left">Responsible</th>
+                        <th class="px-4 py-3 text-left">Target</th>
+                        <th class="px-4 py-3 text-left">Status</th>
+                        <th class="px-4 py-3 text-left">Escalation</th>
+                        <th class="w-32 px-4 py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
 
-                    <td class="p-3 whitespace-nowrap">
-                        {{ $issue->issue_date ?? '-' }}
-                    </td>
+                <tbody class="divide-y divide-gray-200">
 
-                    <td class="p-3 whitespace-nowrap">
-                        {{ $issue->project?->project_name ?? '-' }}
-                    </td>
+                    @forelse($siteIssues as $index => $issue)
 
-                    <td class="p-3 min-w-[220px] font-semibold">
-                        {{ $issue->title ?? '-' }}
-                    </td>
+                        @php
+                            $priorityClass = match($issue->priority) {
+                                'Low' => 'bg-gray-100 text-gray-700',
+                                'Medium' => 'bg-blue-100 text-blue-800',
+                                'High' => 'bg-orange-100 text-orange-800',
+                                'Critical' => 'bg-red-100 text-red-800',
+                                default => 'bg-gray-100 text-gray-700',
+                            };
 
-                    <td class="p-3 whitespace-nowrap">
-                        {{ $issue->issue_type }}
-                    </td>
+                            $statusClass = match($issue->status) {
+                                'Open' => 'bg-red-100 text-red-800',
+                                'Assigned' => 'bg-blue-100 text-blue-800',
+                                'In Progress' => 'bg-orange-100 text-orange-800',
+                                'Resolved' => 'bg-green-100 text-green-800',
+                                'Verified' => 'bg-emerald-100 text-emerald-800',
+                                'Closed' => 'bg-slate-200 text-slate-800',
+                                default => 'bg-gray-100 text-gray-700',
+                            };
 
-                    <td class="p-3">
-                        <span class="px-2 py-1 rounded text-xs
-                            {{ $issue->priority === 'Low' ? 'bg-gray-100 text-gray-800' : '' }}
-                            {{ $issue->priority === 'Medium' ? 'bg-blue-100 text-blue-800' : '' }}
-                            {{ $issue->priority === 'High' ? 'bg-orange-100 text-orange-800' : '' }}
-                            {{ $issue->priority === 'Critical' ? 'bg-red-100 text-red-800' : '' }}">
-                            {{ $issue->priority }}
-                        </span>
-                    </td>
+                            $isOverdue =
+                                $issue->target_closure_date
+                                && ! in_array(
+                                    $issue->status,
+                                    ['Resolved', 'Verified', 'Closed'],
+                                    true
+                                )
+                                && $issue->target_closure_date->isPast();
+                        @endphp
 
-                    <td class="p-3 whitespace-nowrap">
-                        {{ $issue->responsible_person ?? '-' }}
-                    </td>
+                        <tr class="align-top hover:bg-gray-50">
 
-                    <td class="p-3 whitespace-nowrap">
-                        {{ $issue->target_closure_date ?? '-' }}
-                    </td>
+                            <td class="px-4 py-4 text-center text-gray-500">
+                                {{ ($siteIssues->firstItem() ?? 1) + $index }}
+                            </td>
 
-                    <td class="p-3">
-                        <span class="px-2 py-1 rounded text-xs
-                            {{ $issue->status === 'Open' ? 'bg-red-100 text-red-800' : '' }}
-                            {{ $issue->status === 'In Progress' ? 'bg-orange-100 text-orange-800' : '' }}
-                            {{ $issue->status === 'Resolved' ? 'bg-green-100 text-green-800' : '' }}">
-                            {{ $issue->status }}
-                        </span>
-                    </td>
+                            <td class="whitespace-nowrap px-4 py-4">
+                                <div class="font-semibold text-gray-800">
+                                    {{ $issue->issue_date?->format('d/m/Y') ?? '-' }}
+                                </div>
+                            </td>
 
-                    <td class="p-3 whitespace-nowrap">
-                        @if($issue->escalated_to_management)
-                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">Management</span>
-                        @elseif($issue->escalated_to_pmo)
-                            <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs">PMO</span>
-                        @else
-                            <span class="text-gray-500">-</span>
-                        @endif
-                    </td>
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-gray-800">
+                                    {{ $issue->project?->project_name ?? '-' }}
+                                </div>
+                            </td>
 
-                    <td class="p-3 whitespace-nowrap">
-                        <div class="flex gap-2">
-                            <a href="{{ route('site-issues.show', $issue) }}"
-                               class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded">
-                                View
-                            </a>
+                            <td class="max-w-sm px-4 py-4">
+                                <div class="font-semibold text-gray-800">
+                                    {{ $issue->title }}
+                                </div>
 
-                            <a href="{{ route('site-issues.edit', $issue) }}"
-                               class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
-                                Edit
-                            </a>
-                        </div>
-                    </td>
+                                @if($issue->activity)
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        {{ $issue->activity->activity_name }}
+                                    </div>
+                                @endif
+                            </td>
 
-                </tr>
+                            <td class="px-4 py-4">
+                                <div class="text-sm font-medium text-gray-800">
+                                    {{ $issue->issue_type }}
+                                </div>
 
-            @empty
+                                <div class="mt-2">
+                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $priorityClass }}">
+                                        {{ $issue->priority }}
+                                    </span>
+                                </div>
+                            </td>
 
-                <tr>
-                    <td colspan="11" class="p-6 text-center text-gray-500">
-                        No site issues found.
-                    </td>
-                </tr>
+                            <td class="px-4 py-4">
+                                {{ $issue->responsible_person ?: '-' }}
+                            </td>
 
-            @endforelse
+                            <td class="whitespace-nowrap px-4 py-4">
+                                <div class="font-medium text-gray-800">
+                                    {{ $issue->target_closure_date?->format('d/m/Y') ?? '-' }}
+                                </div>
 
-            </tbody>
+                                @if($isOverdue)
+                                    <div class="mt-1 text-xs font-semibold text-red-600">
+                                        Overdue
+                                    </div>
+                                @endif
+                            </td>
 
-        </table>
+                            <td class="px-4 py-4">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">
+                                    {{ $issue->status }}
+                                </span>
+                            </td>
+
+                            <td class="px-4 py-4">
+                                @if($issue->escalated_to_management)
+                                    <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
+                                        Management
+                                    </span>
+                                @elseif($issue->escalated_to_pmo)
+                                    <span class="inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-800">
+                                        PMO
+                                    </span>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+
+                            <td class="px-4 py-4">
+                                <div class="flex flex-col gap-2">
+
+                                    <a href="{{ route('site-issues.show', $issue) }}"
+                                       class="rounded-lg bg-slate-700 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-slate-800">
+                                        View
+                                    </a>
+
+                                    <a href="{{ route('site-issues.edit', $issue) }}"
+                                       class="rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-amber-600">
+                                        Edit
+                                    </a>
+
+                                    @if(!$issue->is_dpr_linked)
+                                        <form method="POST"
+                                              action="{{ route('site-issues.destroy', $issue) }}">
+                                            @csrf
+                                            @method('DELETE')
+
+                                            <button type="submit"
+                                                    onclick="return confirm('Delete this Site Issue and its photos?')"
+                                                    class="w-full rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endif
+
+                                </div>
+                            </td>
+
+                        </tr>
+
+                    @empty
+
+                        <tr>
+                            <td colspan="10"
+                                class="px-6 py-14 text-center">
+
+                                <div class="mx-auto max-w-md">
+                                    <div class="text-lg font-semibold text-gray-700">
+                                        No Site Issues found
+                                    </div>
+
+                                    <p class="mt-2 text-sm text-gray-500">
+                                        Adjust the filters or report the first site issue.
+                                    </p>
+
+                                    <a href="{{ route('site-issues.create') }}"
+                                       class="mt-4 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                                        + Add Site Issue
+                                    </a>
+                                </div>
+
+                            </td>
+                        </tr>
+
+                    @endforelse
+
+                </tbody>
+            </table>
+
+        </div>
+
+        @if($siteIssues->hasPages())
+            <div class="border-t border-gray-200 px-5 py-4">
+                {{ $siteIssues->links() }}
+            </div>
+        @endif
 
     </div>
-</div>
-
-<div class="mt-4">
-    {{ $siteIssues->links() }}
 </div>
 
 @endsection

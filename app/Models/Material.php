@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Material extends Model
 {
@@ -19,16 +20,38 @@ class Material extends Model
         'brand_master_id',
     ];
 
+    protected $casts = [
+        'minimum_stock_level' => 'decimal:2',
+        'is_active' => 'boolean',
+    ];
+
     public function category()
     {
-        return $this->belongsTo(MaterialCategory::class, 'material_category_id');
+        return $this->belongsTo(
+            MaterialCategory::class,
+            'material_category_id'
+        );
     }
 
     public function brandMaster()
-{
-    return $this->belongsTo(
-        \App\Models\BrandMaster::class,
-        'brand_master_id'
-    );
-}
+    {
+        return $this->belongsTo(
+            BrandMaster::class,
+            'brand_master_id'
+        );
+    }
+
+    public function activityMaterialMappings(): HasMany
+    {
+        return $this->hasMany(
+            ActivityMaterialMapping::class,
+            'material_id'
+        );
+    }
+
+    public function activeActivityMaterialMappings(): HasMany
+    {
+        return $this->activityMaterialMappings()
+            ->where('is_active', true);
+    }
 }

@@ -2,271 +2,1146 @@
 
 @section('content')
 
-<h1 class="text-3xl font-bold mb-6">
-    Edit Material Consumed
-</h1>
+@php
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $labelClass = 'mb-1 block text-sm font-semibold text-gray-700';
 
-@if($errors->any())
-    <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
-        @foreach($errors->all() as $error)
-            <p>{{ $error }}</p>
-        @endforeach
-    </div>
-@endif
+    $existingItems = $materialConsumed->items->map(function ($item) {
+        return [
+            'activity_division_id' => $item->activity_division_id,
+            'activity_id' => $item->activity_id,
+            'material_type_id' => $item->material_type_id,
+            'brand_master_id' => $item->brand_master_id,
+            'material_specification_id' => $item->material_specification_id,
+            'material_grade_id' => $item->material_grade_id,
+            'quantity_consumed' => $item->quantity_consumed,
+            'wastage_quantity' => $item->wastage_quantity,
+            'unit_master_id' => $item->unit_master_id,
+            'wastage_reason' => $item->wastage_reason,
+            'remarks' => $item->remarks,
+        ];
+    })->values()->all();
 
-<form method="POST"
-      action="{{ route('material-consumed.update', $materialConsumed) }}"
-      class="bg-white p-6 rounded shadow">
+    if (empty($existingItems)) {
+        $existingItems = [[
+            'activity_division_id' => '',
+            'activity_id' => '',
+            'material_type_id' => '',
+            'brand_master_id' => '',
+            'material_specification_id' => '',
+            'material_grade_id' => '',
+            'quantity_consumed' => '',
+            'wastage_quantity' => 0,
+            'unit_master_id' => '',
+            'wastage_reason' => '',
+            'remarks' => '',
+        ]];
+    }
 
-    @csrf
-    @method('PUT')
+    $formItems = old('items', $existingItems);
 
-    <h2 class="text-xl font-bold mb-4">Project & Location</h2>
+    $activityOptionsForJs = $activities
+        ->map(function ($activity) {
+            return [
+                'id' => $activity->id,
+                'name' => $activity->activity_name,
+                'division_id' => $activity->activity_division_id,
+            ];
+        })
+        ->values();
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    $materialTypeOptionsForJs = $materialTypes
+        ->map(function ($type) {
+            return [
+                'id' => $type->id,
+                'name' => $type->material_type_name,
+                'group' => $type->material_group,
+                'unit_id' => $type->unit_master_id,
+                'unit_name' => optional($type->unit)->unit_name,
+            ];
+        })
+        ->values();
+
+    $brandOptionsForJs = $brands
+        ->map(function ($brand) {
+            return [
+                'id' => $brand->id,
+                'name' => $brand->brand_name,
+                'material_type_id' => $brand->material_type_id,
+            ];
+        })
+        ->values();
+
+    $specificationOptionsForJs = $specifications
+        ->map(function ($specification) {
+            return [
+                'id' => $specification->id,
+                'name' => $specification->specification_name,
+                'material_type_id' => $specification->material_type_id,
+            ];
+        })
+        ->values();
+
+    $gradeOptionsForJs = $grades
+        ->map(function ($grade) {
+            return [
+                'id' => $grade->id,
+                'name' => $grade->grade_name,
+                'material_type_id' => $grade->material_type_id,
+            ];
+        })
+        ->values();
+
+    $materialGroupsForJs = $materialGroups->values();
+@endphp
+
+<div class="mx-auto max-w-full">
+
+    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
         <div>
-            <label class="block font-semibold mb-1">Project</label>
-            <select id="project_id" name="project_id" class="border p-2 rounded w-full" required>
-                <option value="">Select Project</option>
-                @foreach($projects as $project)
-                    <option value="{{ $project->id }}"
-                        {{ $materialConsumed->project_id == $project->id ? 'selected' : '' }}>
-                        {{ $project->project_name }}
-                    </option>
-                @endforeach
-            </select>
+            <h1 class="text-3xl font-bold text-gray-800">
+                Edit Material Consumption #{{ $materialConsumed->id }}
+            </h1>
+
+            <p class="mt-1 text-gray-500">
+                Update location, contractor, quantities and material rows while this entry is in Draft status.
+            </p>
         </div>
 
-        <div>
-            <label class="block font-semibold mb-1">Block</label>
-            <select id="project_block_id" name="project_block_id" class="border p-2 rounded w-full">
-                <option value="">Select Block</option>
-                @foreach($projectBlocks as $block)
-                    <option value="{{ $block->id }}"
-                            data-project="{{ $block->project_id }}"
-                            {{ $materialConsumed->project_block_id == $block->id ? 'selected' : '' }}>
-                        {{ $block->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('material-consumed.show', $materialConsumed) }}"
+               class="inline-flex items-center justify-center rounded-lg bg-slate-700 px-5 py-2.5 font-semibold text-white hover:bg-slate-800">
+                View
+            </a>
 
-        <div>
-            <label class="block font-semibold mb-1">Floor</label>
-            <select id="project_floor_id" name="project_floor_id" class="border p-2 rounded w-full">
-                <option value="">Select Floor</option>
-                @foreach($projectFloors as $floor)
-                    <option value="{{ $floor->id }}"
-                            data-block="{{ $floor->project_block_id }}"
-                            {{ $materialConsumed->project_floor_id == $floor->id ? 'selected' : '' }}>
-                        {{ $floor->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
-            <label class="block font-semibold mb-1">Unit</label>
-            <select id="project_unit_id" name="project_unit_id" class="border p-2 rounded w-full">
-                <option value="">Select Unit</option>
-                @foreach($projectUnits as $unit)
-                    <option value="{{ $unit->id }}"
-                            data-floor="{{ $unit->project_floor_id }}"
-                            {{ $materialConsumed->project_unit_id == $unit->id ? 'selected' : '' }}>
-                        {{ $unit->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
-            <label class="block font-semibold mb-1">Room</label>
-            <select id="project_room_id" name="project_room_id" class="border p-2 rounded w-full">
-                <option value="">Select Room</option>
-                @foreach($projectRooms as $room)
-                    <option value="{{ $room->id }}"
-                            data-unit="{{ $room->project_unit_id }}"
-                            {{ $materialConsumed->project_room_id == $room->id ? 'selected' : '' }}>
-                        {{ $room->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
-            <label class="block font-semibold mb-1">Sub-space</label>
-            <select id="project_subspace_id" name="project_subspace_id" class="border p-2 rounded w-full">
-                <option value="">Select Sub-space</option>
-                @foreach($projectSubspaces as $subspace)
-                    <option value="{{ $subspace->id }}"
-                            data-room="{{ $subspace->project_room_id }}"
-                            {{ $materialConsumed->project_subspace_id == $subspace->id ? 'selected' : '' }}>
-                        {{ $subspace->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-    </div>
-
-    <h2 class="text-xl font-bold mb-4">Activity Details</h2>
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-
-        <div>
-            <label class="block font-semibold mb-1">Activity Division</label>
-            <select id="activity_division_id" name="activity_division_id" class="border p-2 rounded w-full">
-                <option value="">Select Activity Division</option>
-                @foreach($activityDivisions as $division)
-                    <option value="{{ $division->id }}"
-                        {{ $materialConsumed->activity_division_id == $division->id ? 'selected' : '' }}>
-                        {{ $division->code }} - {{ $division->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
-            <label class="block font-semibold mb-1">Activity</label>
-            <select id="activity_id" name="activity_id" class="border p-2 rounded w-full">
-                <option value="">Select Activity</option>
-                @foreach($activities as $activity)
-                    <option value="{{ $activity->id }}"
-                            data-division="{{ $activity->activity_division_id }}"
-                            {{ $materialConsumed->activity_id == $activity->id ? 'selected' : '' }}>
-                        {{ $activity->activity_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <div>
-            <label class="block font-semibold mb-1">Contractor</label>
-            <select name="contractor_id" class="border p-2 rounded w-full">
-                <option value="">Select Contractor</option>
-                @foreach($contractors as $contractor)
-                    <option value="{{ $contractor->id }}"
-                        {{ $materialConsumed->contractor_id == $contractor->id ? 'selected' : '' }}>
-                        {{ $contractor->contractor_name }}
-                    </option>
-                @endforeach
-            </select>
+            <a href="{{ route('material-consumed.index') }}"
+               class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+                Back
+            </a>
         </div>
 
     </div>
 
-    <h2 class="text-xl font-bold mb-4">Material Details</h2>
+    @if(session('error'))
+        <div class="mb-5 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-red-700">
+            {{ session('error') }}
+        </div>
+    @endif
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    @if($errors->any())
+        <div class="mb-5 rounded-lg border border-red-300 bg-red-50 p-4 text-red-700">
+            <p class="mb-2 font-semibold">
+                Please correct the following:
+            </p>
 
-        <div>
-            <label class="block font-semibold mb-1">Material Category</label>
-            <select id="material_category_id" name="material_category_id" class="border p-2 rounded w-full" required>
-                <option value="">Select Category</option>
-                @foreach($materialCategories as $category)
-                    <option value="{{ $category->id }}"
-                        {{ $materialConsumed->material_category_id == $category->id ? 'selected' : '' }}>
-                        {{ $category->category_name }}
-                    </option>
+            <ul class="ml-5 list-disc">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
                 @endforeach
-            </select>
+            </ul>
+        </div>
+    @endif
+
+    <form method="POST"
+          action="{{ route('material-consumed.update', $materialConsumed) }}"
+          id="material-consumption-form">
+
+        @csrf
+        @method('PUT')
+
+        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+            <h2 class="mb-5 text-xl font-bold text-gray-800">
+                Consumption Information
+            </h2>
+
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+
+                <div>
+                    <label class="{{ $labelClass }}">
+                        Project <span class="text-red-500">*</span>
+                    </label>
+
+                    <select name="project_id"
+                            id="project_id"
+                            class="{{ $inputClass }}"
+                            required>
+
+                        <option value="">Select Project</option>
+
+                        @foreach($projects as $project)
+                            <option value="{{ $project->id }}"
+                                {{ (string) old('project_id', $materialConsumed->project_id) === (string) $project->id ? 'selected' : '' }}>
+                                {{ $project->project_name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">Block</label>
+
+                    <select name="project_block_id"
+                            id="project_block_id"
+                            class="{{ $inputClass }}">
+
+                        <option value="">Select Block</option>
+
+                        @foreach($projectBlocks as $block)
+                            <option value="{{ $block->id }}"
+                                    data-project="{{ $block->project_id }}"
+                                {{ (string) old('project_block_id', $materialConsumed->project_block_id) === (string) $block->id ? 'selected' : '' }}>
+                                {{ $block->name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">Floor</label>
+
+                    <select name="project_floor_id"
+                            id="project_floor_id"
+                            class="{{ $inputClass }}">
+
+                        <option value="">Select Floor</option>
+
+                        @foreach($projectFloors as $floor)
+                            <option value="{{ $floor->id }}"
+                                    data-project="{{ $floor->project_id }}"
+                                    data-block="{{ $floor->project_block_id }}"
+                                {{ (string) old('project_floor_id', $materialConsumed->project_floor_id) === (string) $floor->id ? 'selected' : '' }}>
+                                {{ $floor->name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">Unit</label>
+
+                    <select name="project_unit_id"
+                            id="project_unit_id"
+                            class="{{ $inputClass }}">
+
+                        <option value="">Select Unit</option>
+
+                        @foreach($projectUnits as $projectUnit)
+                            <option value="{{ $projectUnit->id }}"
+                                    data-project="{{ $projectUnit->project_id }}"
+                                    data-block="{{ $projectUnit->project_block_id }}"
+                                    data-floor="{{ $projectUnit->project_floor_id }}"
+                                {{ (string) old('project_unit_id', $materialConsumed->project_unit_id) === (string) $projectUnit->id ? 'selected' : '' }}>
+                                {{ $projectUnit->name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">Room</label>
+
+                    <select name="project_room_id"
+                            id="project_room_id"
+                            class="{{ $inputClass }}">
+
+                        <option value="">Select Room</option>
+
+                        @foreach($projectRooms as $room)
+                            <option value="{{ $room->id }}"
+                                    data-project="{{ $room->project_id }}"
+                                    data-block="{{ $room->project_block_id }}"
+                                    data-floor="{{ $room->project_floor_id }}"
+                                    data-unit="{{ $room->project_unit_id }}"
+                                {{ (string) old('project_room_id', $materialConsumed->project_room_id) === (string) $room->id ? 'selected' : '' }}>
+                                {{ $room->name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">Sub-space</label>
+
+                    <select name="project_subspace_id"
+                            id="project_subspace_id"
+                            class="{{ $inputClass }}">
+
+                        <option value="">Select Sub-space</option>
+
+                        @foreach($projectSubspaces as $subspace)
+                            <option value="{{ $subspace->id }}"
+                                    data-project="{{ $subspace->project_id }}"
+                                    data-block="{{ $subspace->project_block_id }}"
+                                    data-floor="{{ $subspace->project_floor_id }}"
+                                    data-unit="{{ $subspace->project_unit_id }}"
+                                    data-room="{{ $subspace->project_room_id }}"
+                                {{ (string) old('project_subspace_id', $materialConsumed->project_subspace_id) === (string) $subspace->id ? 'selected' : '' }}>
+                                {{ $subspace->name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">Contractor</label>
+
+                    <select name="contractor_id"
+                            class="{{ $inputClass }}">
+
+                        <option value="">Select Contractor</option>
+
+                        @foreach($contractors as $contractor)
+                            <option value="{{ $contractor->id }}"
+                                {{ (string) old('contractor_id', $materialConsumed->contractor_id) === (string) $contractor->id ? 'selected' : '' }}>
+                                {{ $contractor->contractor_name }}
+                            </option>
+                        @endforeach
+
+                    </select>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">
+                        Consumed Date <span class="text-red-500">*</span>
+                    </label>
+
+                    <input type="date"
+                           name="consumed_date"
+                           value="{{ old('consumed_date', $materialConsumed->consumed_date?->format('Y-m-d')) }}"
+                           class="{{ $inputClass }}"
+                           required>
+                </div>
+
+                <div>
+                    <label class="{{ $labelClass }}">
+                        Related Work Output Quantity
+                    </label>
+
+                    <input type="number"
+                           step="0.001"
+                           min="0"
+                           name="related_work_output_quantity"
+                           value="{{ old('related_work_output_quantity', $materialConsumed->related_work_output_quantity ?? 0) }}"
+                           class="{{ $inputClass }}">
+                </div>
+
+                <div class="md:col-span-2 xl:col-span-3">
+                    <label class="{{ $labelClass }}">General Remarks</label>
+
+                    <textarea name="remarks"
+                              rows="3"
+                              class="{{ $inputClass }}"
+                              placeholder="General notes for this material consumption">{{ old('remarks', $materialConsumed->remarks) }}</textarea>
+                </div>
+
+            </div>
         </div>
 
-        <div>
-            <label class="block font-semibold mb-1">Material</label>
-            <select id="material_id" name="material_id" class="border p-2 rounded w-full" required>
-                <option value="">Select Material</option>
-                @foreach($materials as $material)
-                    <option value="{{ $material->id }}"
-                            data-category="{{ $material->material_category_id }}"
-                            {{ $materialConsumed->material_id == $material->id ? 'selected' : '' }}>
-                        {{ $material->material_name }}
-                    </option>
-                @endforeach
-            </select>
+        <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
+
+            <div class="flex flex-col gap-3 border-b border-gray-200 p-5 md:flex-row md:items-center md:justify-between">
+
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">
+                        Material Items
+                    </h2>
+
+                    <p class="mt-1 text-sm text-gray-500">
+                        Edit existing material rows or add more items.
+                    </p>
+                </div>
+
+                <button type="button"
+                        id="add-item-row"
+                        class="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">
+                    + Add Material Row
+                </button>
+
+            </div>
+
+            <div class="overflow-x-auto">
+
+                <table class="min-w-[2100px] w-full text-sm">
+
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                        <tr>
+                            <th class="w-14 px-3 py-3 text-center">#</th>
+                            <th class="min-w-44 px-3 py-3 text-left">Activity Division</th>
+                            <th class="min-w-52 px-3 py-3 text-left">Activity</th>
+                            <th class="min-w-48 px-3 py-3 text-left">Material Group</th>
+                            <th class="min-w-52 px-3 py-3 text-left">Material Type</th>
+                            <th class="min-w-44 px-3 py-3 text-left">Brand</th>
+                            <th class="min-w-44 px-3 py-3 text-left">Specification</th>
+                            <th class="min-w-44 px-3 py-3 text-left">Grade / Rating</th>
+                            <th class="min-w-36 px-3 py-3 text-left">Consumed Qty</th>
+                            <th class="min-w-36 px-3 py-3 text-left">Wastage Qty</th>
+                            <th class="min-w-36 px-3 py-3 text-left">Unit</th>
+                            <th class="min-w-56 px-3 py-3 text-left">Wastage Reason</th>
+                            <th class="min-w-52 px-3 py-3 text-left">Remarks</th>
+                            <th class="w-24 px-3 py-3 text-center">Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="material-items-body"
+                           class="divide-y divide-gray-200">
+
+                        @foreach($formItems as $rowIndex => $formItem)
+
+                            <tr class="material-item-row align-top"
+                                data-row-index="{{ $rowIndex }}">
+
+                                <td class="row-number px-3 py-3 text-center font-semibold">
+                                    {{ $loop->iteration }}
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select name="items[{{ $rowIndex }}][activity_division_id]"
+                                            class="{{ $inputClass }} activity-division-select">
+
+                                        <option value="">Select Division</option>
+
+                                        @foreach($activityDivisions as $division)
+                                            <option value="{{ $division->id }}"
+                                                {{ (string) ($formItem['activity_division_id'] ?? '') === (string) $division->id ? 'selected' : '' }}>
+                                                {{ $division->name }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select name="items[{{ $rowIndex }}][activity_id]"
+                                            class="{{ $inputClass }} activity-select">
+
+                                        <option value="">Select Activity</option>
+
+                                        @foreach($activities as $activity)
+                                            <option value="{{ $activity->id }}"
+                                                    data-division="{{ $activity->activity_division_id }}"
+                                                {{ (string) ($formItem['activity_id'] ?? '') === (string) $activity->id ? 'selected' : '' }}>
+                                                {{ $activity->activity_name }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select class="{{ $inputClass }} material-group-select">
+
+                                        <option value="">Select Group</option>
+
+                                        @foreach($materialGroups as $group)
+                                            <option value="{{ $group }}">
+                                                {{ $group }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select name="items[{{ $rowIndex }}][material_type_id]"
+                                            class="{{ $inputClass }} material-type-select"
+                                            required>
+
+                                        <option value="">Select Material Type</option>
+
+                                        @foreach($materialTypes as $materialType)
+                                            <option value="{{ $materialType->id }}"
+                                                    data-group="{{ $materialType->material_group }}"
+                                                    data-unit-id="{{ $materialType->unit_master_id }}"
+                                                    data-unit-name="{{ optional($materialType->unit)->unit_name }}"
+                                                {{ (string) ($formItem['material_type_id'] ?? '') === (string) $materialType->id ? 'selected' : '' }}>
+                                                {{ $materialType->material_type_name }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select name="items[{{ $rowIndex }}][brand_master_id]"
+                                            class="{{ $inputClass }} brand-select">
+
+                                        <option value="">Select Brand</option>
+
+                                        @foreach($brands as $brand)
+                                            <option value="{{ $brand->id }}"
+                                                    data-material-type="{{ $brand->material_type_id }}"
+                                                {{ (string) ($formItem['brand_master_id'] ?? '') === (string) $brand->id ? 'selected' : '' }}>
+                                                {{ $brand->brand_name }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select name="items[{{ $rowIndex }}][material_specification_id]"
+                                            class="{{ $inputClass }} specification-select">
+
+                                        <option value="">Select Specification</option>
+
+                                        @foreach($specifications as $specification)
+                                            <option value="{{ $specification->id }}"
+                                                    data-material-type="{{ $specification->material_type_id }}"
+                                                {{ (string) ($formItem['material_specification_id'] ?? '') === (string) $specification->id ? 'selected' : '' }}>
+                                                {{ $specification->specification_name }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <select name="items[{{ $rowIndex }}][material_grade_id]"
+                                            class="{{ $inputClass }} grade-select">
+
+                                        <option value="">Select Grade / Rating</option>
+
+                                        @foreach($grades as $grade)
+                                            <option value="{{ $grade->id }}"
+                                                    data-material-type="{{ $grade->material_type_id }}"
+                                                {{ (string) ($formItem['material_grade_id'] ?? '') === (string) $grade->id ? 'selected' : '' }}>
+                                                {{ $grade->grade_name }}
+                                            </option>
+                                        @endforeach
+
+                                    </select>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <input type="number"
+                                           step="0.001"
+                                           min="0.001"
+                                           name="items[{{ $rowIndex }}][quantity_consumed]"
+                                           value="{{ $formItem['quantity_consumed'] ?? '' }}"
+                                           class="{{ $inputClass }}"
+                                           required>
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <input type="number"
+                                           step="0.001"
+                                           min="0"
+                                           name="items[{{ $rowIndex }}][wastage_quantity]"
+                                           value="{{ $formItem['wastage_quantity'] ?? 0 }}"
+                                           class="{{ $inputClass }} wastage-quantity-input">
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <input type="hidden"
+                                           name="items[{{ $rowIndex }}][unit_master_id]"
+                                           value="{{ $formItem['unit_master_id'] ?? '' }}"
+                                           class="unit-id-input">
+
+                                    <input type="text"
+                                           class="{{ $inputClass }} unit-name-input bg-gray-100"
+                                           readonly
+                                           placeholder="Auto">
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <input type="text"
+                                           name="items[{{ $rowIndex }}][wastage_reason]"
+                                           value="{{ $formItem['wastage_reason'] ?? '' }}"
+                                           class="{{ $inputClass }} wastage-reason-input"
+                                           placeholder="Required when wastage &gt; 0">
+                                </td>
+
+                                <td class="px-3 py-3">
+                                    <input type="text"
+                                           name="items[{{ $rowIndex }}][remarks]"
+                                           value="{{ $formItem['remarks'] ?? '' }}"
+                                           class="{{ $inputClass }}"
+                                           placeholder="Optional">
+                                </td>
+
+                                <td class="px-3 py-3 text-center">
+                                    <button type="button"
+                                            class="remove-item-row rounded bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">
+                                        Remove
+                                    </button>
+                                </td>
+
+                            </tr>
+
+                        @endforeach
+
+                    </tbody>
+
+                </table>
+            </div>
+
+            <div class="border-t border-gray-200 p-5 text-sm text-gray-500">
+                Brand, Specification, Grade/Rating and Unit are filtered automatically from the selected Material Type. Wastage reason is required whenever wastage quantity is greater than zero.
+            </div>
         </div>
 
-        <div>
-            <label class="block font-semibold mb-1">Quantity Consumed</label>
-            <input type="number"
-                   step="0.01"
-                   name="quantity_consumed"
-                   value="{{ old('quantity_consumed', $materialConsumed->quantity_consumed) }}"
-                   class="border p-2 rounded w-full"
-                   required>
+        <div class="mt-6 flex flex-wrap gap-3">
+            <button type="submit"
+                    class="rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700">
+                Update Material Consumption
+            </button>
+
+            <a href="{{ route('material-consumed.show', $materialConsumed) }}"
+               class="rounded-lg bg-gray-500 px-7 py-3 font-semibold text-white hover:bg-gray-600">
+                Cancel
+            </a>
         </div>
 
-        <div>
-            <label class="block font-semibold mb-1">Unit</label>
-            <input type="text"
-                   name="unit"
-                   value="{{ old('unit', $materialConsumed->unit) }}"
-                   class="border p-2 rounded w-full">
-        </div>
+    </form>
+</div>
 
-    </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const body = document.getElementById('material-items-body');
+    const addRowButton = document.getElementById('add-item-row');
 
-    <h2 class="text-xl font-bold mb-4">Output & Wastage</h2>
+    const projectSelect = document.getElementById('project_id');
+    const blockSelect = document.getElementById('project_block_id');
+    const floorSelect = document.getElementById('project_floor_id');
+    const unitSelect = document.getElementById('project_unit_id');
+    const roomSelect = document.getElementById('project_room_id');
+    const subspaceSelect = document.getElementById('project_subspace_id');
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    let rowIndex = body.querySelectorAll('.material-item-row').length;
 
-        <div>
-            <label class="block font-semibold mb-1">Related Work Output Quantity</label>
-            <input type="number"
-                   step="0.01"
-                   name="related_work_output_quantity"
-                   value="{{ old('related_work_output_quantity', $materialConsumed->related_work_output_quantity) }}"
-                   class="border p-2 rounded w-full">
-        </div>
+    const activityOptions = @json($activityOptionsForJs);
+    const materialTypeOptions = @json($materialTypeOptionsForJs);
+    const brandOptions = @json($brandOptionsForJs);
+    const specificationOptions = @json($specificationOptionsForJs);
+    const gradeOptions = @json($gradeOptionsForJs);
+    const materialGroups = @json($materialGroupsForJs);
 
-        <div>
-            <label class="block font-semibold mb-1">Wastage Quantity</label>
-            <input type="number"
-                   step="0.01"
-                   name="wastage_quantity"
-                   value="{{ old('wastage_quantity', $materialConsumed->wastage_quantity) }}"
-                   class="border p-2 rounded w-full">
-        </div>
+    function makeOption(value, label, selected = false) {
+        return new Option(label, value, selected, selected);
+    }
 
-        <div>
-            <label class="block font-semibold mb-1">Consumed Date</label>
-            <input type="date"
-                   name="consumed_date"
-                   value="{{ old('consumed_date', $materialConsumed->consumed_date) }}"
-                   class="border p-2 rounded w-full"
-                   required>
-        </div>
+    function rebuildSelect(select, placeholder, values, selectedValue = '') {
+        select.innerHTML = '';
+        select.add(makeOption('', placeholder));
 
-    </div>
+        values.forEach(function (item) {
+            select.add(
+                makeOption(
+                    String(item.id),
+                    item.name,
+                    String(item.id) === String(selectedValue)
+                )
+            );
+        });
+    }
 
-    <div class="mb-6">
-        <label class="block font-semibold mb-1">Wastage Reason</label>
-        <input type="text"
-               name="wastage_reason"
-               value="{{ old('wastage_reason', $materialConsumed->wastage_reason) }}"
-               class="border p-2 rounded w-full">
-    </div>
+    function initializeRow(row) {
+        const divisionSelect = row.querySelector('.activity-division-select');
+        const activitySelect = row.querySelector('.activity-select');
+        const groupSelect = row.querySelector('.material-group-select');
+        const typeSelect = row.querySelector('.material-type-select');
+        const brandSelect = row.querySelector('.brand-select');
+        const specificationSelect = row.querySelector('.specification-select');
+        const gradeSelect = row.querySelector('.grade-select');
+        const unitIdInput = row.querySelector('.unit-id-input');
+        const unitNameInput = row.querySelector('.unit-name-input');
+        const wastageQuantityInput = row.querySelector('.wastage-quantity-input');
+        const wastageReasonInput = row.querySelector('.wastage-reason-input');
 
-    <div class="mb-6">
-        <label class="block font-semibold mb-1">Remarks</label>
-        <textarea name="remarks"
-                  rows="3"
-                  class="border p-2 rounded w-full">{{ old('remarks', $materialConsumed->remarks) }}</textarea>
-    </div>
+        const preservedActivityId = activitySelect.value;
+        const preservedTypeId = typeSelect.value;
+        const preservedBrandId = brandSelect.value;
+        const preservedSpecificationId = specificationSelect.value;
+        const preservedGradeId = gradeSelect.value;
 
-    <div class="flex gap-3">
-        <button type="submit"
-                class="bg-blue-600 text-white px-4 py-2 rounded">
-            Update Consumption Entry
-        </button>
+        const selectedType = materialTypeOptions.find(function (type) {
+            return String(type.id) === String(preservedTypeId);
+        });
 
-        <a href="{{ route('material-consumed.index') }}"
-           class="bg-gray-500 text-white px-4 py-2 rounded">
-            Back
-        </a>
-    </div>
+        if (selectedType) {
+            groupSelect.value = selectedType.group || '';
+        }
 
-</form>
+        function filterActivities(selectedValue = '') {
+            const divisionId = divisionSelect.value;
+
+            const filtered = activityOptions.filter(function (activity) {
+                return divisionId === ''
+                    || String(activity.division_id) === String(divisionId);
+            });
+
+            rebuildSelect(
+                activitySelect,
+                'Select Activity',
+                filtered,
+                selectedValue
+            );
+        }
+
+        function filterMaterialTypes(selectedValue = '') {
+            const group = groupSelect.value;
+
+            const filtered = materialTypeOptions.filter(function (type) {
+                return group === '' || type.group === group;
+            });
+
+            rebuildSelect(
+                typeSelect,
+                'Select Material Type',
+                filtered,
+                selectedValue
+            );
+        }
+
+        function updateMaterialDependencies(options = {}) {
+            const materialTypeId = typeSelect.value;
+
+            const selectedMaterialType = materialTypeOptions.find(function (type) {
+                return String(type.id) === String(materialTypeId);
+            });
+
+            unitIdInput.value = selectedMaterialType?.unit_id || '';
+            unitNameInput.value = selectedMaterialType?.unit_name || '';
+
+            const filteredBrands = brandOptions.filter(function (brand) {
+                return String(brand.material_type_id) === String(materialTypeId);
+            });
+
+            const filteredSpecifications = specificationOptions.filter(function (specification) {
+                return String(specification.material_type_id) === String(materialTypeId);
+            });
+
+            const filteredGrades = gradeOptions.filter(function (grade) {
+                return String(grade.material_type_id) === String(materialTypeId);
+            });
+
+            rebuildSelect(
+                brandSelect,
+                'Select Brand',
+                filteredBrands,
+                options.brandId || ''
+            );
+
+            rebuildSelect(
+                specificationSelect,
+                'Select Specification',
+                filteredSpecifications,
+                options.specificationId || ''
+            );
+
+            rebuildSelect(
+                gradeSelect,
+                'Select Grade / Rating',
+                filteredGrades,
+                options.gradeId || ''
+            );
+        }
+
+        function updateWastageRequirement() {
+            const wastage = Number(wastageQuantityInput.value || 0);
+            wastageReasonInput.required = wastage > 0;
+        }
+
+        divisionSelect.addEventListener('change', function () {
+            filterActivities('');
+        });
+
+        groupSelect.addEventListener('change', function () {
+            filterMaterialTypes('');
+            updateMaterialDependencies();
+        });
+
+        typeSelect.addEventListener('change', function () {
+            updateMaterialDependencies();
+        });
+
+        wastageQuantityInput.addEventListener(
+            'input',
+            updateWastageRequirement
+        );
+
+        row.querySelector('.remove-item-row')
+            .addEventListener('click', function () {
+                const rows = body.querySelectorAll('.material-item-row');
+
+                if (rows.length <= 1) {
+                    alert('At least one material row is required.');
+                    return;
+                }
+
+                row.remove();
+                refreshRowNumbers();
+            });
+
+        filterActivities(preservedActivityId);
+        filterMaterialTypes(preservedTypeId);
+
+        updateMaterialDependencies({
+            brandId: preservedBrandId,
+            specificationId: preservedSpecificationId,
+            gradeId: preservedGradeId,
+        });
+
+        updateWastageRequirement();
+    }
+
+    function buildNewRow(index) {
+        const row = document.createElement('tr');
+
+        row.className = 'material-item-row align-top';
+        row.dataset.rowIndex = index;
+
+        row.innerHTML = `
+            <td class="row-number px-3 py-3 text-center font-semibold"></td>
+
+            <td class="px-3 py-3">
+                <select name="items[${index}][activity_division_id]"
+                        class="{{ $inputClass }} activity-division-select">
+
+                    <option value="">Select Division</option>
+
+                    @foreach($activityDivisions as $division)
+                        <option value="{{ $division->id }}">
+                            {{ $division->name }}
+                        </option>
+                    @endforeach
+
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <select name="items[${index}][activity_id]"
+                        class="{{ $inputClass }} activity-select">
+                    <option value="">Select Activity</option>
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <select class="{{ $inputClass }} material-group-select">
+                    <option value="">Select Group</option>
+
+                    ${materialGroups.map(function (group) {
+                        return `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`;
+                    }).join('')}
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <select name="items[${index}][material_type_id]"
+                        class="{{ $inputClass }} material-type-select"
+                        required>
+                    <option value="">Select Material Type</option>
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <select name="items[${index}][brand_master_id]"
+                        class="{{ $inputClass }} brand-select">
+                    <option value="">Select Brand</option>
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <select name="items[${index}][material_specification_id]"
+                        class="{{ $inputClass }} specification-select">
+                    <option value="">Select Specification</option>
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <select name="items[${index}][material_grade_id]"
+                        class="{{ $inputClass }} grade-select">
+                    <option value="">Select Grade / Rating</option>
+                </select>
+            </td>
+
+            <td class="px-3 py-3">
+                <input type="number"
+                       step="0.001"
+                       min="0.001"
+                       name="items[${index}][quantity_consumed]"
+                       class="{{ $inputClass }}"
+                       required>
+            </td>
+
+            <td class="px-3 py-3">
+                <input type="number"
+                       step="0.001"
+                       min="0"
+                       value="0"
+                       name="items[${index}][wastage_quantity]"
+                       class="{{ $inputClass }} wastage-quantity-input">
+            </td>
+
+            <td class="px-3 py-3">
+                <input type="hidden"
+                       name="items[${index}][unit_master_id]"
+                       class="unit-id-input">
+
+                <input type="text"
+                       class="{{ $inputClass }} unit-name-input bg-gray-100"
+                       readonly
+                       placeholder="Auto">
+            </td>
+
+            <td class="px-3 py-3">
+                <input type="text"
+                       name="items[${index}][wastage_reason]"
+                       class="{{ $inputClass }} wastage-reason-input"
+                       placeholder="Required when wastage > 0">
+            </td>
+
+            <td class="px-3 py-3">
+                <input type="text"
+                       name="items[${index}][remarks]"
+                       class="{{ $inputClass }}"
+                       placeholder="Optional">
+            </td>
+
+            <td class="px-3 py-3 text-center">
+                <button type="button"
+                        class="remove-item-row rounded bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">
+                    Remove
+                </button>
+            </td>
+        `;
+
+        return row;
+    }
+
+    function refreshRowNumbers() {
+        body.querySelectorAll('.material-item-row')
+            .forEach(function (row, index) {
+                row.querySelector('.row-number').textContent = index + 1;
+            });
+    }
+
+    function escapeHtml(value) {
+        const div = document.createElement('div');
+        div.textContent = value ?? '';
+        return div.innerHTML;
+    }
+
+    function cloneOptions(select) {
+        return Array.from(select.options).map(function (option) {
+            return option.cloneNode(true);
+        });
+    }
+
+    const originalBlockOptions = cloneOptions(blockSelect);
+    const originalFloorOptions = cloneOptions(floorSelect);
+    const originalUnitOptions = cloneOptions(unitSelect);
+    const originalRoomOptions = cloneOptions(roomSelect);
+    const originalSubspaceOptions = cloneOptions(subspaceSelect);
+
+    function filterLocationSelect(select, source, predicate, placeholder) {
+        const currentValue = select.value;
+
+        select.innerHTML = '';
+        select.add(new Option(placeholder, ''));
+
+        source.forEach(function (option) {
+            if (option.value !== '' && predicate(option)) {
+                const clonedOption = option.cloneNode(true);
+
+                if (String(clonedOption.value) === String(currentValue)) {
+                    clonedOption.selected = true;
+                }
+
+                select.add(clonedOption);
+            }
+        });
+    }
+
+    function filterProjectLocations() {
+        const projectId = projectSelect.value;
+
+        filterLocationSelect(
+            blockSelect,
+            originalBlockOptions,
+            function (option) {
+                return projectId === ''
+                    || String(option.dataset.project) === String(projectId);
+            },
+            'Select Block'
+        );
+
+        filterFloors();
+    }
+
+    function filterFloors() {
+        const projectId = projectSelect.value;
+        const blockId = blockSelect.value;
+
+        filterLocationSelect(
+            floorSelect,
+            originalFloorOptions,
+            function (option) {
+                const projectMatch = projectId === ''
+                    || String(option.dataset.project) === String(projectId);
+
+                const blockMatch = blockId === ''
+                    || String(option.dataset.block) === String(blockId);
+
+                return projectMatch && blockMatch;
+            },
+            'Select Floor'
+        );
+
+        filterUnits();
+    }
+
+    function filterUnits() {
+        const projectId = projectSelect.value;
+        const blockId = blockSelect.value;
+        const floorId = floorSelect.value;
+
+        filterLocationSelect(
+            unitSelect,
+            originalUnitOptions,
+            function (option) {
+                const projectMatch = projectId === ''
+                    || String(option.dataset.project) === String(projectId);
+
+                const blockMatch = blockId === ''
+                    || String(option.dataset.block) === String(blockId);
+
+                const floorMatch = floorId === ''
+                    || String(option.dataset.floor) === String(floorId);
+
+                return projectMatch && blockMatch && floorMatch;
+            },
+            'Select Unit'
+        );
+
+        filterRooms();
+    }
+
+    function filterRooms() {
+        const projectId = projectSelect.value;
+        const blockId = blockSelect.value;
+        const floorId = floorSelect.value;
+        const unitId = unitSelect.value;
+
+        filterLocationSelect(
+            roomSelect,
+            originalRoomOptions,
+            function (option) {
+                const projectMatch = projectId === ''
+                    || String(option.dataset.project) === String(projectId);
+
+                const blockMatch = blockId === ''
+                    || String(option.dataset.block) === String(blockId);
+
+                const floorMatch = floorId === ''
+                    || String(option.dataset.floor) === String(floorId);
+
+                const unitMatch = unitId === ''
+                    || String(option.dataset.unit) === String(unitId);
+
+                return projectMatch
+                    && blockMatch
+                    && floorMatch
+                    && unitMatch;
+            },
+            'Select Room'
+        );
+
+        filterSubspaces();
+    }
+
+    function filterSubspaces() {
+        const projectId = projectSelect.value;
+        const blockId = blockSelect.value;
+        const floorId = floorSelect.value;
+        const unitId = unitSelect.value;
+        const roomId = roomSelect.value;
+
+        filterLocationSelect(
+            subspaceSelect,
+            originalSubspaceOptions,
+            function (option) {
+                const projectMatch = projectId === ''
+                    || String(option.dataset.project) === String(projectId);
+
+                const blockMatch = blockId === ''
+                    || String(option.dataset.block) === String(blockId);
+
+                const floorMatch = floorId === ''
+                    || String(option.dataset.floor) === String(floorId);
+
+                const unitMatch = unitId === ''
+                    || String(option.dataset.unit) === String(unitId);
+
+                const roomMatch = roomId === ''
+                    || String(option.dataset.room) === String(roomId);
+
+                return projectMatch
+                    && blockMatch
+                    && floorMatch
+                    && unitMatch
+                    && roomMatch;
+            },
+            'Select Sub-space'
+        );
+    }
+
+    addRowButton.addEventListener('click', function () {
+        const newRow = buildNewRow(rowIndex++);
+        body.appendChild(newRow);
+        initializeRow(newRow);
+        refreshRowNumbers();
+    });
+
+    projectSelect.addEventListener('change', function () {
+        blockSelect.value = '';
+        floorSelect.value = '';
+        unitSelect.value = '';
+        roomSelect.value = '';
+        subspaceSelect.value = '';
+        filterProjectLocations();
+    });
+
+    blockSelect.addEventListener('change', function () {
+        floorSelect.value = '';
+        unitSelect.value = '';
+        roomSelect.value = '';
+        subspaceSelect.value = '';
+        filterFloors();
+    });
+
+    floorSelect.addEventListener('change', function () {
+        unitSelect.value = '';
+        roomSelect.value = '';
+        subspaceSelect.value = '';
+        filterUnits();
+    });
+
+    unitSelect.addEventListener('change', function () {
+        roomSelect.value = '';
+        subspaceSelect.value = '';
+        filterRooms();
+    });
+
+    roomSelect.addEventListener('change', function () {
+        subspaceSelect.value = '';
+        filterSubspaces();
+    });
+
+    body.querySelectorAll('.material-item-row')
+        .forEach(initializeRow);
+
+    refreshRowNumbers();
+    filterProjectLocations();
+});
+</script>
 
 @endsection

@@ -2,1031 +2,1066 @@
 
 @section('content')
 
-<div class="flex justify-between items-center mb-6">
+@php
+    $statusClass = match($dpr->status) {
+        'Approved' => 'bg-green-100 text-green-800',
+        'Rejected' => 'bg-red-100 text-red-800',
+        default => 'bg-yellow-100 text-yellow-800',
+    };
 
-    <h1 class="text-4xl font-bold">
-        DPR Report
-    </h1>
+    $attendanceDetails = $dpr->labourAttendances
+        ->flatMap(fn ($attendance) => $attendance->details ?? collect());
 
-    <button onclick="window.print()"
-            class="bg-blue-600 text-white px-5 py-2 rounded shadow">
+    $presentCount = $attendanceDetails
+        ->filter(fn ($detail) => strtolower((string) ($detail->attendanceStatus?->code ?? $detail->attendanceStatus?->name ?? '')) === 'present')
+        ->count();
 
-        Print DPR
+    $absentCount = $attendanceDetails
+        ->filter(fn ($detail) => strtolower((string) ($detail->attendanceStatus?->code ?? $detail->attendanceStatus?->name ?? '')) === 'absent')
+        ->count();
 
-    </button>
-<a href="/dprs/{{ $dpr->id }}/pdf"
-   class="bg-green-600 text-white px-5 py-2 rounded shadow">
+    $halfDayCount = $attendanceDetails
+        ->filter(fn ($detail) => str_contains(
+            strtolower((string) ($detail->attendanceStatus?->code ?? $detail->attendanceStatus?->name ?? '')),
+            'half'
+        ))
+        ->count();
 
-    Download PDF
+    $uniqueLabourCount = $attendanceDetails
+        ->pluck('labour_id')
+        ->filter()
+        ->unique()
+        ->count();
 
-</a>
-</div>
+    $totalNormalHours = round((float) $attendanceDetails->sum('normal_hours'), 2);
+    $totalOtHours = round((float) $attendanceDetails->sum('ot_hours'), 2);
 
-<!-- Header Information -->
+    $formatQty = function ($value) {
+        if ($value === null || $value === '') {
+            return '0';
+        }
 
-<div class="bg-white rounded shadow p-6 mb-6">
+        return rtrim(
+            rtrim(
+                number_format((float) $value, 3, '.', ''),
+                '0'
+            ),
+            '.'
+        );
+    };
+@endphp
 
-    <div class="grid grid-cols-2 gap-8">
+<div class="mx-auto max-w-full">
+
+    {{-- Header --}}
+    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
         <div>
+            <div class="flex flex-wrap items-center gap-3">
+                <h1 class="text-3xl font-bold text-gray-800">
+                    Daily Progress Report
+                </h1>
 
-            <p class="mb-4">
-                <span class="font-bold">
-                    Project:
+                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">
+                    {{ $dpr->status }}
                 </span>
+            </div>
 
-                {{ $dpr->project->project_name }}
+            <p class="mt-1 text-gray-500">
+                DPR #{{ $dpr->id }} · {{ $dpr->dpr_date?->format('d M Y') }}
             </p>
-
-            <p class="mb-4">
-                <span class="font-bold">
-                    Engineer:
-                </span>
-
-                {{ $dpr->user->name }}
-            </p>
-
-            <p class="mb-4">
-                <span class="font-bold">
-                    DPR Date:
-                </span>
-
-                {{ $dpr->dpr_date }}
-            </p>
-
         </div>
 
-        <div>
+        <div class="flex flex-wrap gap-2">
 
-            <p class="mb-4">
-                <span class="font-bold">
-                    Weather:
-                </span>
+            <a href="{{ route('dprs.index') }}"
+               class="rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+                Back
+            </a>
 
-                {{ $dpr->weather }}
-            </p>
+            <button type="button"
+                    onclick="window.print()"
+                    class="rounded-lg bg-slate-700 px-5 py-2.5 font-semibold text-white hover:bg-slate-800">
+                Print
+            </button>
 
-            <p class="mb-4">
-
-                <span class="font-bold">
-                    Status:
-                </span>
-
-                @if($dpr->status == 'Approved')
-
-                    <span class="bg-green-200 text-green-800 px-3 py-1 rounded">
-                        Approved
-                    </span>
-
-                @elseif($dpr->status == 'Rejected')
-
-                    <span class="bg-red-200 text-red-800 px-3 py-1 rounded">
-                        Rejected
-                    </span>
-
-                @else
-
-                    <span class="bg-yellow-200 text-yellow-800 px-3 py-1 rounded">
-                        Pending
-                    </span>
-
-                @endif
-
-            </p>
+            <a href="{{ route('dprs.pdf', $dpr->id) }}"
+               class="rounded-lg bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700">
+                Download PDF
+            </a>
 
         </div>
 
     </div>
 
-</div>
-
-<!-- Work Items -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Work Progress Details
-    </h2>
-
-    <table class="w-full border">
-    <thead class="bg-gray-200">
-        <tr>
-            <th class="p-3 text-left border">Division</th>
-            <th class="p-3 text-left border">Activity</th>
-            <th class="p-3 text-left border">Block</th>
-            <th class="p-3 text-left border">Floor</th>
-            <th class="p-3 text-left border">Unit</th>
-            <th class="p-3 text-left border">Room</th>
-            <th class="p-3 text-left border">Sub-space</th>
-            <th class="p-3 text-left border">Qty</th>
-            <th class="p-3 text-left border">Remarks</th>
-        </tr>
-    </thead>
-
-    <tbody>
-        @foreach($dpr->workItems as $item)
-            <tr class="border-t">
-                <td class="p-3 border">
-                    {{ $item->activityMapping?->division?->name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->activityMapping?->activity_name ?? $item->activity?->activity_name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->block?->name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->floor?->name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->unit?->name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->room?->name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->subspace?->name ?? '-' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->quantity_completed }}
-                    {{ $item->activityMapping?->unit ?? '' }}
-                </td>
-
-                <td class="p-3 border">
-                    {{ $item->remarks ?? '-' }}
-                </td>
-            </tr>
-        @endforeach
-    </tbody>
-</table>
-
-</div>
-
-<!-- Labour Details -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Labour Details
-    </h2>
-
-    @if($dpr->labours->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Labour Type
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Male
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Female
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Local
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Non Local
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Total
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->labours as $labour)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $labour->labourType->labour_type_name }}
-
-                    </td>
-
-                    <td class="p-4 border">
-                        {{ $labour->male_count }}
-                    </td>
-
-                    <td class="p-4 border">
-                        {{ $labour->female_count }}
-                    </td>
-
-                    <td class="p-4 border">
-                        {{ $labour->local_count }}
-                    </td>
-
-                    <td class="p-4 border">
-                        {{ $labour->non_local_count }}
-                    </td>
-
-                    <td class="p-4 border">
-                        {{ $labour->total_count }}
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No labour entries available.
-        </p>
-
+    @if(session('success'))
+        <div class="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+            {{ session('success') }}
+        </div>
     @endif
 
-</div>
-
-<!-- Material Consumption -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Material Consumption
-    </h2>
-
-    @if($dpr->materials->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Material
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Quantity
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Unit
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->materials as $material)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $material->material->material_name }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $material->quantity_used }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $material->material->unit }}
-
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No material consumption entries available.
-        </p>
-
+    @if(session('error'))
+        <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+            {{ session('error') }}
+        </div>
     @endif
 
-</div>
-
-<!-- Material Received -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Material Received
-    </h2>
-
-    @if($dpr->materialReceived->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Material
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Vendor
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Quantity
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Challan
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Bill
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->materialReceived as $received)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $received->material->material_name }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $received->vendor->vendor_name ?? '-' }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $received->quantity_received }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $received->challan_number }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $received->bill_number }}
-
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No material receipts available.
-        </p>
-
-    @endif
-
-</div>
-
-<!-- Material Required -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Material Required
-    </h2>
-
-    @if($dpr->materialRequired->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Material
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Quantity
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Required Date
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Priority
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Reason
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->materialRequired as $required)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $required->material->material_name }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $required->required_quantity }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $required->required_date }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $required->priority }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $required->reason }}
-
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No material requirements available.
-        </p>
-
-    @endif
-
-</div>
-
-<!-- Machinery / Tools -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Machinery / Tools Used
-    </h2>
-
-    @if($dpr->machineryTools->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Machine
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Quantity
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Usage Hours
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Condition
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Remarks
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->machineryTools as $machine)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $machine->machineryTool->machine_name }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $machine->quantity }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $machine->usage_hours }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $machine->working_condition }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $machine->remarks }}
-
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No machinery usage available.
-        </p>
-
-    @endif
-
-    <!-- Issues / Delays -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Issues / Delays
-    </h2>
-
-    @if($dpr->siteIssues->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Issue
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Activity
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Priority
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Status
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Responsible
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->siteIssues as $issue)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $issue->issue_type }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $issue->related_activity }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $issue->priority }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $issue->status }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $issue->responsible_person }}
-
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No site issues reported.
-        </p>
-
-    @endif
-
-</div>
-
-</div>
-
-<!-- Tomorrow Plan -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Tomorrow Plan
-    </h2>
-
-    @if($dpr->tomorrowPlans->count() > 0)
-
-        <table class="w-full border">
-
-            <thead class="bg-gray-200">
-
-                <tr>
-
-                    <th class="p-4 border text-left">
-                        Activity
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Planned Qty
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Unit
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Labour
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Materials
-                    </th>
-
-                    <th class="p-4 border text-left">
-                        Machinery
-                    </th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                @foreach($dpr->tomorrowPlans as $plan)
-
-                <tr>
-
-                    <td class="p-4 border">
-
-                        {{ $plan->activity->activity_name ?? '-' }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $plan->planned_quantity }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $plan->unit }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $plan->planned_labour }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $plan->materials_required }}
-
-                    </td>
-
-                    <td class="p-4 border">
-
-                        {{ $plan->machinery_required }}
-
-                    </td>
-
-                </tr>
-
-                @endforeach
-
-            </tbody>
-
-        </table>
-
-    @else
-
-        <p class="text-gray-500">
-            No tomorrow plans available.
-        </p>
-
-    @endif
-
-</div>
-
-<!-- Site Photos -->
-
-<div class="bg-white rounded shadow p-6 mb-6">
-
-    <h2 class="text-2xl font-bold mb-6">
-        Site Progress Photos
-    </h2>
-
-    @if($dpr->photos->count() > 0)
-
-        <div class="grid grid-cols-3 gap-6">
-
-            @foreach($dpr->photos as $photo)
-
-                <div>
-
-                    <a href="{{ asset('storage/' . $photo->photo_path) }}"
-                       target="_blank">
-
-                        <img src="{{ asset('storage/' . $photo->photo_path) }}"
-                             class="rounded shadow border h-64 w-full object-cover">
-
-                    </a>
-
+    {{-- DPR Header --}}
+    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="DPR Overview"
+            subtitle="Project, engineer and submission details."
+            icon="📋"
+        />
+
+        <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+
+            <div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Project
                 </div>
 
-            @endforeach
+                <div class="mt-1 font-semibold text-gray-800">
+                    {{ $dpr->project?->project_name ?? '-' }}
+                </div>
+            </div>
+
+            <div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Engineer
+                </div>
+
+                <div class="mt-1 font-semibold text-gray-800">
+                    {{ $dpr->user?->name ?? '-' }}
+                </div>
+            </div>
+
+            <div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    DPR Date
+                </div>
+
+                <div class="mt-1 font-semibold text-gray-800">
+                    {{ $dpr->dpr_date?->format('d/m/Y') ?? '-' }}
+                </div>
+            </div>
+
+            <div>
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Weather
+                </div>
+
+                <div class="mt-1 font-semibold text-gray-800">
+                    {{ $dpr->weather ?: '-' }}
+                </div>
+            </div>
 
         </div>
+    </div>
 
-    @else
+    {{-- Summary Cards --}}
+    <div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-8">
 
-        <p class="text-gray-500">
-            No site photos uploaded.
-        </p>
+        @php
+            $summaryCards = [
+                ['label' => 'Labour', 'value' => $uniqueLabourCount],
+                ['label' => 'Work Done', 'value' => $dpr->workDoneItems->count()],
+                ['label' => 'Received', 'value' => $dpr->materialReceipts->count()],
+                ['label' => 'Consumed', 'value' => $dpr->materialConsumptions->count()],
+                ['label' => 'Required', 'value' => $dpr->materialRequirements->count()],
+                ['label' => 'Issues', 'value' => $dpr->siteIssues->count()],
+                ['label' => 'Machinery', 'value' => $dpr->machineryTools->count()],
+                ['label' => 'Photos', 'value' => $dpr->photos->count()],
+            ];
+        @endphp
 
-    @endif
+        @foreach($summaryCards as $card)
+            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    {{ $card['label'] }}
+                </div>
 
-</div>
-<!-- Summary -->
-
-<div class="grid grid-cols-2 gap-6">
-
-    <div class="bg-white rounded shadow p-6">
-
-        <h2 class="text-2xl font-bold mb-4">
-            DPR Summary
-        </h2>
-
-        <p class="mb-3">
-
-            <span class="font-bold">
-                Total Work Items:
-            </span>
-
-            {{ $dpr->workItems->count() }}
-
-        </p>
-
-        <p>
-
-            <span class="font-bold">
-                Total Quantity Entries:
-            </span>
-
-            {{ $dpr->workItems->sum('quantity_completed') }}
-
-        </p>
+                <div class="mt-1 text-2xl font-bold text-gray-800">
+                    {{ $card['value'] }}
+                </div>
+            </div>
+        @endforeach
 
     </div>
 
-    <div class="bg-white rounded shadow p-6">
+    {{-- Labour Attendance --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
 
-        <h2 class="text-2xl font-bold mb-4">
-            General Remarks
-        </h2>
+        <x-rds.section-title
+            title="Labour Attendance"
+            subtitle="Attendance-linked labour details for this DPR."
+            icon="👷"
+        />
 
-        <p class="text-gray-700">
-            {{ $dpr->remarks }}
-        </p>
+        @if($dpr->labourAttendances->isNotEmpty())
 
-    </div>
-    <div class="bg-white rounded shadow p-6 mt-6">
+            <div class="mb-5 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
 
-    <h2 class="text-2xl font-bold mb-4">
-        PMO Review Remarks
-    </h2>
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase text-gray-500">Total Labour</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-800">{{ $uniqueLabourCount }}</div>
+                </div>
 
-    @if($dpr->pmo_remarks)
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase text-gray-500">Present</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-800">{{ $presentCount }}</div>
+                </div>
 
-        <p class="text-gray-700">
-            {{ $dpr->pmo_remarks }}
-        </p>
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase text-gray-500">Absent</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-800">{{ $absentCount }}</div>
+                </div>
 
-    @else
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase text-gray-500">Half Day</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-800">{{ $halfDayCount }}</div>
+                </div>
 
-        <p class="text-gray-500">
-            No PMO remarks available.
-        </p>
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase text-gray-500">Normal Hrs</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-800">{{ $totalNormalHours }}</div>
+                </div>
 
-    @endif
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase text-gray-500">OT Hrs</div>
+                    <div class="mt-1 text-2xl font-bold text-gray-800">{{ $totalOtHours }}</div>
+                </div>
 
-</div>
+            </div>
 
-</div>
-{{-- PMO REVIEW PANEL --}}
-@if(in_array(auth()->user()->role->name, ['PMO', 'Admin', 'DGM']) && $dpr->status === 'Pending')
+            <div class="overflow-x-auto">
+                <table class="min-w-[900px] w-full text-sm">
 
-<div class="bg-white rounded shadow p-6 mb-6 border-l-4 border-blue-600">
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Labour</th>
+                            <th class="px-4 py-3 text-left">Designation</th>
+                            <th class="px-4 py-3 text-left">Shift</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                            <th class="px-4 py-3 text-right">Normal Hrs</th>
+                            <th class="px-4 py-3 text-right">OT Hrs</th>
+                        </tr>
+                    </thead>
 
-    <h2 class="text-2xl font-bold mb-4">
-        PMO Review Panel
-    </h2>
+                    <tbody class="divide-y divide-gray-200">
 
-    <div class="mb-4">
-        <span class="font-semibold">Current Status:</span>
+                        @foreach($dpr->labourAttendances as $attendance)
+                            @foreach($attendance->details as $detail)
+                                <tr>
+                                    <td class="px-4 py-3">
+                                        {{ $detail->labour?->name ?? '-' }}
+                                    </td>
 
-        <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded">
-            Pending Review
-        </span>
-    </div>
+                                    <td class="px-4 py-3">
+                                        {{ $detail->designationRole?->name ?? '-' }}
+                                    </td>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <td class="px-4 py-3">
+                                        {{ $attendance->shift?->shift_name ?? $attendance->shift?->name ?? '-' }}
+                                    </td>
 
-        <form method="POST"
-              action="{{ route('dprs.approve', $dpr->id) }}">
+                                    <td class="px-4 py-3">
+                                        {{ $detail->attendanceStatus?->name ?? $detail->attendanceStatus?->code ?? '-' }}
+                                    </td>
 
-            @csrf
+                                    <td class="px-4 py-3 text-right">
+                                        {{ $detail->normal_hours ?? 0 }}
+                                    </td>
 
-            <label class="block font-semibold mb-2">
-                Approval Remarks
-            </label>
+                                    <td class="px-4 py-3 text-right">
+                                        {{ $detail->ot_hours ?? 0 }}
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @endforeach
 
-            <textarea name="pmo_remarks"
-                      rows="4"
-                      class="border rounded w-full p-3 mb-4"
-                      placeholder="Enter approval remarks..."></textarea>
+                    </tbody>
+                </table>
+            </div>
 
-            <button type="submit"
-                    onclick="return confirm('Approve this DPR?')"
-                    class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded">
-                Approve DPR
-            </button>
-
-        </form>
-
-        <form method="POST"
-              action="{{ route('dprs.reject', $dpr->id) }}">
-
-            @csrf
-
-            <label class="block font-semibold mb-2">
-                Rejection Remarks <span class="text-red-600">*</span>
-            </label>
-
-            <textarea name="pmo_remarks"
-                      rows="4"
-                      class="border rounded w-full p-3 mb-4"
-                      placeholder="Enter reason for rejection..."
-                      required></textarea>
-
-            <button type="submit"
-                    onclick="return confirm('Reject this DPR?')"
-                    class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded">
-                Reject DPR
-            </button>
-
-        </form>
-
-    </div>
-
-</div>
-
-@endif
-
-
-{{-- PMO REMARKS DISPLAY --}}
-@if($dpr->pmo_remarks)
-
-<div class="bg-white rounded shadow p-6 mb-6 border-l-4
-    {{ $dpr->status === 'Approved' ? 'border-green-600' : 'border-red-600' }}">
-
-    <h2 class="text-2xl font-bold mb-4">
-        PMO Remarks
-    </h2>
-
-    <div class="mb-3">
-        <span class="font-semibold">Status:</span>
-
-        @if($dpr->status === 'Approved')
-            <span class="bg-green-100 text-green-800 px-3 py-1 rounded">
-                Approved
-            </span>
-        @elseif($dpr->status === 'Rejected')
-            <span class="bg-red-100 text-red-800 px-3 py-1 rounded">
-                Rejected
-            </span>
         @else
-            <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded">
-                {{ $dpr->status }}
-            </span>
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No linked Labour Attendance.
+            </div>
+
         @endif
     </div>
 
-    <p class="text-gray-700 whitespace-pre-line">
-        {{ $dpr->pmo_remarks }}
-    </p>
+    {{-- Work Done --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Work Done"
+            subtitle="Physical work activities completed during the day."
+            icon="🏗️"
+        />
+
+        @forelse($dpr->workDoneItems as $index => $item)
+
+            <div class="{{ $index > 0 ? 'mt-5' : '' }} rounded-xl border border-gray-200 bg-gray-50 p-5">
+
+                <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Work {{ $index + 1 }}
+                        </div>
+
+                        <h3 class="mt-1 text-lg font-bold text-gray-800">
+                            {{ $item->activity_name ?? $item->activity?->activity_name ?? '-' }}
+                        </h3>
+
+                        @if($item->activityMapping?->division?->name)
+                            <div class="mt-1 text-sm text-gray-500">
+                                {{ $item->activityMapping->division->name }}
+                            </div>
+                        @endif
+                    </div>
+
+                    <div class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-800">
+                        {{ $formatQty($item->quantity_completed) }} {{ $item->unit ?? $item->activityMapping?->unit ?? $item->activity?->unit }}
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Location</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $item->location_path ?: '-' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Contractor</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $item->contractor?->contractor_name ?? '-' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Status</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $item->execution_status ?? '-' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Progress</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $item->progress_percentage ?? 0 }}%</div>
+                    </div>
+
+                </div>
+
+                @if($item->remarks)
+                    <div class="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+                        {{ $item->remarks }}
+                    </div>
+                @endif
+
+                @if($item->photos->isNotEmpty())
+                    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+                        @foreach($item->photos as $photo)
+                            <a href="{{ $photo->file_url }}"
+                               target="_blank"
+                               rel="noopener">
+                                <img src="{{ $photo->file_url }}"
+                                     alt="{{ $photo->display_caption }}"
+                                     class="h-28 w-full rounded-lg border border-gray-200 bg-white object-cover">
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
+            </div>
+
+        @empty
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No linked Work Done records.
+            </div>
+
+        @endforelse
+    </div>
+
+    {{-- Material Received --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Material Received"
+            subtitle="Materials received on site during the DPR day."
+            icon="📦"
+        />
+
+        @forelse($dpr->materialReceipts as $receipt)
+
+            <div class="{{ !$loop->first ? 'mt-5' : '' }} rounded-xl border border-gray-200 bg-gray-50 p-5">
+
+                <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <div class="font-semibold text-gray-800">
+                            Receipt #{{ $receipt->id }}
+                        </div>
+
+                        <div class="mt-1 text-sm text-gray-500">
+                            Vendor: {{ $receipt->vendor?->vendor_name ?? $receipt->vendor_name ?? '-' }}
+                        </div>
+                    </div>
+
+                    <div class="text-sm text-gray-600">
+                        {{ $receipt->status ?? 'Recorded' }}
+                    </div>
+                </div>
+
+                <div class="mt-4 overflow-x-auto">
+                    <table class="min-w-[850px] w-full text-sm">
+                        <thead class="bg-white text-xs uppercase text-gray-500">
+                            <tr>
+                                <th class="px-3 py-2 text-left">Material</th>
+                                <th class="px-3 py-2 text-left">Brand</th>
+                                <th class="px-3 py-2 text-left">Specification</th>
+                                <th class="px-3 py-2 text-left">Grade</th>
+                                <th class="px-3 py-2 text-right">Quantity</th>
+                                <th class="px-3 py-2 text-left">Unit</th>
+                            </tr>
+                        </thead>
+
+                        <tbody class="divide-y divide-gray-200">
+                            @forelse($receipt->items as $item)
+                                <tr>
+                                    <td class="px-3 py-2">
+                                        {{ $item->materialType?->material_type_name ?? $item->display_name ?? 'Material' }}
+                                    </td>
+
+                                    <td class="px-3 py-2">
+                                        {{ $item->brand?->brand_name ?? '-' }}
+                                    </td>
+
+                                    <td class="px-3 py-2">
+                                        {{ $item->specification?->specification_name ?? '-' }}
+                                    </td>
+
+                                    <td class="px-3 py-2">
+                                        {{ $item->grade?->grade_name ?? '-' }}
+                                    </td>
+
+                                    <td class="px-3 py-2 text-right">
+                                        {{ $formatQty($item->quantity_received) }}
+                                    </td>
+
+                                    <td class="px-3 py-2">
+                                        {{ $item->unit?->unit_name ?? $item->unit?->name ?? '-' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="6" class="px-3 py-3 text-center text-gray-500">
+                                        No item rows available.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                @if($receipt->photos->isNotEmpty())
+                    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+                        @foreach($receipt->photos as $photo)
+                            <a href="{{ $photo->file_url }}"
+                               target="_blank"
+                               rel="noopener">
+                                <img src="{{ $photo->file_url }}"
+                                     alt="Material Received Photo"
+                                     class="h-28 w-full rounded-lg border border-gray-200 bg-white object-cover">
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
+            </div>
+
+        @empty
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No linked Material Received records.
+            </div>
+
+        @endforelse
+    </div>
+
+    {{-- Material Consumed --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Material Consumed"
+            subtitle="Materials consumed and wastage recorded during execution."
+            icon="🧱"
+        />
+
+        @if($dpr->materialConsumptions->isNotEmpty())
+
+            <div class="overflow-x-auto">
+                <table class="min-w-[900px] w-full text-sm">
+
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Record</th>
+                            <th class="px-4 py-3 text-left">Material</th>
+                            <th class="px-4 py-3 text-right">Consumed</th>
+                            <th class="px-4 py-3 text-right">Wastage</th>
+                            <th class="px-4 py-3 text-left">Unit</th>
+                            <th class="px-4 py-3 text-left">Remarks</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-gray-200">
+
+                        @foreach($dpr->materialConsumptions as $consumption)
+                            @forelse($consumption->items as $item)
+                                <tr>
+                                    <td class="px-4 py-3">
+                                        #{{ $consumption->id }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $item->display_name ?: ($item->materialType?->material_type_name ?? 'Material') }}
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right">
+                                        {{ $formatQty($item->quantity_consumed) }}
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right">
+                                        {{ $formatQty($item->wastage_quantity) }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $item->unit?->unit_name ?? $item->unit?->name ?? '-' }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $item->remarks ?: ($consumption->remarks ?: '-') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td class="px-4 py-3">#{{ $consumption->id }}</td>
+                                    <td class="px-4 py-3">Material</td>
+                                    <td class="px-4 py-3 text-right">{{ $formatQty($consumption->quantity_consumed) }}</td>
+                                    <td class="px-4 py-3 text-right">{{ $formatQty($consumption->wastage_quantity) }}</td>
+                                    <td class="px-4 py-3">{{ $consumption->unit ?? '-' }}</td>
+                                    <td class="px-4 py-3">{{ $consumption->remarks ?? '-' }}</td>
+                                </tr>
+                            @endforelse
+                        @endforeach
+
+                    </tbody>
+                </table>
+            </div>
+
+        @else
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No linked Material Consumed records.
+            </div>
+
+        @endif
+    </div>
+
+    {{-- Material Required --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Material Required"
+            subtitle="Material requirements raised during the DPR day."
+            icon="📌"
+        />
+
+        @if($dpr->materialRequirements->isNotEmpty())
+
+            <div class="overflow-x-auto">
+                <table class="min-w-[900px] w-full text-sm">
+
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Requirement</th>
+                            <th class="px-4 py-3 text-left">Material</th>
+                            <th class="px-4 py-3 text-right">Required Qty</th>
+                            <th class="px-4 py-3 text-left">Unit</th>
+                            <th class="px-4 py-3 text-left">Required Date</th>
+                            <th class="px-4 py-3 text-left">Priority</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-gray-200">
+
+                        @foreach($dpr->materialRequirements as $requirement)
+                            @forelse($requirement->items as $item)
+                                <tr>
+                                    <td class="px-4 py-3">#{{ $requirement->id }}</td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $item->display_name ?: ($item->materialType?->material_type_name ?? 'Material') }}
+                                    </td>
+
+                                    <td class="px-4 py-3 text-right">
+                                        {{ $formatQty($item->required_quantity) }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $item->unit?->unit_name ?? $item->unit?->name ?? '-' }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $requirement->required_date?->format('d/m/Y') ?? '-' }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $requirement->priority ?? '-' }}
+                                    </td>
+
+                                    <td class="px-4 py-3">
+                                        {{ $requirement->status ?? '-' }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td class="px-4 py-3">#{{ $requirement->id }}</td>
+                                    <td class="px-4 py-3">{{ $requirement->material?->material_name ?? 'Material' }}</td>
+                                    <td class="px-4 py-3 text-right">{{ $formatQty($requirement->required_quantity) }}</td>
+                                    <td class="px-4 py-3">{{ $requirement->unit ?? '-' }}</td>
+                                    <td class="px-4 py-3">{{ $requirement->required_date?->format('d/m/Y') ?? '-' }}</td>
+                                    <td class="px-4 py-3">{{ $requirement->priority ?? '-' }}</td>
+                                    <td class="px-4 py-3">{{ $requirement->status ?? '-' }}</td>
+                                </tr>
+                            @endforelse
+                        @endforeach
+
+                    </tbody>
+                </table>
+            </div>
+
+        @else
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No linked Material Required records.
+            </div>
+
+        @endif
+    </div>
+
+    {{-- Site Issues --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Site Issues"
+            subtitle="Issues, risks and delays reported during the day."
+            icon="⚠️"
+        />
+
+        @forelse($dpr->siteIssues as $issue)
+
+            @php
+                $priorityClass = match($issue->priority) {
+                    'Low' => 'bg-gray-100 text-gray-700',
+                    'Medium' => 'bg-blue-100 text-blue-800',
+                    'High' => 'bg-orange-100 text-orange-800',
+                    'Critical' => 'bg-red-100 text-red-800',
+                    default => 'bg-gray-100 text-gray-700',
+                };
+            @endphp
+
+            <div class="{{ !$loop->first ? 'mt-5' : '' }} rounded-xl border border-gray-200 bg-gray-50 p-5">
+
+                <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-800">
+                            {{ $issue->title }}
+                        </h3>
+
+                        <div class="mt-1 text-sm text-gray-500">
+                            {{ $issue->issue_type }}
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2">
+                        <span class="rounded-full px-3 py-1 text-xs font-semibold {{ $priorityClass }}">
+                            {{ $issue->priority }}
+                        </span>
+
+                        <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700">
+                            {{ $issue->status }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Location</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $issue->location_path ?: '-' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Activity</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $issue->activity?->activity_name ?? '-' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Responsible</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $issue->responsible_person ?: '-' }}</div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs font-semibold uppercase text-gray-500">Target Closure</div>
+                        <div class="mt-1 text-sm text-gray-800">{{ $issue->target_closure_date?->format('d/m/Y') ?? '-' }}</div>
+                    </div>
+
+                </div>
+
+                @if($issue->description)
+                    <div class="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-3">
+                        <div class="text-xs font-semibold uppercase text-gray-500">Description</div>
+                        <div class="mt-1 whitespace-pre-line text-sm text-gray-700">{{ $issue->description }}</div>
+                    </div>
+                @endif
+
+                @if($issue->resolution)
+                    <div class="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-3">
+                        <div class="text-xs font-semibold uppercase text-gray-500">Resolution</div>
+                        <div class="mt-1 whitespace-pre-line text-sm text-gray-700">{{ $issue->resolution }}</div>
+                    </div>
+                @endif
+
+                @if($issue->photos->isNotEmpty())
+                    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-6">
+                        @foreach($issue->photos as $photo)
+                            <a href="{{ $photo->file_url }}"
+                               target="_blank"
+                               rel="noopener">
+                                <img src="{{ $photo->file_url }}"
+                                     alt="{{ $photo->display_caption }}"
+                                     class="h-28 w-full rounded-lg border border-gray-200 bg-white object-cover">
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
+            </div>
+
+        @empty
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No linked Site Issues.
+            </div>
+
+        @endforelse
+    </div>
+
+    {{-- Machinery --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Machinery / Equipment Used"
+            subtitle="Machinery and equipment recorded directly in the DPR."
+            icon="🚜"
+        />
+
+        @if($dpr->machineryTools->isNotEmpty())
+
+            <div class="overflow-x-auto">
+                <table class="min-w-[800px] w-full text-sm">
+
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Machine</th>
+                            <th class="px-4 py-3 text-right">Qty</th>
+                            <th class="px-4 py-3 text-right">Usage Hrs</th>
+                            <th class="px-4 py-3 text-left">Condition</th>
+                            <th class="px-4 py-3 text-left">Remarks</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($dpr->machineryTools as $machine)
+                            <tr>
+                                <td class="px-4 py-3">
+                                    {{ $machine->machineryTool?->machine_name ?? '-' }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right">
+                                    {{ $machine->quantity }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right">
+                                    {{ $machine->usage_hours }}
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    {{ $machine->working_condition }}
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    {{ $machine->remarks ?: '-' }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+
+                </table>
+            </div>
+
+        @else
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No Machinery / Equipment recorded.
+            </div>
+
+        @endif
+    </div>
+
+    {{-- DPR Photos --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="DPR Photos"
+            subtitle="General site progress photos uploaded with the DPR."
+            icon="📷"
+        />
+
+        @if($dpr->photos->isNotEmpty())
+
+            <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+
+                @foreach($dpr->photos as $photo)
+                    <a href="{{ asset('storage/' . ltrim($photo->photo_path, '/')) }}"
+                       target="_blank"
+                       rel="noopener">
+                        <img src="{{ asset('storage/' . ltrim($photo->photo_path, '/')) }}"
+                             alt="DPR Photo"
+                             class="h-56 w-full rounded-xl border border-gray-200 bg-gray-100 object-cover shadow-sm">
+                    </a>
+                @endforeach
+
+            </div>
+
+        @else
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No DPR-level photos uploaded.
+            </div>
+
+        @endif
+    </div>
+
+    {{-- Tomorrow Plan --}}
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+        <x-rds.section-title
+            title="Tomorrow Plan"
+            subtitle="Planned execution for the upcoming work day."
+            icon="📅"
+        />
+
+        @if($dpr->tomorrowPlans->isNotEmpty())
+
+            <div class="overflow-x-auto">
+                <table class="min-w-[950px] w-full text-sm">
+
+                    <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Activity</th>
+                            <th class="px-4 py-3 text-left">Location</th>
+                            <th class="px-4 py-3 text-right">Planned Qty</th>
+                            <th class="px-4 py-3 text-left">Unit</th>
+                            <th class="px-4 py-3 text-right">Labour</th>
+                            <th class="px-4 py-3 text-left">Priority</th>
+                            <th class="px-4 py-3 text-left">Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($dpr->tomorrowPlans as $plan)
+
+                            @php
+                                $planLocation = collect([
+                                    $plan->block?->name,
+                                    $plan->floor?->name,
+                                    $plan->unit?->name,
+                                    $plan->room?->name,
+                                    $plan->subspace?->name,
+                                ])->filter()->implode(' → ');
+                            @endphp
+
+                            <tr>
+                                <td class="px-4 py-3">
+                                    {{ $plan->activity?->activity_name ?? '-' }}
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    {{ $planLocation ?: '-' }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right">
+                                    {{ $formatQty($plan->planned_quantity) }}
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    {{ $plan->unit ?? '-' }}
+                                </td>
+
+                                <td class="px-4 py-3 text-right">
+                                    {{ $plan->planned_labour ?? '-' }}
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    {{ $plan->priority ?? '-' }}
+                                </td>
+
+                                <td class="px-4 py-3">
+                                    {{ $plan->status ?? '-' }}
+                                </td>
+                            </tr>
+
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+
+        @else
+
+            <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
+                No Tomorrow Plan linked.
+            </div>
+
+        @endif
+    </div>
+
+    {{-- Remarks --}}
+    <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+            <x-rds.section-title
+                title="General Remarks"
+                subtitle="Engineer remarks for this DPR."
+                icon="📝"
+            />
+
+            <div class="whitespace-pre-line text-sm leading-6 text-gray-700">
+                {{ $dpr->remarks ?: '-' }}
+            </div>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+
+            <x-rds.section-title
+                title="PMO Remarks"
+                subtitle="Review remarks from PMO / Management."
+                icon="💬"
+            />
+
+            <div class="whitespace-pre-line text-sm leading-6 text-gray-700">
+                {{ $dpr->pmo_remarks ?: 'No PMO remarks available.' }}
+            </div>
+        </div>
+
+    </div>
+
+    {{-- PMO Review --}}
+    @if(
+        in_array(
+            auth()->user()->role->name,
+            ['PMO', 'Admin', 'DGM'],
+            true
+        )
+        && $dpr->status === 'Pending'
+    )
+
+        <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+
+            <x-rds.section-title
+                title="PMO Review"
+                subtitle="Approve or return this DPR for correction."
+                icon="✅"
+            />
+
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+
+                <form method="POST"
+                      action="{{ route('dprs.approve', $dpr->id) }}"
+                      class="rounded-xl border border-green-200 bg-white p-5">
+
+                    @csrf
+
+                    <label class="mb-2 block text-sm font-semibold text-gray-800">
+                        Approval Remarks
+                    </label>
+
+                    <textarea name="pmo_remarks"
+                              rows="4"
+                              class="w-full rounded-lg border border-gray-300 p-3 text-sm"
+                              placeholder="Optional approval remarks"></textarea>
+
+                    <button type="submit"
+                            onclick="return confirm('Approve this DPR?')"
+                            class="mt-4 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700">
+                        Approve DPR
+                    </button>
+
+                </form>
+
+                <form method="POST"
+                      action="{{ route('dprs.reject', $dpr->id) }}"
+                      class="rounded-xl border border-red-200 bg-white p-5">
+
+                    @csrf
+
+                    <label class="mb-2 block text-sm font-semibold text-gray-800">
+                        Return for Correction <span class="text-red-600">*</span>
+                    </label>
+
+                    <textarea name="pmo_remarks"
+                              rows="4"
+                              class="w-full rounded-lg border border-gray-300 p-3 text-sm"
+                              placeholder="Reason for correction"
+                              required></textarea>
+
+                    <button type="submit"
+                            onclick="return confirm('Return this DPR for correction?')"
+                            class="mt-4 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700">
+                        Return for Correction
+                    </button>
+
+                </form>
+
+            </div>
+        </div>
+
+    @endif
 
 </div>
 
-@endif
+<style>
+@media print {
+    aside,
+    header,
+    nav,
+    button,
+    a[href*="/pdf"] {
+        display: none !important;
+    }
+
+    body {
+        background: #ffffff !important;
+    }
+
+    .shadow-sm,
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+}
+</style>
 
 @endsection

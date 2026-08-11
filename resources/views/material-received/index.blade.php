@@ -2,286 +2,553 @@
 
 @section('content')
 
-<div class="flex justify-between items-center mb-6">
-    <div>
-        <h1 class="text-3xl font-bold text-gray-800">
-            Material Received
-        </h1>
-        <p class="text-gray-500 mt-1">
-            Track inward material entries by project, vendor, challan and verification status.
-        </p>
+@php
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+
+    $roleName = auth()->user()->role?->name;
+
+    $hasPermission = function (string $permission) use ($roleName): bool {
+        if ($roleName === 'Admin') {
+            return true;
+        }
+
+        return auth()->user()
+            ->role
+            ?->permissions()
+            ->where('name', $permission)
+            ->where('is_active', true)
+            ->exists() ?? false;
+    };
+
+    $canCreate = $hasPermission('material_received.create');
+    $canEdit = $hasPermission('material_received.edit');
+    $canApprove = $hasPermission('material_received.approve')
+        || in_array($roleName, ['PMO', 'DGM'], true);
+    $canVerifyBill = $hasPermission('material_received.accountant_verify')
+        || $roleName === 'Accountant';
+@endphp
+
+<div class="mx-auto max-w-full">
+
+    {{-- Page Header --}}
+    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">
+                Material Received
+            </h1>
+
+            <p class="mt-1 text-gray-500">
+                Track inward material entries, receipt approval and supplier bill verification.
+            </p>
+        </div>
+
+        @if($canCreate)
+            <a href="{{ route('material-received.create') }}"
+               class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-700">
+                + Add Material Received
+            </a>
+        @endif
+
     </div>
 
-    <a href="{{ route('material-received.create') }}"
-       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow">
-        + Add Material Received
-    </a>
-</div>
+    @if(session('success'))
+        <div class="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-green-800">
+            {{ session('success') }}
+        </div>
+    @endif
 
-@if(session('success'))
-    <div class="bg-green-100 text-green-800 p-4 rounded mb-4">
-        {{ session('success') }}
-    </div>
-@endif
+    @if(session('error'))
+        <div class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800">
+            {{ session('error') }}
+        </div>
+    @endif
 
-@if(session('error'))
-    <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
-        {{ session('error') }}
-    </div>
-@endif
+    @if($isAccountant && $effectiveAccountantStatusFilter === 'Pending')
+        <div class="mb-5 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-purple-800">
+            Showing PMO-approved receipts whose supplier bills still require Accounts verification.
+        </div>
+    @endif
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    {{-- Summary Cards --}}
+    @if($isAccountant)
+        <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-    <div class="bg-white p-4 rounded shadow">
-        <p class="text-gray-500 text-sm">Qty Received Today</p>
-        <p class="text-2xl font-bold text-blue-700">
-            {{ $totalReceivedToday }}
-        </p>
-    </div>
+            <a href="{{ route('material-received.index', [
+                    'status' => 'Approved',
+                    'accountant_status' => 'Pending',
+                ]) }}"
+               class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-purple-300 hover:shadow">
 
-    <div class="bg-white p-4 rounded shadow">
-        <p class="text-gray-500 text-sm">Draft Entries</p>
-        <p class="text-2xl font-bold text-yellow-700">
-            {{ $draftCount }}
-        </p>
-    </div>
+                <p class="text-sm text-gray-500">
+                    Bills Pending Verification
+                </p>
 
-    <div class="bg-white p-4 rounded shadow">
-        <p class="text-gray-500 text-sm">Submitted Entries</p>
-        <p class="text-2xl font-bold text-orange-700">
-            {{ $submittedCount }}
-        </p>
-    </div>
+                <p class="mt-2 text-2xl font-bold text-purple-700">
+                    {{ $pendingAccountantCount }}
+                </p>
+            </a>
 
-    <div class="bg-white p-4 rounded shadow">
-        <p class="text-gray-500 text-sm">Approved Entries</p>
-        <p class="text-2xl font-bold text-green-700">
-            {{ $approvedCount }}
-        </p>
-    </div>
+            <a href="{{ route('material-received.index', [
+                    'accountant_status' => 'Bill Verified',
+                ]) }}"
+               class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:border-green-300 hover:shadow">
 
-</div>
+                <p class="text-sm text-gray-500">
+                    Bills Verified Today
+                </p>
 
-<div class="bg-white p-4 rounded shadow mb-6">
+                <p class="mt-2 text-2xl font-bold text-green-700">
+                    {{ $billVerifiedTodayCount }}
+                </p>
+            </a>
 
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-sm text-gray-500">
+                    PMO Approved Receipts
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-green-700">
+                    {{ $approvedCount }}
+                </p>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-sm text-gray-500">
+                    Qty Received Today
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-blue-700">
+                    {{ formatQuantity($totalReceivedToday) }}
+                </p>
+            </div>
+
+        </div>
+    @else
+        <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-sm text-gray-500">
+                    Qty Received Today
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-blue-700">
+                    {{ formatQuantity($totalReceivedToday) }}
+                </p>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-sm text-gray-500">
+                    Draft Entries
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-yellow-700">
+                    {{ $draftCount }}
+                </p>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-sm text-gray-500">
+                    Submitted Entries
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-orange-700">
+                    {{ $submittedCount }}
+                </p>
+            </div>
+
+            <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <p class="text-sm text-gray-500">
+                    Approved Entries
+                </p>
+
+                <p class="mt-2 text-2xl font-bold text-green-700">
+                    {{ $approvedCount }}
+                </p>
+            </div>
+
+        </div>
+    @endif
+
+    {{-- Filters --}}
     <form method="GET"
           action="{{ route('material-received.index') }}"
-          class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
-        <div>
-            <label class="block text-sm font-semibold mb-1">Date</label>
-            <input type="date"
-                   name="received_date"
-                   value="{{ request('received_date') }}"
-                   class="border p-2 rounded w-full">
-        </div>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
 
-        <div>
-            <label class="block text-sm font-semibold mb-1">Project</label>
-            <select name="project_id"
-                    class="border p-2 rounded w-full">
-                <option value="">All Projects</option>
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Date
+                </label>
 
-                @foreach($projects as $project)
-                    <option value="{{ $project->id }}"
-                        {{ request('project_id') == $project->id ? 'selected' : '' }}>
-                        {{ $project->project_name }}
+                <input type="date"
+                       name="received_date"
+                       value="{{ request('received_date') }}"
+                       class="{{ $inputClass }}">
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Project
+                </label>
+
+                <select name="project_id"
+                        class="{{ $inputClass }}">
+
+                    <option value="">All Projects</option>
+
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}"
+                            {{ (string) request('project_id') === (string) $project->id ? 'selected' : '' }}>
+                            {{ $project->project_name }}
+                        </option>
+                    @endforeach
+
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Receipt Status
+                </label>
+
+                <select name="status"
+                        class="{{ $inputClass }}">
+
+                    <option value="">All Receipt Statuses</option>
+
+                    @foreach(['Draft', 'Submitted', 'Approved', 'Rejected'] as $status)
+                        <option value="{{ $status }}"
+                            {{ $effectiveStatusFilter === $status ? 'selected' : '' }}>
+                            {{ $status }}
+                        </option>
+                    @endforeach
+
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Accounts Status
+                </label>
+
+                <select name="accountant_status"
+                        class="{{ $inputClass }}">
+
+                    <option value="all"
+                        {{ $effectiveAccountantStatusFilter === 'all' ? 'selected' : '' }}>
+                        All Accounts Statuses
                     </option>
-                @endforeach
-            </select>
-        </div>
 
-        <div>
-            <label class="block text-sm font-semibold mb-1">Status</label>
-            <select name="status"
-                    class="border p-2 rounded w-full">
-                <option value="">All Status</option>
-                <option value="Draft" {{ request('status') == 'Draft' ? 'selected' : '' }}>Draft</option>
-                <option value="Submitted" {{ request('status') == 'Submitted' ? 'selected' : '' }}>Submitted</option>
-                <option value="Approved" {{ request('status') == 'Approved' ? 'selected' : '' }}>Approved</option>
-            </select>
-        </div>
+                    <option value="Pending"
+                        {{ $effectiveAccountantStatusFilter === 'Pending' ? 'selected' : '' }}>
+                        Pending Verification
+                    </option>
 
-        <div class="flex items-end gap-2">
-            <button type="submit"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">
-                Filter
-            </button>
+                    <option value="Bill Verified"
+                        {{ $effectiveAccountantStatusFilter === 'Bill Verified' ? 'selected' : '' }}>
+                        Bill Verified
+                    </option>
 
-            <a href="{{ route('material-received.index') }}"
-               class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">
-                Clear
-            </a>
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Search
+                </label>
+
+                <input type="text"
+                       name="search"
+                       value="{{ request('search') }}"
+                       class="{{ $inputClass }}"
+                       placeholder="Bill, challan, vendor, material">
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit"
+                        class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                    Filter
+                </button>
+
+                <a href="{{ $isAccountant
+                        ? route('material-received.index', ['accountant_status' => 'all'])
+                        : route('material-received.index') }}"
+                   class="rounded-lg bg-gray-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-700">
+                    Clear
+                </a>
+            </div>
+
         </div>
 
     </form>
 
-</div>
+    {{-- Receipt Table --}}
+    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-<div class="bg-white rounded shadow overflow-hidden">
+        <div class="overflow-x-auto">
 
-    <div class="overflow-x-auto">
+            <table class="min-w-[1180px] w-full text-sm">
 
-        <table class="min-w-full text-sm">
+                <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+                    <tr>
+                        <th class="px-3 py-3 text-center">#</th>
+                        <th class="px-3 py-3 text-left">Date</th>
+                        <th class="px-3 py-3 text-left">Project</th>
+                        <th class="px-3 py-3 text-left">Material</th>
+                        <th class="px-3 py-3 text-left">Specification</th>
+                        <th class="px-3 py-3 text-left">Brand</th>
+                        <th class="px-3 py-3 text-right">Qty</th>
+                        <th class="px-3 py-3 text-left">Unit</th>
+                        <th class="px-3 py-3 text-left">Vendor</th>
+                        <th class="px-3 py-3 text-left">Receipt Status</th>
+                        <th class="px-3 py-3 text-left">Accounts Status</th>
+                        <th class="px-3 py-3 text-center">Actions</th>
+                    </tr>
+                </thead>
 
-            <thead class="bg-gray-100 text-gray-700 uppercase text-xs">
-                <tr>
-                    <th class="p-3 text-left">#</th>
-                    <th class="p-3 text-left">Date</th>
-                    <th class="p-3 text-left">Project</th>
-                    <th class="p-3 text-left">Material</th>
-                    <th class="p-3 text-left">Specification</th>
-                    <th class="p-3 text-left">Brand</th>
-                    <th class="p-3 text-center">Qty</th>
-                    <th class="p-3 text-left">Unit</th>
-                    <th class="p-3 text-left">Vendor</th>
-                    <th class="p-3 text-left">Challan</th>
-                    <th class="p-3 text-left">Condition</th>
-                    <th class="p-3 text-left">Status</th>
-                    <th class="p-3 text-left">Actions</th>
-                </tr>
-            </thead>
+                <tbody class="divide-y divide-gray-200">
 
-            <tbody class="divide-y divide-gray-200">
+                    @forelse($materialReceiveds as $index => $materialReceived)
 
-                @forelse($materialReceiveds as $index => $entry)
+                        @php
+                            $hasNewItems = $materialReceived->items->isNotEmpty();
 
-                    <tr class="hover:bg-gray-50">
+                            $receiptStatusClasses = match($materialReceived->status) {
+                                'Approved' => 'bg-green-100 text-green-800',
+                                'Submitted' => 'bg-blue-100 text-blue-800',
+                                'Rejected' => 'bg-red-100 text-red-800',
+                                default => 'bg-yellow-100 text-yellow-800',
+                            };
 
-                        <td class="p-3">
-                            {{ $materialReceiveds->firstItem() + $index }}
-                        </td>
+                            $accountsStatus = $materialReceived->accountant_verification_status === 'Bill Verified'
+                                ? 'Bill Verified'
+                                : 'Pending';
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->received_date }}
-                        </td>
+                            $accountsStatusClasses = $accountsStatus === 'Bill Verified'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-purple-100 text-purple-800';
+                        @endphp
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->project?->project_name ?? '-' }}
-                        </td>
+                        <tr class="align-top hover:bg-gray-50">
 
-                        <td class="p-3 min-w-[180px]">
-                            {{ $entry->material_name }}
-                        </td>
+                            <td class="px-3 py-3 text-center">
+                                {{ $materialReceiveds->firstItem() + $index }}
+                            </td>
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->specification ?? '-' }}
-                        </td>
+                            <td class="whitespace-nowrap px-3 py-3">
+                                {{ $materialReceived->received_date?->format('d/m/Y') ?? '-' }}
+                            </td>
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->brand ?? '-' }}
-                        </td>
+                            <td class="px-3 py-3">
+                                <div class="font-semibold text-gray-800">
+                                    {{ $materialReceived->project?->project_name ?? '-' }}
+                                </div>
 
-                        <td class="p-3 text-center font-bold">
-                            {{ $entry->quantity_received }}
-                        </td>
+                                @if($materialReceived->storage_location)
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        {{ $materialReceived->storage_location }}
+                                    </div>
+                                @endif
+                            </td>
 
-                        <td class="p-3">
-                            {{ $entry->unit ?? '-' }}
-                        </td>
+                            {{-- Material --}}
+                            <td class="px-3 py-3">
+                                @if($hasNewItems)
+                                    <div class="space-y-2">
+                                        @foreach($materialReceived->items as $item)
+                                            <div class="min-h-[42px] py-1">
+                                                <div class="font-semibold text-gray-800">
+                                                    {{ $item->materialType?->material_type_name ?? '-' }}
+                                                </div>
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->vendor_name ?? '-' }}
-                        </td>
+                                                @if($item->activity)
+                                                    <div class="text-xs text-gray-500">
+                                                        {{ $item->activity->activity_name }}
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {{ $materialReceived->material_name
+                                        ?? $materialReceived->material?->material_name
+                                        ?? '-' }}
+                                @endif
+                            </td>
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->challan_number ?? '-' }}
-                        </td>
+                            {{-- Specification --}}
+                            <td class="px-3 py-3">
+                                @if($hasNewItems)
+                                    <div class="space-y-2">
+                                        @foreach($materialReceived->items as $item)
+                                            <div class="min-h-[42px] py-1">
+                                                {{ $item->specification?->specification_name ?? '-' }}
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {{ $materialReceived->specification ?? '-' }}
+                                @endif
+                            </td>
 
-                        <td class="p-3 whitespace-nowrap">
-                            {{ $entry->material_condition }}
-                        </td>
+                            {{-- Brand --}}
+                            <td class="px-3 py-3">
+                                @if($hasNewItems)
+                                    <div class="space-y-2">
+                                        @foreach($materialReceived->items as $item)
+                                            <div class="min-h-[42px] py-1">
+                                                {{ $item->brand?->brand_name ?? '-' }}
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {{ $materialReceived->brand ?? '-' }}
+                                @endif
+                            </td>
 
-                        <td class="p-3">
-                            <span class="px-2 py-1 rounded text-xs
-                                {{ $entry->status === 'Draft' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                {{ $entry->status === 'Submitted' ? 'bg-orange-100 text-orange-800' : '' }}
-                                {{ $entry->status === 'Approved' ? 'bg-green-100 text-green-800' : '' }}">
-                                {{ $entry->status }}
-                            </span>
-                        </td>
+                            {{-- Quantity --}}
+                            <td class="px-3 py-3 text-right">
+                                @if($hasNewItems)
+                                    <div class="space-y-2">
+                                        @foreach($materialReceived->items as $item)
+                                            <div class="min-h-[42px] py-1 font-semibold">
+                                                {{ formatQuantity($item->quantity_received) }}
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {{ formatQuantity($materialReceived->quantity_received) }}
+                                @endif
+                            </td>
 
-                        <td class="p-3 whitespace-nowrap">
-                            <div class="flex gap-2">
-                                <a href="{{ route('material-received.show', $entry) }}"
-                                    class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded">
+                            {{-- Unit --}}
+                            <td class="px-3 py-3">
+                                @if($hasNewItems)
+                                    <div class="space-y-2">
+                                        @foreach($materialReceived->items as $item)
+                                            <div class="min-h-[42px] py-1">
+                                                {{ $item->unit?->unit_name ?? '-' }}
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    {{ $materialReceived->unit ?? '-' }}
+                                @endif
+                            </td>
+
+                            <td class="px-3 py-3">
+                                {{ $materialReceived->vendor?->vendor_name
+                                    ?? $materialReceived->vendor_name
+                                    ?? '-' }}
+                            </td>
+
+                            <td class="px-3 py-3">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $receiptStatusClasses }}">
+                                    {{ $materialReceived->status }}
+                                </span>
+                            </td>
+
+                            <td class="px-3 py-3">
+                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $accountsStatusClasses }}">
+                                    {{ $accountsStatus }}
+                                </span>
+
+                                @if($accountsStatus === 'Bill Verified')
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        {{ $materialReceived->accountantVerifier?->name ?? '-' }}
+
+                                        @if($materialReceived->accountant_verified_at)
+                                            <br>
+                                            {{ $materialReceived->accountant_verified_at->format('d/m/Y h:i A') }}
+                                        @endif
+                                    </div>
+                                @endif
+                            </td>
+
+                            <td class="px-3 py-3">
+                                <div class="flex flex-col gap-2">
+
+                                    <a href="{{ route('material-received.show', $materialReceived) }}"
+                                       class="rounded bg-slate-700 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-slate-800">
                                         View
-                                </a>
-                                <a href="{{ route('material-received.edit', $entry) }}"
-                                    class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">
-                                    Edit
-                                </a>
+                                    </a>
 
-                                @if($entry->status === 'Draft')
+                                    @if(
+                                        $materialReceived->status === 'Draft'
+                                        && $canEdit
+                                    )
+                                        <a href="{{ route('material-received.edit', $materialReceived) }}"
+                                           class="rounded bg-yellow-500 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-yellow-600">
+                                            Edit
+                                        </a>
+                                    @endif
 
-                                    <form method="POST"
-                                          action="{{ route('material-received.submit', $entry) }}">
-                                        @csrf
-                                        @method('PATCH')
-
-                                        <button type="submit"
-                                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">
-                                            Submit
-                                        </button>
-                                    </form>
-
-                                @elseif($entry->status === 'Submitted')
-
-                                    @if(in_array(auth()->user()->role->name, ['Admin', 'PMO', 'DGM']))
-
+                                    @if(
+                                        $materialReceived->status === 'Submitted'
+                                        && $canApprove
+                                    )
                                         <form method="POST"
-                                              action="{{ route('material-received.approve', $entry) }}">
+                                              action="{{ route('material-received.approve', $materialReceived) }}">
                                             @csrf
                                             @method('PATCH')
 
                                             <button type="submit"
-                                                    class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">
+                                                    onclick="return confirm('Approve this material receipt?')"
+                                                    class="w-full rounded bg-green-600 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-green-700">
                                                 Approve
                                             </button>
                                         </form>
-
-                                    @else
-
-                                        <span class="text-orange-600 font-semibold">
-                                            Pending Approval
-                                        </span>
-
                                     @endif
 
-                                @elseif($entry->status === 'Approved')
+                                    @if(
+                                        $materialReceived->status === 'Approved'
+                                        && $accountsStatus !== 'Bill Verified'
+                                        && $canVerifyBill
+                                    )
+                                        <form method="POST"
+                                              action="{{ route('material-received.accountant-verify', $materialReceived) }}">
+                                            @csrf
+                                            @method('PATCH')
 
-                                    <span class="text-green-700 font-semibold">
-                                        Approved
-                                    </span>
+                                            <button type="submit"
+                                                    onclick="return confirm('Confirm that Accounts has verified this supplier bill?')"
+                                                    class="w-full rounded bg-purple-600 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-purple-700">
+                                                Verify Bill
+                                            </button>
+                                        </form>
+                                    @endif
 
-                                @endif
+                                </div>
+                            </td>
 
-                            </div>
-                        </td>
+                        </tr>
 
-                    </tr>
+                    @empty
 
-                @empty
+                        <tr>
+                            <td colspan="12"
+                                class="px-6 py-12 text-center text-gray-500">
+                                No material receipts found for the selected filters.
+                            </td>
+                        </tr>
 
-                    <tr>
-                        <td colspan="13"
-                            class="p-6 text-center text-gray-500">
-                            No material received entries found.
-                        </td>
-                    </tr>
+                    @endforelse
 
-                @endforelse
+                </tbody>
 
-            </tbody>
+            </table>
+        </div>
 
-        </table>
+        @if($materialReceiveds->hasPages())
+            <div class="border-t border-gray-200 px-5 py-4">
+                {{ $materialReceiveds->links() }}
+            </div>
+        @endif
 
     </div>
 
-</div>
-
-<div class="mt-4">
-    {{ $materialReceiveds->links() }}
 </div>
 
 @endsection

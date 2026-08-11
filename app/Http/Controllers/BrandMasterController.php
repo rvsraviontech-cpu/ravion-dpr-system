@@ -2,150 +2,316 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\BrandMaster;
-use Illuminate\Http\Request;
 use App\Helpers\AuditHelper;
-use App\Models\MaterialCategory;
+use App\Models\BrandMaster;
+use App\Models\MaterialType;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 
 class BrandMasterController extends Controller
 {
-    public function index(Request $request)
+    /**
+     * Display the Material Brand master list.
+     */
+    public function index(Request $request): View
     {
-        $query = BrandMaster::with('category');
-        if ($request->filled('material_category_id')) {
-    $query->where('material_category_id', $request->material_category_id);
-}
+        $query = BrandMaster::query()
+            ->with('materialType.unit');
+
+        if ($request->filled('material_group')) {
+            $query->whereHas(
+                'materialType',
+                fn (Builder $builder) => $builder->where(
+                    'material_group',
+                    $request->string('material_group')->toString()
+                )
+            );
+        }
+
+        if ($request->filled('material_type_id')) {
+            $query->where(
+                'material_type_id',
+                $request->integer('material_type_id')
+            );
+        }
 
         if ($request->filled('search')) {
-            $search = $request->search;
+            $search = trim($request->string('search')->toString());
 
-            $query->where(function ($q) use ($search) {
-                $q->where('brand_name', 'like', "%{$search}%")
-                  ->orWhere('brand_code', 'like', "%{$search}%");
+            $query->where(function (Builder $builder) use ($search) {
+                $builder
+                    ->where('brand_name', 'like', "%{$search}%")
+                    ->orWhere('brand_code', 'like', "%{$search}%")
+                    ->orWhere('remarks', 'like', "%{$search}%")
+                    ->orWhereHas(
+                        'materialType',
+                        fn (Builder $typeQuery) => $typeQuery
+                            ->where('material_type_name', 'like', "%{$search}%")
+                            ->orWhere('material_group', 'like', "%{$search}%")
+                    );
             });
         }
 
-        if ($request->filled('status')) {
-            $query->where('is_active', $request->status);
+        if (
+            $request->has('status')
+            && $request->status !== ''
+            && $request->status !== null
+        ) {
+            $query->where(
+                'is_active',
+                $request->boolean('status')
+            );
         }
 
         $brands = $query
+            ->orderByDesc('is_active')
+            ->orderBy('material_type_id')
+            ->orderBy('sequence')
             ->orderBy('brand_name')
-            ->paginate(20)
+            ->paginate(config('rds.pagination.per_page', 25))
             ->withQueryString();
 
-            $categories = MaterialCategory::where('is_active', true)
-    ->orderBy('category_name')
-    ->get();
-
-        return view('brand-masters.index', compact('brands', 'categories'));
+        return view(
+            'brand-masters.index',
+            array_merge(
+                compact('brands'),
+                $this->formData()
+            )
+        );
     }
 
-    public function store(Request $request)
+    /**
+     * Show the create form.
+     */
+    public function create(): View
     {
-        $request->validate([
-            'brand_name' => 'required|string|max:255|unique:brand_masters,brand_name',
-            'brand_code' => 'nullable|string|max:255|unique:brand_masters,brand_code',
-            'remarks' => 'nullable|string',
-            'material_category_id' => 'required|exists:material_categories,id',
-        ]);
+        return view(
+            'brand-masters.create',
+            $this->formData()
+        );
+    }
 
-            $brand = BrandMaster::create([
-            'brand_name' => $request->brand_name,
-            'brand_code' => $request->brand_code,
-            'is_active' => true,
-            'remarks' => $request->remarks,
-            'material_category_id' => $request->material_category_id,
-        ]);
+    /**
+     * Store a new brand.
+     */
+    public function store(Request $request): RedirectResponse
+    {
+        $validated = $this->validateBrand($request);
+
+        $validated['sequence'] = $validated['sequence'] ?? 0;
+        $validated['is_active'] = true;
+
+        $brand = BrandMaster::create($validated);
 
         AuditHelper::log(
             'Brand Masters',
             'Created',
             'BrandMaster',
             $brand->id,
-            'Brand created: ' . $brand->brand_name,
+            'Material brand created: ' . $brand->brand_name,
             null,
-            $brand->toArray()
+            $this->auditValues($brand->fresh('materialType'))
         );
 
         return redirect()
             ->route('brand-masters.index')
-            ->with('success', 'Brand added successfully.');
+            ->with('success', 'Material brand created successfully.');
     }
 
-    public function edit(BrandMaster $brandMaster)
+    /**
+     * Show the edit form.
+     */
+    public function edit(BrandMaster $brandMaster): View
     {
-        $categories = MaterialCategory::where('is_active', true)
-    ->orderBy('category_name')
-    ->get();
+        $brandMaster->load('materialType');
 
-return view('brand-masters.edit', compact('brandMaster', 'categories'));
+        return view(
+            'brand-masters.edit',
+            array_merge(
+                compact('brandMaster'),
+                $this->formData()
+            )
+        );
     }
 
-    public function update(Request $request, BrandMaster $brandMaster)
-    {
-        $request->validate([
-            'brand_name' => 'required|string|max:255|unique:brand_masters,brand_name,' . $brandMaster->id,
-            'brand_code' => 'nullable|string|max:255|unique:brand_masters,brand_code,' . $brandMaster->id,
-            'is_active' => 'required|boolean',
-            'remarks' => 'nullable|string',
-            'material_category_id' => 'required|exists:material_categories,id',
-        ]);
+    /**
+     * Update an existing brand.
+     */
+    public function update(
+        Request $request,
+        BrandMaster $brandMaster
+    ): RedirectResponse {
+        $validated = $this->validateBrand(
+            $request,
+            $brandMaster
+        );
 
-        $oldValues = $brandMaster->toArray();
+        $validated['sequence'] = $validated['sequence'] ?? 0;
+        $validated['is_active'] = $request->boolean('is_active');
 
-        $brandMaster->update([
-            'brand_name' => $request->brand_name,
-            'brand_code' => $request->brand_code,
-            'is_active' => $request->is_active,
-            'remarks' => $request->remarks,
-            'material_category_id' => $request->material_category_id,
-        ]);
+        $oldValues = $this->auditValues(
+            $brandMaster->load('materialType')
+        );
+
+        $brandMaster->update($validated);
 
         AuditHelper::log(
             'Brand Masters',
             'Updated',
             'BrandMaster',
             $brandMaster->id,
-            'Brand updated: ' . $brandMaster->brand_name,
+            'Material brand updated: ' . $brandMaster->brand_name,
             $oldValues,
-            $brandMaster->fresh()->toArray()
+            $this->auditValues(
+                $brandMaster->fresh('materialType')
+            )
         );
 
         return redirect()
             ->route('brand-masters.index')
-            ->with('success', 'Brand updated successfully.');
+            ->with('success', 'Material brand updated successfully.');
     }
 
-    public function toggleStatus(BrandMaster $brandMaster)
-    {
-        $oldValues = $brandMaster->toArray();
+    /**
+     * Activate or deactivate a brand.
+     */
+    public function toggleStatus(
+        BrandMaster $brandMaster
+    ): RedirectResponse {
+        $oldValues = $this->auditValues(
+            $brandMaster->load('materialType')
+        );
 
         $brandMaster->update([
-            'is_active' => !$brandMaster->is_active,
+            'is_active' => ! $brandMaster->is_active,
         ]);
+
+        $brandMaster->refresh();
 
         AuditHelper::log(
             'Brand Masters',
-            $brandMaster->is_active ? 'Activated' : 'Deactivated',
+            $brandMaster->is_active
+                ? 'Activated'
+                : 'Deactivated',
             'BrandMaster',
             $brandMaster->id,
             $brandMaster->is_active
-                ? 'Brand activated: ' . $brandMaster->brand_name
-                : 'Brand deactivated: ' . $brandMaster->brand_name,
+                ? 'Material brand activated: ' . $brandMaster->brand_name
+                : 'Material brand deactivated: ' . $brandMaster->brand_name,
             $oldValues,
-            $brandMaster->fresh()->toArray()
+            $this->auditValues(
+                $brandMaster->load('materialType')
+            )
         );
 
-        return back()->with('success', 'Brand status updated successfully.');
+        return back()->with(
+            'success',
+            'Material brand status updated successfully.'
+        );
     }
-    
-    public function create()
-{
-    $categories = MaterialCategory::where('is_active', true)
-        ->orderBy('category_name')
-        ->get();
 
-    return view('brand-masters.create', compact('categories'));
-}
+    /**
+     * Shared form and filter data.
+     */
+    private function formData(): array
+    {
+        $materialTypes = MaterialType::query()
+            ->with('unit')
+            ->where('is_active', true)
+            ->orderBy('material_group')
+            ->orderBy('sequence')
+            ->orderBy('material_type_name')
+            ->get();
+
+        return [
+            'materialTypes' => $materialTypes,
+
+            'materialGroups' => $materialTypes
+                ->pluck('material_group')
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values(),
+        ];
+    }
+
+    /**
+     * Validate brand data.
+     */
+    private function validateBrand(
+        Request $request,
+        ?BrandMaster $brandMaster = null
+    ): array {
+        return $request->validate([
+            'material_type_id' => [
+                'required',
+                'integer',
+                'exists:material_types,id',
+            ],
+
+            'brand_name' => [
+                'required',
+                'string',
+                'max:255',
+
+                Rule::unique('brand_masters', 'brand_name')
+                    ->where(
+                        fn ($query) => $query->where(
+                            'material_type_id',
+                            $request->integer('material_type_id')
+                        )
+                    )
+                    ->ignore($brandMaster?->id),
+            ],
+
+            'brand_code' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
+
+            'sequence' => [
+                'nullable',
+                'integer',
+                'min:0',
+            ],
+
+            'is_active' => [
+                'nullable',
+                'boolean',
+            ],
+
+            'remarks' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+        ], [
+            'brand_name.unique' =>
+                'This brand already exists for the selected Material Type.',
+        ]);
+    }
+
+    /**
+     * Audit values.
+     */
+    private function auditValues(BrandMaster $brand): array
+    {
+        return [
+            'id' => $brand->id,
+            'material_type_id' => $brand->material_type_id,
+            'material_type_name' =>
+                $brand->materialType?->material_type_name,
+            'material_group' =>
+                $brand->materialType?->material_group,
+            'brand_name' => $brand->brand_name,
+            'brand_code' => $brand->brand_code,
+            'sequence' => $brand->sequence,
+            'is_active' => $brand->is_active,
+            'remarks' => $brand->remarks,
+        ];
+    }
 }

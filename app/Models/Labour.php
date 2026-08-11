@@ -299,4 +299,6 @@ class Labour extends Model
     {
         return true;
     }
+
+
 }
