@@ -68,6 +68,9 @@ th{
     background:#f6f6f6;
 }
 
+.group-heading td{background:#eff6ff;color:#1e3a8a;font-weight:bold;}
+.group-subtotal td{background:#f8fafc;font-weight:bold;border-top:1.5px solid #93c5fd;}
+
 .meta td{
     border:none;
     padding:3px 0;
@@ -157,12 +160,21 @@ Labour Wage Calculations
 
 <tbody>
 
-@foreach($weeklyWageSheet->details as $detail)
+@php
+$groupedDetails = $weeklyWageSheet->details
+    ->sortBy(fn ($detail) => sprintf('%08d|%s|%s', (int) ($detail->labour?->labourGroup?->sort_order ?? 999999), strtolower((string) ($detail->labour?->labourGroup?->name ?? 'Un-grouped Labour')), strtolower((string) ($detail->labour?->full_name ?? ''))))
+    ->groupBy(fn ($detail) => $detail->labour?->labourGroup?->name ?? 'Un-grouped Labour');
+$serial = 1;
+@endphp
+
+@foreach($groupedDetails as $groupName => $groupDetails)
+<tr class="group-heading"><td colspan="11">Labour Group: {{ $groupName }} ({{ $groupDetails->count() }} Labour)</td></tr>
+@foreach($groupDetails as $detail)
 
 <tr>
 
 <td class="text-center">
-{{ $loop->iteration }}
+{{ $serial++ }}
 </td>
 
 <td>
@@ -221,6 +233,12 @@ Labour Wage Calculations
 
 </tr>
 
+
+@endforeach
+<tr class="group-subtotal">
+<td colspan="10">{{ $groupName }} - Group Wage Total</td>
+<td class="text-right">{{ number_format($groupDetails->sum('net_payable'), 2) }}</td>
+</tr>
 @endforeach
 
 <tr class="summary">

@@ -551,188 +551,124 @@
                         </thead>
 
                         <tbody>
+                            @php $serial = 1; @endphp
 
-                            @foreach($projectGroup['rows'] as $row)
-
-                                <tr class="group">
-
+                            @foreach($projectGroup['labour_groups'] as $labourGroup)
+                                <tr>
                                     <td
-    class="sticky left-0 z-20 w-[240px] min-w-[240px] border border-gray-200 bg-white px-3 py-2 group-hover:bg-blue-50"
->
-                                        <div class="whitespace-normal break-words text-sm font-semibold leading-5 text-gray-900">
-                                            {{ $row['labour_name'] }}
-                                        </div>
-
-                                        <div class="mt-0.5 whitespace-normal break-words text-[11px] leading-4 text-gray-500">
-                                            {{ $row['designation'] }}
-                                        </div>
+                                        colspan="{{ $dateColumns->count() + 7 }}"
+                                        class="border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-900"
+                                    >
+                                        {{ $labourGroup['name'] }}
                                     </td>
+                                </tr>
 
-                                    @foreach($dateColumns as $dateColumn)
-                                        @php
-                                            $dateKey = $dateColumn['key'];
+                                @foreach($labourGroup['rows'] as $row)
+                                    <tr class="group">
+                                        <td
+                                            class="sticky left-0 z-20 w-[240px] min-w-[240px] border border-gray-200 bg-white px-3 py-2 group-hover:bg-blue-50"
+                                        >
+                                            <div class="flex items-start gap-2">
+                                                <span class="shrink-0 text-xs font-semibold text-gray-400">
+                                                    {{ $serial++ }}.
+                                                </span>
 
-                                            $dayEntry =
-                                                $row['days'][$dateKey]
-                                                ?? null;
+                                                <div class="min-w-0">
+                                                    <div class="whitespace-normal break-words text-sm font-semibold leading-5 text-gray-900">
+                                                        {{ $row['labour_name'] }}
+                                                    </div>
 
-                                            $dayCode =
-                                                $dayEntry['code']
-                                                ?? '—';
+                                                    <div class="mt-0.5 whitespace-normal break-words text-[11px] leading-4 text-gray-500">
+                                                        {{ $row['designation'] }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
 
-                                            $cellClass =
-                                                $statusClasses[$dayCode]
-                                                ?? 'border-gray-200 bg-white text-gray-400';
+                                        @foreach($dateColumns as $dateColumn)
+                                            @php
+                                                $dateKey = $dateColumn['key'];
+                                                $dayEntry = $row['days'][$dateKey] ?? null;
+                                                $dayCode = $dayEntry['code'] ?? '—';
+                                                $cellClass = $statusClasses[$dayCode]
+                                                    ?? 'border-gray-200 bg-white text-gray-400';
 
-                                            $tooltipParts = [];
+                                                $tooltipParts = [];
 
-                                            if($dayEntry) {
-                                                $tooltipParts[] =
-                                                    $dayEntry['label']
-                                                    ?? $dayCode;
+                                                if($dayEntry) {
+                                                    $tooltipParts[] = $dayEntry['label'] ?? $dayCode;
 
-                                                if($dayEntry['working_status']) {
-                                                    $tooltipParts[] =
-                                                        'Working: '
-                                                        . $dayEntry['working_status'];
-                                                }
+                                                    if($dayEntry['working_status']) {
+                                                        $tooltipParts[] = 'Working: ' . $dayEntry['working_status'];
+                                                    }
 
-                                                if($dayEntry['check_in']) {
-                                                    $tooltipParts[] =
-                                                        'In: '
-                                                        . $dayEntry['check_in'];
-                                                }
+                                                    if($dayEntry['check_in']) {
+                                                        $tooltipParts[] = 'In: ' . $dayEntry['check_in'];
+                                                    }
 
-                                                if($dayEntry['check_out']) {
-                                                    $tooltipParts[] =
-                                                        'Out: '
-                                                        . $dayEntry['check_out'];
-                                                }
+                                                    if($dayEntry['check_out']) {
+                                                        $tooltipParts[] = 'Out: ' . $dayEntry['check_out'];
+                                                    }
 
-                                                $tooltipParts[] =
-                                                    'Normal: '
-                                                    . number_format(
+                                                    $tooltipParts[] = 'Normal: ' . number_format(
                                                         (float) $dayEntry['normal_hours'],
                                                         2
                                                     );
 
-                                                $tooltipParts[] =
-                                                    'OT: '
-                                                    . number_format(
+                                                    $tooltipParts[] = 'OT: ' . number_format(
                                                         (float) $dayEntry['ot_hours'],
                                                         2
                                                     );
 
-                                                if($dayEntry['attendance_number']) {
-                                                    $tooltipParts[] =
-                                                        $dayEntry['attendance_number'];
+                                                    if($dayEntry['attendance_number']) {
+                                                        $tooltipParts[] = $dayEntry['attendance_number'];
+                                                    }
                                                 }
-                                            }
 
-                                            $tooltip = implode(
-                                                ' | ',
-                                                $tooltipParts
-                                            );
-                                        @endphp
+                                                $tooltip = implode(' | ', $tooltipParts);
+                                            @endphp
 
-                                        <td class="border border-gray-200 bg-white px-1 py-1.5 text-center group-hover:bg-blue-50">
-                                            @if($dayEntry)
-                                                <span
-                                                    class="inline-flex h-6 min-w-6 items-center justify-center rounded border px-1 text-[10px] font-bold {{ $cellClass }}"
-                                                    title="{{ $tooltip }}"
-                                                >
-                                                    {{ $dayCode }}
-                                                </span>
-                                            @else
-                                                <span class="text-xs text-gray-300">
-                                                    —
-                                                </span>
-                                            @endif
+                                            <td class="border border-gray-200 bg-white px-1 py-1.5 text-center group-hover:bg-blue-50">
+                                                @if($dayEntry)
+                                                    <span
+                                                        class="inline-flex h-6 min-w-6 items-center justify-center rounded border px-1 text-[10px] font-bold {{ $cellClass }}"
+                                                        title="{{ $tooltip }}"
+                                                    >
+                                                        {{ $dayCode }}
+                                                    </span>
+                                                @else
+                                                    <span class="text-xs text-gray-300">—</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+
+                                        <td class="border border-gray-200 bg-green-50/50 px-2 py-2 text-center text-sm font-semibold text-green-700">
+                                            {{ $row['totals']['present'] }}
                                         </td>
-                                    @endforeach
 
-                                    <td class="border border-gray-200 bg-green-50/50 px-2 py-2 text-center text-sm font-semibold text-green-700">
-                                        {{ $row['totals']['present'] }}
-                                    </td>
+                                        <td class="border border-gray-200 bg-red-50/50 px-2 py-2 text-center text-sm font-semibold text-red-700">
+                                            {{ $row['totals']['absent'] }}
+                                        </td>
 
-                                    <td class="border border-gray-200 bg-red-50/50 px-2 py-2 text-center text-sm font-semibold text-red-700">
-                                        {{ $row['totals']['absent'] }}
-                                    </td>
+                                        <td class="border border-gray-200 bg-amber-50/50 px-2 py-2 text-center text-sm font-semibold text-amber-700">
+                                            {{ $row['totals']['half_day'] }}
+                                        </td>
 
-                                    <td class="border border-gray-200 bg-amber-50/50 px-2 py-2 text-center text-sm font-semibold text-amber-700">
-                                        {{ $row['totals']['half_day'] }}
-                                    </td>
+                                        <td class="border border-gray-200 bg-blue-50/50 px-2 py-2 text-center text-sm font-semibold text-blue-700">
+                                            {{ $row['totals']['leave'] }}
+                                        </td>
 
-                                    <td class="border border-gray-200 bg-blue-50/50 px-2 py-2 text-center text-sm font-semibold text-blue-700">
-                                        {{ $row['totals']['leave'] }}
-                                    </td>
+                                        <td class="border border-gray-200 bg-gray-50 px-2 py-2 text-right text-sm font-semibold text-gray-800">
+                                            {{ number_format((float) $row['totals']['normal_hours'], 2) }}
+                                        </td>
 
-                                    <td class="border border-gray-200 bg-gray-50 px-2 py-2 text-right text-sm font-semibold text-gray-800">
-                                        {{ number_format(
-                                            (float) $row['totals']['normal_hours'],
-                                            2
-                                        ) }}
-                                    </td>
-
-                                    <td class="border border-gray-200 bg-violet-50/50 px-2 py-2 text-right text-sm font-semibold text-violet-700">
-                                        {{ number_format(
-                                            (float) $row['totals']['ot_hours'],
-                                            2
-                                        ) }}
-                                    </td>
-
-                                </tr>
-
+                                        <td class="border border-gray-200 bg-violet-50/50 px-2 py-2 text-right text-sm font-semibold text-violet-700">
+                                            {{ number_format((float) $row['totals']['ot_hours'], 2) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
                             @endforeach
-
                         </tbody>
-
-                        <tfoot>
-                            <tr>
-                                <td
-                                    class="sticky left-0 z-20 border-2 border-gray-300 bg-gray-100 px-3 py-2.5 text-sm font-bold text-gray-800"
-                                >
-                                    Project Totals
-                                </td>
-
-                                <td
-                                    colspan="{{ $dateColumns->count() }}"
-                                    class="border-2 border-gray-300 bg-gray-100 px-3 py-2.5 text-xs text-gray-500"
-                                >
-                                    {{ $projectGroup['summary']['total_labour'] }} Labour
-                                </td>
-
-                                <td class="border-2 border-gray-300 bg-green-50 px-2 py-2.5 text-center text-sm font-bold text-green-700">
-                                    {{ $projectGroup['summary']['present'] }}
-                                </td>
-
-                                <td class="border-2 border-gray-300 bg-red-50 px-2 py-2.5 text-center text-sm font-bold text-red-700">
-                                    {{ $projectGroup['summary']['absent'] }}
-                                </td>
-
-                                <td class="border-2 border-gray-300 bg-amber-50 px-2 py-2.5 text-center text-sm font-bold text-amber-700">
-                                    {{ $projectGroup['summary']['half_day'] }}
-                                </td>
-
-                                <td class="border-2 border-gray-300 bg-blue-50 px-2 py-2.5 text-center text-sm font-bold text-blue-700">
-                                    {{ $projectGroup['summary']['leave'] }}
-                                </td>
-
-                                <td class="border-2 border-gray-300 bg-gray-100 px-2 py-2.5 text-right text-sm font-bold text-gray-900">
-                                    {{ number_format(
-                                        (float) $projectGroup['summary']['normal_hours'],
-                                        2
-                                    ) }}
-                                </td>
-
-                                <td class="border-2 border-gray-300 bg-violet-50 px-2 py-2.5 text-right text-sm font-bold text-violet-700">
-                                    {{ number_format(
-                                        (float) $projectGroup['summary']['ot_hours'],
-                                        2
-                                    ) }}
-                                </td>
-                            </tr>
-                        </tfoot>
 
                     </table>
                 </div>

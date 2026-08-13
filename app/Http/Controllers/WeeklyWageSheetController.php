@@ -1123,7 +1123,8 @@ class WeeklyWageSheetController extends Controller
                     ->orderBy('id');
             },
 
-            'details.labour:id,labour_code,full_name',
+            'details.labour:id,labour_code,full_name,labour_group_id',
+            'details.labour.labourGroup:id,code,name,sort_order',
             'details.designationRole:id,name',
             'details.labourCategory:id,category_name',
             'details.contractor:id,contractor_name',

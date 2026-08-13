@@ -241,6 +241,14 @@
             font-weight: 700;
         }
 
+        .group-heading td {
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-weight: 700;
+            text-align: left;
+            padding: 4px 5px;
+        }
+
         .project-total td {
             border-top: 1.5px solid #64748b;
             background: #f1f5f9;
@@ -462,126 +470,61 @@
                 </thead>
 
                 <tbody>
-                    @foreach($projectGroup['rows'] as $row)
+                    @php $serial = 1; @endphp
 
-                        <tr>
-                            <td class="labour-column">
-                                <div class="labour-name">
-                                    {{ $row['labour_name'] }}
-                                </div>
-
-                                <div class="designation">
-                                    {{ $row['designation'] }}
-                                </div>
-                            </td>
-
-                            @foreach($dateColumns as $dateColumn)
-                                @php
-                                    $dayEntry =
-                                        $row['days'][
-                                            $dateColumn['key']
-                                        ] ?? null;
-
-                                    $code =
-                                        $dayEntry['code']
-                                        ?? null;
-
-                                    $statusClass = match($code) {
-                                        'P' => 'p',
-                                        'A' => 'a',
-                                        'HD' => 'hd',
-                                        'L' => 'l',
-                                        'WO' => 'wo',
-                                        'H' => 'h',
-                                        default => '',
-                                    };
-                                @endphp
-
-                                <td class="day-column">
-                                    @if($dayEntry)
-                                        <span class="status {{ $statusClass }}">
-                                            {{ $code }}
-                                        </span>
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                            @endforeach
-
-                            <td class="summary-column present-total">
-                                {{ $row['totals']['present'] }}
-                            </td>
-
-                            <td class="summary-column absent-total">
-                                {{ $row['totals']['absent'] }}
-                            </td>
-
-                            <td class="summary-column half-total">
-                                {{ $row['totals']['half_day'] }}
-                            </td>
-
-                            <td class="summary-column leave-total">
-                                {{ $row['totals']['leave'] }}
-                            </td>
-
-                            <td class="hours-column normal-total">
-                                {{ number_format(
-                                    (float) $row['totals']['normal_hours'],
-                                    2
-                                ) }}
-                            </td>
-
-                            <td class="hours-column ot-total">
-                                {{ number_format(
-                                    (float) $row['totals']['ot_hours'],
-                                    2
-                                ) }}
+                    @foreach($projectGroup['labour_groups'] as $labourGroup)
+                        <tr class="group-heading">
+                            <td colspan="{{ $dateColumns->count() + 7 }}">
+                                {{ $labourGroup['name'] }}
                             </td>
                         </tr>
 
-                    @endforeach
+                        @foreach($labourGroup['rows'] as $row)
+                            <tr>
+                                <td class="labour-column">
+                                    <div class="labour-name">
+                                        {{ $serial++ }}. {{ $row['labour_name'] }}
+                                    </div>
 
-                    <tr class="project-total">
-                        <td class="labour-column">
-                            Project Totals -
-                            {{ $projectGroup['summary']['total_labour'] }}
-                            Labour
-                        </td>
+                                    <div class="designation">
+                                        {{ $row['designation'] }}
+                                    </div>
+                                </td>
 
-                        @foreach($dateColumns as $dateColumn)
-                            <td class="day-column"></td>
+                                @foreach($dateColumns as $dateColumn)
+                                    @php
+                                        $dayEntry = $row['days'][$dateColumn['key']] ?? null;
+                                        $code = $dayEntry['code'] ?? null;
+
+                                        $statusClass = match($code) {
+                                            'P' => 'p',
+                                            'A' => 'a',
+                                            'HD' => 'hd',
+                                            'L' => 'l',
+                                            'WO' => 'wo',
+                                            'H' => 'h',
+                                            default => '',
+                                        };
+                                    @endphp
+
+                                    <td class="day-column">
+                                        @if($dayEntry)
+                                            <span class="status {{ $statusClass }}">{{ $code }}</span>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+                                @endforeach
+
+                                <td class="summary-column present-total">{{ $row['totals']['present'] }}</td>
+                                <td class="summary-column absent-total">{{ $row['totals']['absent'] }}</td>
+                                <td class="summary-column half-total">{{ $row['totals']['half_day'] }}</td>
+                                <td class="summary-column leave-total">{{ $row['totals']['leave'] }}</td>
+                                <td class="hours-column normal-total">{{ number_format((float) $row['totals']['normal_hours'], 2) }}</td>
+                                <td class="hours-column ot-total">{{ number_format((float) $row['totals']['ot_hours'], 2) }}</td>
+                            </tr>
                         @endforeach
-
-                        <td class="summary-column present-total">
-                            {{ $projectGroup['summary']['present'] }}
-                        </td>
-
-                        <td class="summary-column absent-total">
-                            {{ $projectGroup['summary']['absent'] }}
-                        </td>
-
-                        <td class="summary-column half-total">
-                            {{ $projectGroup['summary']['half_day'] }}
-                        </td>
-
-                        <td class="summary-column leave-total">
-                            {{ $projectGroup['summary']['leave'] }}
-                        </td>
-
-                        <td class="hours-column normal-total">
-                            {{ number_format(
-                                (float) $projectGroup['summary']['normal_hours'],
-                                2
-                            ) }}
-                        </td>
-
-                        <td class="hours-column ot-total">
-                            {{ number_format(
-                                (float) $projectGroup['summary']['ot_hours'],
-                                2
-                            ) }}
-                        </td>
-                    </tr>
+                    @endforeach
                 </tbody>
             </table>
 
@@ -595,52 +538,6 @@
         </div>
 
     @endforelse
-
-    @if($projectGroups->isNotEmpty())
-        <div class="grand-total">
-            Grand Total
-            &nbsp; | &nbsp;
-
-            Labour:
-            {{ $summary['total_labour'] }}
-
-            &nbsp; | &nbsp;
-
-            P:
-            {{ $summary['present'] }}
-
-            &nbsp; | &nbsp;
-
-            A:
-            {{ $summary['absent'] }}
-
-            &nbsp; | &nbsp;
-
-            HD:
-            {{ $summary['half_day'] }}
-
-            &nbsp; | &nbsp;
-
-            L:
-            {{ $summary['leave'] }}
-
-            &nbsp; | &nbsp;
-
-            Normal:
-            {{ number_format(
-                (float) $summary['normal_hours'],
-                2
-            ) }}
-
-            &nbsp; | &nbsp;
-
-            OT:
-            {{ number_format(
-                (float) $summary['ot_hours'],
-                2
-            ) }}
-        </div>
-    @endif
 
     <div class="legend">
         <strong>Codes:</strong>

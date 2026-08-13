@@ -53,7 +53,8 @@ class WeeklyWageSheetExport implements
                     ->where('is_active', true)
                     ->orderBy('id');
             },
-            'details.labour:id,full_name',
+            'details.labour:id,full_name,labour_group_id',
+            'details.labour.labourGroup:id,code,name,sort_order',
             'details.designationRole:id,name',
             'charges' => function ($query): void {
                 $query
@@ -679,34 +680,59 @@ class WeeklyWageSheetExport implements
         $this->labourTableStartRow =
             count($this->sheetRows) + 1;
 
-        foreach (
-            $sheet->details
-            as $index => $detail
-        ) {
-            $labourLabel =
-                $detail->labour?->full_name
-                ?? 'Unavailable Labour';
+        $groupedDetails = $sheet->details
+            ->sortBy(fn ($detail) => sprintf(
+                '%08d|%s|%s',
+                (int) ($detail->labour?->labourGroup?->sort_order ?? 999999),
+                strtolower((string) ($detail->labour?->labourGroup?->name ?? 'Un-grouped Labour')),
+                strtolower((string) ($detail->labour?->full_name ?? ''))
+            ))
+            ->groupBy(fn ($detail) => $detail->labour?->labourGroup?->name ?? 'Un-grouped Labour');
 
-            $designation =
-                $detail->designationRole?->name;
+        $serial = 1;
 
-            if ($designation) {
-                $labourLabel .=
-                    "\n{$designation}";
+        foreach ($groupedDetails as $groupName => $groupDetails) {
+            $this->labourHeaderRows[] = count($this->sheetRows) + 1;
+            $this->sheetRows[] = [
+                'Labour Group: ' . $groupName . ' | Labour: ' . $groupDetails->count(),
+            ];
+
+            foreach ($groupDetails as $detail) {
+                $labourLabel = $detail->labour?->full_name ?? 'Unavailable Labour';
+                $designation = $detail->designationRole?->name;
+
+                if ($designation) {
+                    $labourLabel .= "\n{$designation}";
+                }
+
+                $this->sheetRows[] = [
+                    $serial++,
+                    $labourLabel,
+                    (float) $detail->daily_wage_rate,
+                    (float) $detail->payable_days,
+                    (float) $detail->normal_wage,
+                    (float) $detail->ot_hours,
+                    (float) $detail->ot_hourly_rate,
+                    (float) $detail->ot_wage,
+                    (float) $detail->additions,
+                    (float) $detail->deductions,
+                    (float) $detail->net_payable,
+                ];
             }
 
+            $this->summaryRows[] = count($this->sheetRows) + 1;
             $this->sheetRows[] = [
-                $index + 1,
-                $labourLabel,
-                (float) $detail->daily_wage_rate,
-                (float) $detail->payable_days,
-                (float) $detail->normal_wage,
-                (float) $detail->ot_hours,
-                (float) $detail->ot_hourly_rate,
-                (float) $detail->ot_wage,
-                (float) $detail->additions,
-                (float) $detail->deductions,
-                (float) $detail->net_payable,
+                '',
+                $groupName . ' - Group Wage Total',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                (float) $groupDetails->sum('net_payable'),
             ];
         }
 

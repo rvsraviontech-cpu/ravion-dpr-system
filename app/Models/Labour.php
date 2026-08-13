@@ -28,6 +28,7 @@ class Labour extends Model
         'emergency_contact_name',
         'emergency_contact_mobile',
         'manpower_source_id',
+        'labour_group_id',
         'labour_category_id',
         'labour_type_id',
         'skill_category_id',
@@ -56,6 +57,7 @@ class Labour extends Model
     protected $casts = [
         'gender_id' => 'integer',
         'manpower_source_id' => 'integer',
+        'labour_group_id' => 'integer',
         'labour_category_id' => 'integer',
         'labour_type_id' => 'integer',
         'skill_category_id' => 'integer',
@@ -102,6 +104,11 @@ class Labour extends Model
     public function manpowerSource(): BelongsTo
     {
         return $this->belongsTo(ManpowerSource::class);
+    }
+
+    public function labourGroup(): BelongsTo
+    {
+        return $this->belongsTo(LabourGroup::class);
     }
 
     public function labourCategory(): BelongsTo

@@ -202,6 +202,11 @@
                         'name' => $labour->full_name,
                         'designation' => $labour->designationRole?->name,
                         'mobile' => $labour->mobile,
+                        'group_name' => $labour->labourGroup?->name
+                            ?? 'Un-grouped Labour',
+                        'assignment_type' => $labour->current_project_id === null
+                            ? 'unassigned'
+                            : 'assigned',
                         'assignment' => $labour->current_project_id === null
                             ? 'Unassigned'
                             : 'Assigned to Project',
@@ -786,7 +791,7 @@
                                             x-bind:id="`labour-search-${row.key}`"
                                             x-model.debounce.250ms="row.search"
                                             autocomplete="off"
-                                            placeholder="Search name, designation or mobile"
+                                            placeholder="Search name, labour group, designation or mobile"
                                             class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                         >
 
@@ -813,6 +818,11 @@
                                                     <div
                                                         class="text-sm font-semibold text-gray-900"
                                                         x-text="labour.name"
+                                                    ></div>
+
+                                                    <div
+                                                        class="mt-1 inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
+                                                        x-text="labour.group_name || 'Un-grouped Labour'"
                                                     ></div>
 
                                                     <div class="mt-0.5 text-xs text-gray-500">
@@ -856,6 +866,12 @@
                                         <div
                                             class="text-sm font-semibold text-gray-900"
                                             x-text="row.selected_name"
+                                        ></div>
+
+                                        <div
+                                            x-show="row.selected_group"
+                                            class="mt-1 text-xs font-semibold text-slate-700"
+                                            x-text="row.selected_group"
                                         ></div>
 
                                         <div
@@ -1321,6 +1337,7 @@
                     labour_id: '',
                     search: '',
                     selected_name: '',
+                    selected_group: '',
                     selected_designation: '',
                     selected_assignment: '',
                     status_id: '',
@@ -1571,6 +1588,7 @@
 
                         const searchableText = [
                             labour.name,
+                            labour.group_name,
                             labour.designation,
                             labour.mobile,
                             labour.assignment,
@@ -1581,12 +1599,39 @@
 
                         return searchableText.includes(term);
                     })
-                    .slice(0, 8);
+                    .sort((a, b) => {
+                        const assignmentRank = (value) =>
+                            value === 'assigned' ? 0 : 1;
+
+                        const assignmentDifference =
+                            assignmentRank(a.assignment_type)
+                            - assignmentRank(b.assignment_type);
+
+                        if (assignmentDifference !== 0) {
+                            return assignmentDifference;
+                        }
+
+                        const groupDifference = String(
+                            a.group_name || ''
+                        ).localeCompare(
+                            String(b.group_name || '')
+                        );
+
+                        if (groupDifference !== 0) {
+                            return groupDifference;
+                        }
+
+                        return String(a.name || '').localeCompare(
+                            String(b.name || '')
+                        );
+                    })
+                    .slice(0, 12);
             },
 
             selectLabour(row, labour) {
                 row.labour_id = String(labour.id);
                 row.selected_name = labour.name ?? '';
+                row.selected_group = labour.group_name ?? 'Un-grouped Labour';
                 row.selected_designation = labour.designation ?? '';
                 row.selected_assignment = labour.assignment ?? '';
                 row.search = '';
@@ -1602,6 +1647,7 @@
             clearSelectedLabour(row) {
                 row.labour_id = '';
                 row.selected_name = '';
+                row.selected_group = '';
                 row.selected_designation = '';
                 row.selected_assignment = '';
                 row.search = '';

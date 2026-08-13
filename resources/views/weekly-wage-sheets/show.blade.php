@@ -79,6 +79,19 @@
             'weekly_wage_sheets.mark_paid'
         )
         && $status === 'approved';
+
+    $wageDetailsByGroup = $weeklyWageSheet->details
+        ->sortBy(fn ($detail) => sprintf(
+            '%08d|%s|%s',
+            (int) ($detail->labour?->labourGroup?->sort_order ?? 999999),
+            strtolower((string) ($detail->labour?->labourGroup?->name ?? 'Un-grouped Labour')),
+            strtolower((string) ($detail->labour?->full_name ?? ''))
+        ))
+        ->groupBy(fn ($detail) => $detail->labour?->labourGroup?->name ?? 'Un-grouped Labour');
+
+    $detailInputIndexes = $weeklyWageSheet->details
+        ->values()
+        ->mapWithKeys(fn ($detail, $index) => [$detail->id => $index]);
 @endphp
 
 <x-rds.page-header
@@ -498,16 +511,27 @@
 
                         <tbody class="divide-y divide-gray-100 bg-white">
 
-                            @foreach($weeklyWageSheet->details as $detail)
+                            @php $serial = 1; @endphp
+
+                            @foreach($wageDetailsByGroup as $groupName => $groupDetails)
+                                <tr class="bg-blue-50">
+                                    <td colspan="16" class="px-3 py-2 text-sm font-bold text-blue-900">
+                                        Labour Group: {{ $groupName }}
+                                        <span class="ml-2 text-xs font-medium text-blue-700">({{ $groupDetails->count() }} Labour)</span>
+                                    </td>
+                                </tr>
+
+                                @foreach($groupDetails as $detail)
+                                    @php $detailIndex = $detailInputIndexes[$detail->id]; @endphp
 
                                 <tr class="align-middle hover:bg-gray-50">
 
                                     <td class="px-3 py-3 text-sm text-gray-500">
-                                        {{ $loop->iteration }}
+                                        {{ $serial++ }}
 
                                         <input
                                             type="hidden"
-                                            name="details[{{ $loop->index }}][id]"
+                                            name="details[{{ $detailIndex }}][id]"
                                             value="{{ $detail->id }}"
                                         >
                                     </td>
@@ -587,9 +611,9 @@
                                     <td class="px-3 py-3">
                                         <input
                                             type="number"
-                                            name="details[{{ $loop->index }}][additions]"
+                                            name="details[{{ $detailIndex }}][additions]"
                                             value="{{ old(
-                                                "details.{$loop->index}.additions",
+                                                "details.{$detailIndex}.additions",
                                                 number_format(
                                                     (float) $detail->additions,
                                                     2,
@@ -607,9 +631,9 @@
                                     <td class="px-3 py-3">
                                         <input
                                             type="number"
-                                            name="details[{{ $loop->index }}][deductions]"
+                                            name="details[{{ $detailIndex }}][deductions]"
                                             value="{{ old(
-                                                "details.{$loop->index}.deductions",
+                                                "details.{$detailIndex}.deductions",
                                                 number_format(
                                                     (float) $detail->deductions,
                                                     2,
@@ -633,32 +657,43 @@
 
                                     <td class="px-3 py-3">
                                         <textarea
-                                            name="details[{{ $loop->index }}][adjustment_reason]"
+                                            name="details[{{ $detailIndex }}][adjustment_reason]"
                                             rows="2"
                                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="Required when additions or deductions are entered."
                                             @disabled(! $canManageAdjustments)
                                         >{{ old(
-                                            "details.{$loop->index}.adjustment_reason",
+                                            "details.{$detailIndex}.adjustment_reason",
                                             $detail->adjustment_reason
                                         ) }}</textarea>
                                     </td>
 
                                     <td class="px-3 py-3">
                                         <textarea
-                                            name="details[{{ $loop->index }}][remarks]"
+                                            name="details[{{ $detailIndex }}][remarks]"
                                             rows="2"
                                             class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                             placeholder="Optional remarks"
                                             @disabled(! $canManageAdjustments)
                                         >{{ old(
-                                            "details.{$loop->index}.remarks",
+                                            "details.{$detailIndex}.remarks",
                                             $detail->remarks
                                         ) }}</textarea>
                                     </td>
 
                                 </tr>
 
+
+                                @endforeach
+                                <tr class="border-t border-blue-200 bg-blue-50/60">
+                                    <td colspan="13" class="px-3 py-3 text-right text-sm font-bold text-blue-900">
+                                        {{ $groupName }} - Group Wage Total
+                                    </td>
+                                    <td class="px-3 py-3 text-right text-sm font-bold text-green-800">
+                                        ₹{{ number_format((float) $groupDetails->sum('net_payable'), 2) }}
+                                    </td>
+                                    <td colspan="2"></td>
+                                </tr>
                             @endforeach
 
                         </tbody>

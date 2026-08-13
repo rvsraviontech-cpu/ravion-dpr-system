@@ -86,7 +86,7 @@
     <x-rds.section
         title="Project Details"
         description="{{ $editingAttendance
-            ? 'Project, attendance date, shift and labour composition are locked.'
+            ? 'Project, attendance date and shift are locked. Draft/Rejected attendance may still add missed labour before submission.'
             : 'Select the project, attendance date and shift.' }}"
     >
         @if($editingAttendance)
@@ -118,7 +118,7 @@
             </div>
 
             <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                Labour cannot be added or removed while editing. Use Attendance Corrections to change labour composition.
+                Draft/Rejected attendance can still add missed labour or remove an incorrectly added labour before submission. Submitted/Approved attendance remains locked.
             </div>
         @else
             <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
@@ -177,7 +177,7 @@
     <x-rds.section
         title="Labour Attendance"
         description="{{ $editingAttendance
-            ? 'Update attendance values for the existing labour rows.'
+            ? 'Previously saved attendance is retained. Assigned/unassigned eligible labour not yet marked is also shown.'
             : 'Assigned labour is shown first, followed by unassigned labour.' }}"
     >
         <div id="labour-pool-summary" class="mb-5 hidden grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -447,9 +447,9 @@
 
             const group = labour.assignment_group === 'unassigned' ? 'unassigned' : (editing ? 'existing' : 'assigned');
 
-            return `<tr class="attendance-row" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name].filter(Boolean).join(' ').toLowerCase())}">
+            return `<tr class="attendance-row" data-existing="${old || labour.has_saved_attendance ? '1' : '0'}" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name, labour.labour_group_name].filter(Boolean).join(' ').toLowerCase())}">
                 <td class="px-3 py-3"><input type="hidden" name="details[${index}][labour_id]" value="${esc(id)}"><input class="status-id" type="hidden" name="details[${index}][attendance_status_id]" value="${esc(statusId)}"><input type="hidden" name="details[${index}][attendance_source]" value="${esc(source)}"><p class="truncate text-sm font-semibold text-gray-900">${esc(labour.full_name || 'Unavailable Labour')}</p></td>
-                <td class="px-3 py-3"><p class="truncate text-sm text-gray-700">${esc(labour.designation_role_name || '—')}</p></td>
+                <td class="px-3 py-3"><p class="truncate text-sm text-gray-700">${esc(labour.designation_role_name || '—')}</p><p class="mt-0.5 truncate text-[11px] font-medium text-gray-500">${esc(labour.labour_group_name || 'Un-grouped')}</p></td>
                 <td class="px-2 py-3 text-center"><button type="button" class="present-btn inline-flex h-9 w-10 items-center justify-center rounded-md border text-sm font-bold transition">P</button></td>
                 <td class="px-2 py-3 text-center"><button type="button" class="absent-btn inline-flex h-9 w-10 items-center justify-center rounded-md border text-sm font-bold transition">A</button></td>
                 <td class="px-3 py-3"><select class="more-status block w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm">${moreOptions(moreId)}</select></td>
@@ -733,20 +733,143 @@
             $('summary-ot').textContent = otHours.toFixed(2);
         }
 
+        function groupHeadingHtml(groupName, labourCount) {
+            return `
+                <tr class="labour-group-heading bg-slate-100">
+                    <td colspan="11" class="border-y border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700">
+                        ${esc(groupName || 'Un-grouped Labour')}
+                        <span class="ml-2 font-medium normal-case tracking-normal text-slate-500">
+                            ${labourCount} labour${labourCount === 1 ? '' : 's'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function groupedRowsHtml(labours, startIndex) {
+            const grouped = new Map();
+
+            labours.forEach((labour) => {
+                const key = String(
+                    labour.labour_group_id
+                    || 'ungrouped'
+                );
+
+                if (!grouped.has(key)) {
+                    grouped.set(key, {
+                        name:
+                            labour.labour_group_name
+                            || 'Un-grouped Labour',
+
+                        sortOrder:
+                            Number(
+                                labour.labour_group_sort_order
+                                ?? 999999
+                            ),
+
+                        labours: [],
+                    });
+                }
+
+                grouped.get(key).labours.push(labour);
+            });
+
+            const orderedGroups = Array.from(
+                grouped.values()
+            ).sort((a, b) => {
+                if (a.sortOrder !== b.sortOrder) {
+                    return a.sortOrder - b.sortOrder;
+                }
+
+                return String(a.name).localeCompare(
+                    String(b.name)
+                );
+            });
+
+            let index = startIndex;
+            let html = '';
+
+            orderedGroups.forEach((group) => {
+                group.labours.sort((a, b) =>
+                    String(a.full_name || '').localeCompare(
+                        String(b.full_name || '')
+                    )
+                );
+
+                html += groupHeadingHtml(
+                    group.name,
+                    group.labours.length
+                );
+
+                group.labours.forEach((labour) => {
+                    html += rowHtml(
+                        labour,
+                        index++
+                    );
+                });
+            });
+
+            return {
+                html,
+                nextIndex: index,
+            };
+        }
+
         function render(assigned, unassigned) {
-            assigned = Array.isArray(assigned) ? assigned : [];
-            unassigned = Array.isArray(unassigned) ? unassigned : [];
-            let index = 0;
-            assignedRows.innerHTML = assigned.map((labour) => rowHtml(labour, index++)).join('');
-            unassignedRows.innerHTML = unassigned.map((labour) => rowHtml(labour, index++)).join('');
-            rows = Array.from(document.querySelectorAll('.attendance-row'));
+            assigned = Array.isArray(assigned)
+                ? assigned
+                : [];
+
+            unassigned = Array.isArray(unassigned)
+                ? unassigned
+                : [];
+
+            const assignedResult = groupedRowsHtml(
+                assigned,
+                0
+            );
+
+            const unassignedResult = groupedRowsHtml(
+                unassigned,
+                assignedResult.nextIndex
+            );
+
+            assignedRows.innerHTML =
+                assignedResult.html;
+
+            unassignedRows.innerHTML =
+                unassignedResult.html;
+
+            rows = Array.from(
+                document.querySelectorAll(
+                    '.attendance-row'
+                )
+            );
+
             rows.forEach(bind);
-            $('pool-assigned-count').textContent = assigned.length;
-            $('pool-unassigned-count').textContent = unassigned.length;
-            $('pool-total-count').textContent = assigned.length + unassigned.length;
-            $('labour-pool-summary').classList.remove('hidden');
-            $('attendance-groups').classList.toggle('hidden', rows.length === 0);
-            $('labour-empty-message').classList.toggle('hidden', rows.length > 0);
+
+            $('pool-assigned-count').textContent =
+                assigned.length;
+
+            $('pool-unassigned-count').textContent =
+                unassigned.length;
+
+            $('pool-total-count').textContent =
+                assigned.length + unassigned.length;
+
+            $('labour-pool-summary')
+                .classList.remove('hidden');
+
+            $('attendance-groups').classList.toggle(
+                'hidden',
+                rows.length === 0
+            );
+
+            $('labour-empty-message').classList.toggle(
+                'hidden',
+                rows.length > 0
+            );
+
             filterRows();
             updateSummary();
         }
@@ -756,8 +879,14 @@
         }
 
         function visibleAssignedRows() {
-            return Array.from(assignedRows.children)
-                .filter((row) => !row.classList.contains('hidden'));
+            return Array.from(
+                assignedRows.querySelectorAll(
+                    '.attendance-row'
+                )
+            ).filter(
+                (row) =>
+                    ! row.classList.contains('hidden')
+            );
         }
 
         function selectedAttendanceRows() {
@@ -768,13 +897,127 @@
             });
         }
 
+        function refreshGroupHeadingVisibility(
+            tbody
+        ) {
+            const children = Array.from(
+                tbody.children
+            );
+
+            let currentHeading = null;
+            let currentRows = [];
+
+            const flush = () => {
+                if (!currentHeading) {
+                    return;
+                }
+
+                const hasVisibleRows =
+                    currentRows.some(
+                        (row) =>
+                            ! row.classList.contains(
+                                'hidden'
+                            )
+                    );
+
+                currentHeading.classList.toggle(
+                    'hidden',
+                    ! hasVisibleRows
+                );
+            };
+
+            children.forEach((child) => {
+                if (
+                    child.classList.contains(
+                        'labour-group-heading'
+                    )
+                ) {
+                    flush();
+                    currentHeading = child;
+                    currentRows = [];
+                    return;
+                }
+
+                if (
+                    child.classList.contains(
+                        'attendance-row'
+                    )
+                ) {
+                    currentRows.push(child);
+                }
+            });
+
+            flush();
+        }
+
         function filterRows() {
-            const term = String($('labour-table-search').value || '').trim().toLowerCase();
-            rows.forEach((row) => row.classList.toggle('hidden', Boolean(term) && !row.dataset.search.includes(term)));
-            $('assigned-visible-count').textContent = Array.from(assignedRows.children).filter((row) => !row.classList.contains('hidden')).length;
-            $('unassigned-visible-count').textContent = Array.from(unassignedRows.children).filter((row) => !row.classList.contains('hidden')).length;
-            $('assigned-section').classList.toggle('hidden', assignedRows.children.length === 0);
-            $('unassigned-section').classList.toggle('hidden', unassignedRows.children.length === 0);
+            const term = String(
+                $('labour-table-search').value || ''
+            )
+                .trim()
+                .toLowerCase();
+
+            rows.forEach((row) => {
+                row.classList.toggle(
+                    'hidden',
+                    Boolean(term)
+                    && ! row.dataset.search.includes(
+                        term
+                    )
+                );
+            });
+
+            refreshGroupHeadingVisibility(
+                assignedRows
+            );
+
+            refreshGroupHeadingVisibility(
+                unassignedRows
+            );
+
+            const visibleAssigned =
+                Array.from(
+                    assignedRows.querySelectorAll(
+                        '.attendance-row'
+                    )
+                ).filter(
+                    (row) =>
+                        ! row.classList.contains(
+                            'hidden'
+                        )
+                );
+
+            const visibleUnassigned =
+                Array.from(
+                    unassignedRows.querySelectorAll(
+                        '.attendance-row'
+                    )
+                ).filter(
+                    (row) =>
+                        ! row.classList.contains(
+                            'hidden'
+                        )
+                );
+
+            $('assigned-visible-count').textContent =
+                visibleAssigned.length;
+
+            $('unassigned-visible-count').textContent =
+                visibleUnassigned.length;
+
+            $('assigned-section').classList.toggle(
+                'hidden',
+                assignedRows.querySelectorAll(
+                    '.attendance-row'
+                ).length === 0
+            );
+
+            $('unassigned-section').classList.toggle(
+                'hidden',
+                unassignedRows.querySelectorAll(
+                    '.attendance-row'
+                ).length === 0
+            );
         }
 
         function standardLogoutTime() {
@@ -807,19 +1050,6 @@
                 return false;
             }
 
-            if (editing) {
-                const neutralRows = rows.filter((row) => {
-                    return !row.querySelector('.status-id').value;
-                });
-
-                if (neutralRows.length > 0) {
-                    showClientError(
-                        'Every existing labour row must have an attendance value before updating. Select P, A, or another Attendance Status for the neutral rows.'
-                    );
-                    return false;
-                }
-            }
-
             rows.forEach((row) => {
                 const selected = Boolean(
                     row.querySelector('.status-id').value
@@ -830,7 +1060,7 @@
                      * During create, neutral labour rows are display-only and
                      * are excluded from the submitted details array.
                      */
-                    if (!editing && !selected) {
+                    if (!selected) {
                         field.disabled = true;
                     } else {
                         field.disabled = false;
@@ -900,8 +1130,7 @@
                 if (sequence !== requestNo) return;
                 const payload = await response.json();
                 if (!response.ok) throw new Error(payload.message || 'Unable to load labour profiles.');
-                if (editing) render(payload.existing_labours || payload.labours || [], []);
-                else render(payload.assigned_labours || [], payload.unassigned_labours || []);
+                render(payload.assigned_labours || [], payload.unassigned_labours || []);
             } catch (error) {
                 render([], []);
                 $('labour-error-message').textContent = error.message || 'Unable to load labour profiles.';

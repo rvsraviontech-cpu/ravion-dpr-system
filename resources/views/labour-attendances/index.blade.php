@@ -100,9 +100,9 @@
 <x-rds.card :padding="false">
 
     <div class="w-full overflow-hidden">
-        <div class="max-h-[326px] overflow-y-auto overflow-x-hidden">
+        <div class="max-h-[336px] overflow-y-auto overflow-x-auto">
 
-            <table class="w-full table-fixed border-collapse">
+            <table class="w-full min-w-[900px] table-fixed border-collapse">
 
                 <colgroup>
                     <col style="width: 6%;">

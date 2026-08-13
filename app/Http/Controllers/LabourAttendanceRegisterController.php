@@ -383,7 +383,8 @@ class LabourAttendanceRegisterController extends Controller
 
                 'attendance.shift:id,code,name',
 
-                'labour:id,labour_code,full_name',
+                'labour:id,labour_code,full_name,labour_group_id',
+                'labour.labourGroup:id,code,name,sort_order',
 
                 'attendanceStatus:id,code,name,short_name,counts_as_present,counts_as_absent',
 
@@ -428,6 +429,22 @@ class LabourAttendanceRegisterController extends Controller
 
                     'rows' =>
                         $rows->values(),
+
+                    'labour_groups' =>
+                        $rows
+                            ->groupBy('labour_group_name')
+                            ->map(function (Collection $groupRows): array {
+                                $firstGroupRow = $groupRows->first();
+
+                                return [
+                                    'name' => $firstGroupRow['labour_group_name'],
+                                    'sort_order' => $firstGroupRow['labour_group_sort_order'],
+                                    'rows' => $groupRows->values(),
+                                    'summary' => $this->buildSummary($groupRows),
+                                ];
+                            })
+                            ->sortBy('sort_order')
+                            ->values(),
 
                     'summary' =>
                         $this->buildSummary(
@@ -693,6 +710,16 @@ class LabourAttendanceRegisterController extends Controller
                             ?->name
                         ?? '—',
 
+                    'labour_group_id' =>
+                        $first->labour?->labour_group_id,
+
+                    'labour_group_name' =>
+                        $first->labour?->labourGroup?->name
+                        ?? 'Un-grouped Labour',
+
+                    'labour_group_sort_order' =>
+                        (int) ($first->labour?->labourGroup?->sort_order ?? 999999),
+
                     'project_id' =>
                         $first
                             ->attendance
@@ -729,6 +756,8 @@ class LabourAttendanceRegisterController extends Controller
 
             ->sortBy([
                 ['project_name', 'asc'],
+                ['labour_group_sort_order', 'asc'],
+                ['labour_group_name', 'asc'],
                 ['labour_name', 'asc'],
             ])
 

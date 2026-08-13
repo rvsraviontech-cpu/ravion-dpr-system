@@ -69,6 +69,8 @@ use App\Http\Controllers\MaterialTypeController;
 use App\Http\Controllers\MaterialGradeController;
 use App\Http\Controllers\DprWorkItemController;
 use App\Http\Controllers\WorkDoneController;
+use App\Http\Controllers\LabourGroupController;
+use App\Http\Controllers\WeeklyAttendanceController;
 
 
 Route::get('/', function () {
@@ -214,7 +216,25 @@ Route::patch(
         )->name('photos.destroy');
 
         
-    
+    // Labour Group Master
+Route::get('/labour-groups', [LabourGroupController::class, 'index'])
+    ->name('labour-groups.index');
+Route::post('/labour-groups', [LabourGroupController::class, 'store'])
+    ->name('labour-groups.store');
+Route::put('/labour-groups/{labourGroup}', [LabourGroupController::class, 'update'])
+    ->name('labour-groups.update');
+Route::patch('/labour-groups/{labourGroup}/toggle-status', [LabourGroupController::class, 'toggleStatus'])
+    ->name('labour-groups.toggle-status');
+Route::get('/labour-groups/assignments/manage', [LabourGroupController::class, 'assignments'])
+    ->name('labour-groups.assignments');
+Route::put('/labour-groups/assignments/manage', [LabourGroupController::class, 'updateAssignments'])
+    ->name('labour-groups.assignments.update');
+
+// Admin / PMO Weekly Attendance bulk-entry tool.
+Route::get('/weekly-attendance', [WeeklyAttendanceController::class, 'index'])
+    ->name('weekly-attendance.index');
+Route::post('/weekly-attendance', [WeeklyAttendanceController::class, 'store'])
+    ->name('weekly-attendance.store');
 
     /*
 |--------------------------------------------------------------------------
@@ -959,6 +979,8 @@ Route::get(
     Route::post('/dprs/{id}/reject', [DprController::class, 'reject'])
         ->name('dprs.reject')
         ->middleware('permission:dpr_reviews.reject');
+
+        
 
         /*
 |--------------------------------------------------------------------------

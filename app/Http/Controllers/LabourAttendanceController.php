@@ -850,20 +850,14 @@ public function reopen(
                 ->whereDate('attendance_date', $attendanceDate)
                 ->firstOrFail();
 
-            ProjectAccess::authorize(
-                (int) $attendance->project_id
-            );
+            ProjectAccess::authorize((int) $attendance->project_id);
 
             $attendance->load([
                 'details' => function ($query): void {
-                    $query
-                        ->where('is_active', true)
+                    $query->where('is_active', true)
                         ->with([
-                            'labour.labourCategory',
-                            'labour.labourType',
+                            'labour.labourGroup',
                             'labour.designationRole',
-                            'labour.skillCategory',
-                            'labour.contractor',
                             'labour.defaultShift',
                             'attendanceStatus',
                             'workingStatus',
@@ -872,93 +866,93 @@ public function reopen(
                 },
             ]);
 
-            $existingLabours = $attendance->details
-                ->map(function (
-                    LabourAttendanceDetail $detail
-                ): array {
-                    $labour = $detail->labour;
+            $existingByLabour = $attendance->details->keyBy('labour_id');
+
+            $workingStatusIds = $this->workingAttendanceStatusIds();
+
+            $allocatedLabourIds = LabourAttendanceDetail::query()
+                ->select('labour_attendance_details.labour_id')
+                ->join('labour_attendances', 'labour_attendances.id', '=', 'labour_attendance_details.labour_attendance_id')
+                ->whereDate('labour_attendances.attendance_date', $attendanceDate)
+                ->where('labour_attendances.id', '!=', $attendance->id)
+                ->where('labour_attendances.project_id', '!=', $project->id)
+                ->where('labour_attendances.is_active', true)
+                ->where('labour_attendance_details.is_active', true)
+                ->whereNull('labour_attendance_details.deleted_at')
+                ->whereNull('labour_attendances.deleted_at')
+                ->whereIn('labour_attendance_details.attendance_status_id', $workingStatusIds);
+
+            $pool = Labour::query()
+                ->active()
+                ->whereNotIn('employment_status', ['exited', 'suspended'])
+                ->where(function (Builder $query) use ($project, $existingByLabour): void {
+                    $query->where('current_project_id', $project->id)
+                        ->orWhereNull('current_project_id')
+                        ->orWhereIn('id', $existingByLabour->keys());
+                })
+                ->where(function (Builder $query) use ($allocatedLabourIds, $existingByLabour): void {
+                    $query
+                        ->whereNotIn('id', $allocatedLabourIds)
+                        ->orWhereIn('id', $existingByLabour->keys());
+                })
+                ->with(['labourGroup', 'designationRole', 'defaultShift', 'currentProject'])
+                ->ordered()
+                ->get()
+                ->map(function (Labour $labour) use ($project, $existingByLabour): array {
+                    $detail = $existingByLabour->get($labour->id);
+                    $isAssigned = (int) $labour->current_project_id === (int) $project->id;
 
                     return [
-                        'detail_id' => $detail->id,
-                        'id' => $detail->labour_id,
-                        'labour_id' => $detail->labour_id,
-
-                        'full_name' =>
-                            $labour?->full_name
-                            ?? 'Unavailable Labour',
-
-                        'designation_role_id' =>
-                            $detail->designation_role_id
-                            ?? $labour?->designation_role_id,
-
-                        'designation_role_name' =>
-                            $detail->designationRole?->name
-                            ?? $labour?->designationRole?->name,
-
-                        'default_shift_id' =>
-                            $labour?->default_shift_id,
-
-                        'default_shift_name' =>
-                            $labour?->defaultShift?->name,
-
-                        'normal_shift_hours' =>
-                            (float) (
-                                $labour?->normal_shift_hours
-                                ?? 0
-                            ),
-
-                        'attendance_status_id' =>
-                            $detail->attendance_status_id,
-
-                        'attendance_status_name' =>
-                            $detail->attendanceStatus?->name,
-
-                        'working_status_id' =>
-                            $detail->working_status_id,
-
-                        'working_status_name' =>
-                            $detail->workingStatus?->name,
-
-                        'check_in_time' =>
-                            $this->formatAttendanceTime(
-                                $detail->check_in_time
-                            ),
-
-                        'check_out_time' =>
-                            $this->formatAttendanceTime(
-                                $detail->check_out_time
-                            ),
-
-                        'normal_hours' =>
-                            (float) $detail->normal_hours,
-
-                        'ot_hours' =>
-                            (float) $detail->ot_hours,
-
-                        'attendance_source' =>
-                            $detail->attendance_source
-                            ?? 'manual',
-
-                        'remarks' => $detail->remarks,
-
-                        'assignment_group' => 'existing',
+                        'detail_id' => $detail?->id,
+                        'id' => $labour->id,
+                        'labour_id' => $labour->id,
+                        'full_name' => $labour->full_name,
+                        'designation_role_id' => $detail?->designation_role_id ?? $labour->designation_role_id,
+                        'designation_role_name' => $detail?->designationRole?->name ?? $labour->designationRole?->name,
+                        'labour_group_id' => $labour->labour_group_id,
+                        'labour_group_name' => $labour->labourGroup?->name ?? 'Un-grouped Labour',
+                        'labour_group_sort_order' => $labour->labourGroup?->sort_order ?? 999999,
+                        'default_shift_id' => $labour->default_shift_id,
+                        'default_shift_name' => $labour->defaultShift?->name,
+                        'normal_shift_hours' => (float) ($labour->normal_shift_hours ?? 0),
+                        'attendance_status_id' => $detail?->attendance_status_id,
+                        'attendance_status_name' => $detail?->attendanceStatus?->name,
+                        'working_status_id' => $detail?->working_status_id,
+                        'working_status_name' => $detail?->workingStatus?->name,
+                        'check_in_time' => $this->formatAttendanceTime($detail?->check_in_time),
+                        'check_out_time' => $this->formatAttendanceTime($detail?->check_out_time),
+                        'normal_hours' => (float) ($detail?->normal_hours ?? 0),
+                        'ot_hours' => (float) ($detail?->ot_hours ?? 0),
+                        'attendance_source' => $detail?->attendance_source ?? 'manual',
+                        'remarks' => $detail?->remarks,
+                        'has_saved_attendance' => (bool) $detail,
+                        'assignment_group' => $isAssigned ? 'selected_project' : 'unassigned',
+                        'assignment_label' => $isAssigned ? 'Assigned to Project' : 'Unassigned',
                     ];
                 })
+                ->sortBy([
+                    ['labour_group_sort_order', 'asc'],
+                    ['labour_group_name', 'asc'],
+                    ['full_name', 'asc'],
+                ])
                 ->values();
+
+            $assigned = $pool->where('assignment_group', 'selected_project')->values();
+            $unassigned = $pool->where('assignment_group', 'unassigned')->values();
 
             return response()->json([
                 'mode' => 'edit',
                 'project_id' => $project->id,
                 'attendance_date' => $attendanceDate,
                 'attendance_id' => $attendance->id,
-                'available_count' => $existingLabours->count(),
-                'existing_count' => $existingLabours->count(),
-                'assigned_count' => 0,
-                'unassigned_count' => 0,
-                'assigned_labours' => [],
-                'unassigned_labours' => [],
-                'existing_labours' => $existingLabours,
-                'labours' => $existingLabours,
+                'available_count' => $pool->count(),
+                'existing_count' => $existingByLabour->count(),
+                'assigned_count' => $assigned->count(),
+                'unassigned_count' => $unassigned->count(),
+                'assigned_labours' => $assigned,
+                'unassigned_labours' => $unassigned,
+                'existing_labours' => $pool->where('has_saved_attendance', true)->values(),
+                'labours' => $pool,
             ]);
         }
 
@@ -1025,6 +1019,7 @@ public function reopen(
             })
             ->whereNotIn('id', $allocatedLabourIds)
             ->with([
+                'labourGroup',
                 'designationRole',
                 'defaultShift',
                 'currentProject',
@@ -1048,6 +1043,10 @@ public function reopen(
 
                     'designation_role_name' =>
                         $labour->designationRole?->name,
+
+                    'labour_group_id' => $labour->labour_group_id,
+                    'labour_group_name' => $labour->labourGroup?->name ?? 'Un-grouped Labour',
+                    'labour_group_sort_order' => $labour->labourGroup?->sort_order ?? 999999,
 
                     'default_shift_id' =>
                         $labour->default_shift_id,

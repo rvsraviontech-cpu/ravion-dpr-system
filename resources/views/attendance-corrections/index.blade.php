@@ -28,6 +28,8 @@
 
 @include('attendance-corrections.partials.statistics')
 
-@include('attendance-corrections.partials.table')
+<div class="max-h-[326px] overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm">
+    @include('attendance-corrections.partials.table')
+</div>
 
 @endsection

@@ -157,6 +157,7 @@ class AttendanceCorrectionController extends Controller
                         ->where('is_active', true)
                         ->with([
                             'labour.designationRole',
+                            'labour.labourGroup',
                             'attendanceStatus',
                             'workingStatus',
                         ])
@@ -173,11 +174,49 @@ class AttendanceCorrectionController extends Controller
                 ->all();
 
             /*
-             * Security rule:
-             * Engineers may add only labour assigned to the selected project
-             * or labour currently unassigned. Labour assigned to other projects
-             * must not be exposed.
+             * Correction Add Labour pool:
+             * - project-assigned labour omitted from this approved sheet,
+             * - currently unassigned labour,
+             * - never labour assigned to another project,
+             * - never labour already recorded on another project on this date.
              */
+            $conflictingLabourIds = LabourAttendanceDetail::query()
+                ->join(
+                    'labour_attendances',
+                    'labour_attendances.id',
+                    '=',
+                    'labour_attendance_details.labour_attendance_id'
+                )
+                ->whereDate(
+                    'labour_attendances.attendance_date',
+                    $selectedAttendance->attendance_date
+                )
+                ->where(
+                    'labour_attendances.id',
+                    '!=',
+                    $selectedAttendance->id
+                )
+                ->where(
+                    'labour_attendances.project_id',
+                    '!=',
+                    $selectedAttendance->project_id
+                )
+                ->where(
+                    'labour_attendances.is_active',
+                    true
+                )
+                ->whereNull('labour_attendances.deleted_at')
+                ->where(
+                    'labour_attendance_details.is_active',
+                    true
+                )
+                ->whereNull('labour_attendance_details.deleted_at')
+                ->pluck('labour_attendance_details.labour_id')
+                ->map(fn ($id): int => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+
             $availableLabours = Labour::query()
                 ->active()
                 ->where(function (Builder $query) use (
@@ -193,15 +232,29 @@ class AttendanceCorrectionController extends Controller
                 ->when(
                     ! empty($existingLabourIds),
                     fn (Builder $query): Builder =>
-                        $query->whereNotIn(
-                            'id',
-                            $existingLabourIds
-                        )
+                        $query->whereNotIn('id', $existingLabourIds)
+                )
+                ->when(
+                    ! empty($conflictingLabourIds),
+                    fn (Builder $query): Builder =>
+                        $query->whereNotIn('id', $conflictingLabourIds)
                 )
                 ->with([
                     'designationRole',
+                    'labourGroup',
                 ])
-                ->ordered()
+                ->orderByRaw(
+                    '
+                        CASE
+                            WHEN current_project_id = ? THEN 1
+                            WHEN current_project_id IS NULL THEN 2
+                            ELSE 3
+                        END
+                    ',
+                    [$selectedAttendance->project_id]
+                )
+                ->orderBy('labour_group_id')
+                ->orderBy('full_name')
                 ->get();
         }
 
@@ -1407,6 +1460,51 @@ class AttendanceCorrectionController extends Controller
                     throw ValidationException::withMessages([
                         "details.{$rowIndex}.labour_id" => [
                             'The selected labour is assigned to another project and cannot be added to this attendance sheet.',
+                        ],
+                    ]);
+                }
+
+                $hasConflictingAttendance = LabourAttendanceDetail::query()
+                    ->join(
+                        'labour_attendances',
+                        'labour_attendances.id',
+                        '=',
+                        'labour_attendance_details.labour_attendance_id'
+                    )
+                    ->where(
+                        'labour_attendance_details.labour_id',
+                        $labourId
+                    )
+                    ->where(
+                        'labour_attendance_details.is_active',
+                        true
+                    )
+                    ->whereNull('labour_attendance_details.deleted_at')
+                    ->whereDate(
+                        'labour_attendances.attendance_date',
+                        $attendance->attendance_date
+                    )
+                    ->where(
+                        'labour_attendances.id',
+                        '!=',
+                        $attendance->id
+                    )
+                    ->where(
+                        'labour_attendances.project_id',
+                        '!=',
+                        $attendance->project_id
+                    )
+                    ->where(
+                        'labour_attendances.is_active',
+                        true
+                    )
+                    ->whereNull('labour_attendances.deleted_at')
+                    ->exists();
+
+                if ($hasConflictingAttendance) {
+                    throw ValidationException::withMessages([
+                        "details.{$rowIndex}.labour_id" => [
+                            'This labour already has attendance recorded on another project for the same date.',
                         ],
                     ]);
                 }

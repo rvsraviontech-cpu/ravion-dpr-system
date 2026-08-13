@@ -24,6 +24,8 @@ class LabourAttendanceRegisterExport implements
 
     private array $projectHeaderRows = [];
 
+    private array $groupHeaderRows = [];
+
     private array $tableHeaderRows = [];
 
     private array $projectTotalRows = [];
@@ -203,6 +205,40 @@ class LabourAttendanceRegisterExport implements
                         $sheet->getRowDimension(
                             $rowNumber
                         )->setRowHeight(22);
+                    }
+
+                    /*
+                    |--------------------------------------------------------------------------
+                    | Labour Group Headers
+                    |--------------------------------------------------------------------------
+                    */
+
+                    foreach ($this->groupHeaderRows as $rowNumber) {
+                        $sheet->mergeCells("A{$rowNumber}:{$lastColumn}{$rowNumber}");
+
+                        $sheet->getStyle(
+                            "A{$rowNumber}:{$lastColumn}{$rowNumber}"
+                        )->applyFromArray([
+                            'font' => [
+                                'bold' => true,
+                                'size' => 9,
+                                'color' => ['rgb' => '1E3A8A'],
+                            ],
+                            'fill' => [
+                                'fillType' => Fill::FILL_SOLID,
+                                'startColor' => ['rgb' => 'EFF6FF'],
+                            ],
+                            'alignment' => [
+                                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                                'vertical' => Alignment::VERTICAL_CENTER,
+                            ],
+                            'borders' => [
+                                'allBorders' => [
+                                    'borderStyle' => Border::BORDER_THIN,
+                                    'color' => ['rgb' => '93C5FD'],
+                                ],
+                            ],
+                        ]);
                     }
 
                     /*
@@ -511,12 +547,6 @@ class LabourAttendanceRegisterExport implements
 
     private function buildSheetRows(): void
     {
-        /*
-         * Do not insert completely empty rows.
-         * Laravel Excel may skip them, which causes styling row numbers
-         * to move and can merge over the date heading row.
-         */
-
         $this->sheetRows[] = [
             'Ravion ERP - Labour Attendance Register',
         ];
@@ -526,225 +556,71 @@ class LabourAttendanceRegisterExport implements
         ];
 
         foreach ($this->projectGroups as $projectGroup) {
-            $projectName =
-                $projectGroup['project_name']
-                ?? 'Unknown Project';
-
-            $projectCode =
-                $projectGroup['project_code']
-                ?? null;
+            $projectName = $projectGroup['project_name'] ?? 'Unknown Project';
+            $projectCode = $projectGroup['project_code'] ?? null;
 
             $projectHeading = $projectName;
 
             if ($projectCode) {
-                $projectHeading .=
-                    " ({$projectCode})";
+                $projectHeading .= " ({$projectCode})";
             }
 
             $projectHeading .=
                 ' | Labour: '
-                . (
-                    $projectGroup['summary']['total_labour']
-                    ?? 0
-                )
+                . ($projectGroup['summary']['total_labour'] ?? 0)
                 . ' | P: '
-                . (
-                    $projectGroup['summary']['present']
-                    ?? 0
-                )
+                . ($projectGroup['summary']['present'] ?? 0)
                 . ' | A: '
-                . (
-                    $projectGroup['summary']['absent']
-                    ?? 0
-                )
+                . ($projectGroup['summary']['absent'] ?? 0)
                 . ' | Normal: '
                 . number_format(
-                    (float) (
-                        $projectGroup['summary']['normal_hours']
-                        ?? 0
-                    ),
+                    (float) ($projectGroup['summary']['normal_hours'] ?? 0),
                     2
                 )
                 . ' | OT: '
                 . number_format(
-                    (float) (
-                        $projectGroup['summary']['ot_hours']
-                        ?? 0
-                    ),
+                    (float) ($projectGroup['summary']['ot_hours'] ?? 0),
                     2
                 );
 
-            $this->projectHeaderRows[] =
-                count($this->sheetRows) + 1;
+            $this->projectHeaderRows[] = count($this->sheetRows) + 1;
+            $this->sheetRows[] = [$projectHeading];
 
-            $this->sheetRows[] = [
-                $projectHeading,
-            ];
+            $this->tableHeaderRows[] = count($this->sheetRows) + 1;
+            $this->sheetRows[] = $this->columnHeaders();
 
-            $this->tableHeaderRows[] =
-                count($this->sheetRows) + 1;
+            $serial = 1;
 
-            $this->sheetRows[] =
-                $this->columnHeaders();
-
-            foreach (
-                $projectGroup['rows']
-                as $row
-            ) {
-                $excelRow = [
-                    $row['labour_name']
-                        ?? 'Unavailable Labour',
-
-                    $row['designation']
-                        ?? '—',
+            foreach ($projectGroup['labour_groups'] as $labourGroup) {
+                $this->groupHeaderRows[] = count($this->sheetRows) + 1;
+                $this->sheetRows[] = [
+                    $labourGroup['name'] ?? 'Un-grouped Labour',
                 ];
 
-                foreach (
-                    $this->dateColumns
-                    as $dateColumn
-                ) {
-                    $dayEntry =
-                        $row['days'][
-                            $dateColumn['key']
-                        ] ?? null;
+                foreach ($labourGroup['rows'] as $row) {
+                    $excelRow = [
+                        $serial . '. ' . ($row['labour_name'] ?? 'Unavailable Labour'),
+                        $row['designation'] ?? '—',
+                    ];
 
-                    $excelRow[] =
-                        $dayEntry['code']
-                        ?? '—';
+                    $serial++;
+
+                    foreach ($this->dateColumns as $dateColumn) {
+                        $dayEntry = $row['days'][$dateColumn['key']] ?? null;
+                        $excelRow[] = $dayEntry['code'] ?? '—';
+                    }
+
+                    $excelRow[] = $row['totals']['present'] ?? 0;
+                    $excelRow[] = $row['totals']['absent'] ?? 0;
+                    $excelRow[] = $row['totals']['half_day'] ?? 0;
+                    $excelRow[] = $row['totals']['leave'] ?? 0;
+                    $excelRow[] = (float) ($row['totals']['normal_hours'] ?? 0);
+                    $excelRow[] = (float) ($row['totals']['ot_hours'] ?? 0);
+
+                    $this->sheetRows[] = $excelRow;
                 }
-
-                $excelRow[] =
-                    $row['totals']['present']
-                    ?? 0;
-
-                $excelRow[] =
-                    $row['totals']['absent']
-                    ?? 0;
-
-                $excelRow[] =
-                    $row['totals']['half_day']
-                    ?? 0;
-
-                $excelRow[] =
-                    $row['totals']['leave']
-                    ?? 0;
-
-                $excelRow[] =
-                    (float) (
-                        $row['totals']['normal_hours']
-                        ?? 0
-                    );
-
-                $excelRow[] =
-                    (float) (
-                        $row['totals']['ot_hours']
-                        ?? 0
-                    );
-
-                $this->sheetRows[] =
-                    $excelRow;
             }
-
-            $this->projectTotalRows[] =
-                count($this->sheetRows) + 1;
-
-            $totalRow = [
-                'Project Totals',
-
-                (
-                    $projectGroup['summary']['total_labour']
-                    ?? 0
-                ) . ' Labour',
-            ];
-
-            foreach (
-                $this->dateColumns
-                as $dateColumn
-            ) {
-                $totalRow[] = '';
-            }
-
-            $totalRow[] =
-                $projectGroup['summary']['present']
-                ?? 0;
-
-            $totalRow[] =
-                $projectGroup['summary']['absent']
-                ?? 0;
-
-            $totalRow[] =
-                $projectGroup['summary']['half_day']
-                ?? 0;
-
-            $totalRow[] =
-                $projectGroup['summary']['leave']
-                ?? 0;
-
-            $totalRow[] =
-                (float) (
-                    $projectGroup['summary']['normal_hours']
-                    ?? 0
-                );
-
-            $totalRow[] =
-                (float) (
-                    $projectGroup['summary']['ot_hours']
-                    ?? 0
-                );
-
-            $this->sheetRows[] =
-                $totalRow;
         }
-
-        $this->grandTotalRow =
-            count($this->sheetRows) + 1;
-
-        $grandTotal = [
-            'Grand Total',
-
-            (
-                $this->summary['total_labour']
-                ?? 0
-            ) . ' Labour',
-        ];
-
-        foreach (
-            $this->dateColumns
-            as $dateColumn
-        ) {
-            $grandTotal[] = '';
-        }
-
-        $grandTotal[] =
-            $this->summary['present']
-            ?? 0;
-
-        $grandTotal[] =
-            $this->summary['absent']
-            ?? 0;
-
-        $grandTotal[] =
-            $this->summary['half_day']
-            ?? 0;
-
-        $grandTotal[] =
-            $this->summary['leave']
-            ?? 0;
-
-        $grandTotal[] =
-            (float) (
-                $this->summary['normal_hours']
-                ?? 0
-            );
-
-        $grandTotal[] =
-            (float) (
-                $this->summary['ot_hours']
-                ?? 0
-            );
-
-        $this->sheetRows[] =
-            $grandTotal;
     }
 
     private function columnHeaders(): array
