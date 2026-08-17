@@ -3,7 +3,7 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2 sm:text-sm';
     $labelClass = 'mb-1 block text-sm font-semibold text-gray-700';
 @endphp
 
@@ -11,7 +11,7 @@
 
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Create Daily Progress Report
             </h1>
 
@@ -21,7 +21,7 @@
         </div>
 
         <a href="{{ route('dprs.index') }}"
-           class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+           class="inline-flex w-full items-center justify-center rounded-lg bg-gray-600 px-5 py-3 font-semibold text-white hover:bg-gray-700 sm:w-auto sm:py-2.5">
             Back
         </a>
     </div>
@@ -48,7 +48,7 @@
 
         @csrf
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="DPR Header"
@@ -133,7 +133,7 @@
             <div class="mt-5 flex flex-wrap items-center gap-3">
                 <button type="button"
                         id="loadExecutionButton"
-                        class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                        class="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-2.5">
                     Load Daily Execution
                 </button>
 
@@ -149,94 +149,276 @@
         </div>
 
         <div id="executionSummary"
-             class="mt-6 hidden grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-7">
+             class="mt-6 hidden grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         </div>
 
         <div id="executionSections"
              class="mt-6 hidden space-y-6">
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="labour_attendances">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Labour Attendance</h2>
-                        <p class="mt-1 text-sm text-gray-500">Daily attendance sheets already recorded for the Project and Date.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="labour_attendances"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Labour Attendance</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Daily attendance sheets already recorded for the Project and Date.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="labour_attendances"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="labour_attendances"></div>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="work_done">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Work Done</h2>
-                        <p class="mt-1 text-sm text-gray-500">Physical work activities recorded during the day.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="work_done"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Work Done</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Physical work activities recorded during the day.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="work_done"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="work_done"></div>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="material_received">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Material Received</h2>
-                        <p class="mt-1 text-sm text-gray-500">Material receipts entered for the day.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="material_received"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Material Received</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Material receipts entered for the day.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="material_received"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="material_received"></div>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="material_consumed">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Material Consumed</h2>
-                        <p class="mt-1 text-sm text-gray-500">Material consumption already recorded for this Project and Date.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="material_consumed"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Material Consumed</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Material consumption already recorded for this Project and Date.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="material_consumed"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="material_consumed"></div>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="material_required">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Material Required</h2>
-                        <p class="mt-1 text-sm text-gray-500">Requirements created during this DPR day, normally for upcoming work.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="material_required"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Material Required</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Requirements created during this DPR day, normally for upcoming work.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="material_required"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="material_required"></div>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="site_issues">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Site Issues</h2>
-                        <p class="mt-1 text-sm text-gray-500">Issues and delays reported during the selected day.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="site_issues"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Site Issues</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Issues and delays reported during the selected day.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="site_issues"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="site_issues"></div>
+                </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm"
-                 data-section="tomorrow_plans">
-                <div class="flex items-center justify-between border-b border-gray-200 p-5">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-800">Tomorrow Plan</h2>
-                        <p class="mt-1 text-sm text-gray-500">Planning entries created during the DPR day for upcoming execution.</p>
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="tomorrow_plans"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Tomorrow Plan</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Planning entries created during the DPR day for upcoming execution.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
                     </div>
-                    <button type="button" class="section-toggle text-sm font-semibold text-blue-700">Unselect All</button>
                 </div>
-                <div class="space-y-3 p-5" data-list="tomorrow_plans"></div>
+
+                <div class="section-body hidden">
+                    <div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2.5">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <button type="button"
+                                class="section-toggle text-xs font-semibold text-blue-700">
+                            Unselect All
+                        </button>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="tomorrow_plans"></div>
+                </div>
             </div>
 
         </div>
@@ -254,29 +436,39 @@
 
 
         {{-- Machinery / Equipment --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm" x-data="{ machineryOpen: false }">
 
-            <div class="flex flex-col gap-3 border-b border-gray-200 p-5 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800">
-                        Machinery / Equipment Used
-                    </h2>
-
-                    <p class="mt-1 text-sm text-gray-500">
-                        Add machinery or equipment used during the day.
-                    </p>
-                </div>
-
+            <div class="bg-[#0F2A52] px-4 py-3 text-white">
                 <button type="button"
-                        id="addMachineryButton"
-                        class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
-                    + Add Machinery / Equipment
+                        @click="machineryOpen = !machineryOpen"
+                        class="flex w-full items-center justify-between gap-3 text-left">
+                    <div>
+                        <h2 class="text-base font-bold sm:text-lg">Machinery / Equipment Used</h2>
+                        <p class="mt-1 text-xs text-blue-100">
+                            Optional for now. The standalone machinery module will be expanded separately.
+                        </p>
+                    </div>
+                    <span class="text-lg transition-transform"
+                          :class="machineryOpen ? 'rotate-180' : ''">⌄</span>
                 </button>
             </div>
 
+            <div x-show="machineryOpen" x-cloak>
+                <div class="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 p-4 md:flex-row md:items-center md:justify-between">
+                    <div class="text-sm text-gray-600">
+                        Add machinery only when it was actually used during the day.
+                    </div>
+
+                    <button type="button"
+                            id="addMachineryButton"
+                            class="w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 md:w-auto md:py-2">
+                        + Add Machinery / Equipment
+                    </button>
+                </div>
+
             <div id="machineryRows" class="divide-y divide-gray-200">
 
-                <div class="machinery-row p-5">
+                <div class="machinery-row p-4 sm:p-5">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
 
                         <div class="xl:col-span-2">
@@ -348,7 +540,7 @@
             </div>
 
             <template id="machineryRowTemplate">
-                <div class="machinery-row p-5">
+                <div class="machinery-row p-4 sm:p-5">
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
 
                         <div class="xl:col-span-2">
@@ -417,46 +609,87 @@
                     </div>
                 </div>
             </template>
+            </div>
+
         </div>
 
         {{-- DPR Photo Upload --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
-            <x-rds.section-title
-                title="DPR Photo Upload"
-                subtitle="Upload additional site photos for this DPR."
-                icon="📷"
-            />
+            <div class="mb-5 rounded-xl bg-[#0F2A52] px-4 py-3 text-white">
+                <h2 class="text-lg font-bold sm:text-xl">DPR Photo Upload</h2>
+                <p class="mt-1 text-xs text-blue-100">
+                    Take site photos one by one or select multiple photos from the gallery.
+                </p>
+            </div>
 
+            {{-- Final accumulated file input submitted to Laravel --}}
             <input type="file"
                    name="photos[]"
                    id="dprPhotos"
                    multiple
                    accept="image/jpeg,image/png,image/webp,image/*"
-                   class="{{ $inputClass }}">
+                   class="hidden">
 
-            <p class="mt-2 text-xs text-gray-500">
-                JPG, PNG or WEBP. Maximum 10 MB per image.
-            </p>
+            {{-- Camera picker: one capture can be added at a time --}}
+            <input type="file"
+                   id="dprCameraInput"
+                   accept="image/*"
+                   capture="environment"
+                   class="hidden">
+
+            {{-- Gallery picker --}}
+            <input type="file"
+                   id="dprGalleryInput"
+                   multiple
+                   accept="image/jpeg,image/png,image/webp,image/*"
+                   class="hidden">
+
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button"
+                        id="takeDprPhotoButton"
+                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0F2A52] px-4 py-3 text-sm font-semibold text-white">
+                    <span aria-hidden="true">📷</span>
+                    Take Photo
+                </button>
+
+                <button type="button"
+                        id="chooseDprPhotosButton"
+                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700">
+                    <span aria-hidden="true">🖼️</span>
+                    Gallery
+                </button>
+            </div>
+
+            <div class="mt-3 flex items-center justify-between gap-3">
+                <p class="text-xs text-gray-500">
+                    JPG, PNG or WEBP. Maximum 10 MB per image.
+                </p>
+
+                <span id="dprPhotoCount"
+                      class="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                    0 photos
+                </span>
+            </div>
 
             <div id="dprPhotoPreview"
-                 class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                 class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             </div>
         </div>
 
         <div id="submitBar"
-             class="sticky bottom-0 z-20 mt-6 hidden border-t border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur">
+             class="sticky bottom-[68px] z-30 mt-6 hidden border-t border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur lg:bottom-0">
 
             <div class="mx-auto flex max-w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
 
                 <div class="text-sm text-gray-600">
-                    Selected execution records:
+                    Selected DPR items:
                     <span id="selectedCount" class="font-bold text-gray-900">0</span>
                 </div>
 
                 <button type="submit"
                         id="submitDprButton"
-                        class="rounded-lg bg-blue-600 px-8 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        class="w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-8"
                         disabled>
                     Submit DPR for PMO Review
                 </button>
@@ -577,6 +810,11 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!list || !section) return;
 
         list.innerHTML = '';
+
+        const countBadge = section.querySelector('.section-count');
+        if (countBadge) {
+            countBadge.textContent = String(records?.length || 0);
+        }
 
         if (!records || records.length === 0) {
             list.innerHTML = `
@@ -715,6 +953,12 @@ document.addEventListener('DOMContentLoaded', function () {
             const checked = section.querySelectorAll('.execution-checkbox:checked');
             const toggle = section.querySelector('.section-toggle');
 
+            const selectedLabel = section.querySelector('.section-selected-count');
+
+            if (selectedLabel) {
+                selectedLabel.textContent = String(checked.length);
+            }
+
             if (!toggle || boxes.length === 0) {
                 if (toggle) toggle.classList.add('hidden');
                 return;
@@ -795,6 +1039,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 renderSection(key, payload[key] || []);
             });
 
+            document.querySelectorAll('[data-section]').forEach(section => {
+                const count = Number(section.querySelector('.section-count')?.textContent || 0);
+                const body = section.querySelector('.section-body');
+                const collapse = section.querySelector('.section-collapse');
+                const chevron = section.querySelector('.section-chevron');
+
+                // Keep sections collapsed by default on mobile.
+                // On desktop, open sections that actually contain records.
+                const shouldOpen = window.matchMedia('(min-width: 1024px)').matches && count > 0;
+
+                section.dataset.open = shouldOpen ? '1' : '0';
+                body?.classList.toggle('hidden', !shouldOpen);
+                collapse?.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+                chevron?.classList.toggle('rotate-180', shouldOpen);
+            });
+
             const total = Object.values(payload.counts || {})
                 .reduce((sum, value) => sum + Number(value || 0), 0);
 
@@ -867,6 +1127,26 @@ document.addEventListener('DOMContentLoaded', function () {
         existingNotice.classList.add('hidden');
         loadStatus.textContent = 'Date changed. Click “Load Daily Execution”.';
     });
+
+    document.querySelectorAll('.section-collapse')
+        .forEach(button => {
+            button.addEventListener('click', function () {
+                const section = button.closest('[data-section]');
+                const body = section?.querySelector('.section-body');
+                const chevron = section?.querySelector('.section-chevron');
+
+                if (!section || !body) return;
+
+                const isOpen = section.dataset.open === '1';
+                section.dataset.open = isOpen ? '0' : '1';
+                body.classList.toggle('hidden', isOpen);
+                button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+
+                if (chevron) {
+                    chevron.classList.toggle('rotate-180', !isOpen);
+                }
+            });
+        });
 
     document.querySelectorAll('.section-toggle')
         .forEach(button => {
@@ -996,79 +1276,176 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /*
     |--------------------------------------------------------------------------
-    | DPR Photo Preview
+    | DPR Photos - Accumulated Camera + Gallery Selection
     |--------------------------------------------------------------------------
+    |
+    | Mobile camera capture commonly returns only one file per invocation.
+    | We therefore keep our own selectedFiles array and rebuild the final
+    | photos[] FileList using DataTransfer before form submission.
+    |
     */
 
     const dprPhotos = document.getElementById('dprPhotos');
+    const dprCameraInput = document.getElementById('dprCameraInput');
+    const dprGalleryInput = document.getElementById('dprGalleryInput');
+    const takeDprPhotoButton = document.getElementById('takeDprPhotoButton');
+    const chooseDprPhotosButton = document.getElementById('chooseDprPhotosButton');
     const dprPhotoPreview = document.getElementById('dprPhotoPreview');
+    const dprPhotoCount = document.getElementById('dprPhotoCount');
 
-    dprPhotos?.addEventListener('change', function () {
+    let selectedDprPhotos = [];
+
+    function photoKey(file) {
+        return `${file.name}-${file.size}-${file.lastModified}`;
+    }
+
+    function syncDprPhotoInput() {
+        const transfer = new DataTransfer();
+
+        selectedDprPhotos.forEach(file => {
+            transfer.items.add(file);
+        });
+
+        dprPhotos.files = transfer.files;
+
+        const count = selectedDprPhotos.length;
+
+        dprPhotoCount.textContent =
+            `${count} ${count === 1 ? 'photo' : 'photos'}`;
+
+        updateSelectedCount();
+    }
+
+    function renderDprPhotoPreview() {
         dprPhotoPreview.innerHTML = '';
 
-        const files =
-            Array.from(this.files || []);
+        selectedDprPhotos.forEach((file, index) => {
+            const url = URL.createObjectURL(file);
 
-        const oversized =
-            files.find(
-                file =>
-                    file.size > 10 * 1024 * 1024
-            );
-
-        if (oversized) {
-            alert(
-                `"${oversized.name}" is larger than 10 MB.`
-            );
-
-            this.value = '';
-            updateSelectedCount();
-            return;
-        }
-
-        files.forEach(file => {
-            const url =
-                URL.createObjectURL(file);
-
-            const card =
-                document.createElement('div');
-
+            const card = document.createElement('div');
             card.className =
-                'overflow-hidden rounded-lg border border-gray-200 bg-white';
+                'overflow-hidden rounded-xl border border-gray-200 bg-white';
 
-            const image =
-                document.createElement('img');
-
+            const image = document.createElement('img');
             image.src = url;
             image.alt = file.name;
-            image.className =
-                'h-28 w-full object-cover';
+            image.className = 'h-28 w-full object-cover';
 
             image.onload = function () {
                 URL.revokeObjectURL(url);
             };
 
-            const meta =
-                document.createElement('div');
+            const meta = document.createElement('div');
+            meta.className = 'p-2';
 
-            meta.className =
-                'p-2 text-xs text-gray-600';
+            const fileName = document.createElement('div');
+            fileName.className =
+                'truncate text-[11px] text-gray-500';
+            fileName.textContent = file.name;
 
-            meta.textContent =
-                `${file.name} • ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+            const footer = document.createElement('div');
+            footer.className =
+                'mt-2 flex items-center justify-between gap-2';
 
-            card.append(
-                image,
-                meta
-            );
+            const size = document.createElement('span');
+            size.className = 'text-[11px] text-gray-400';
+            size.textContent =
+                `${(file.size / 1024 / 1024).toFixed(2)} MB`;
 
-            dprPhotoPreview.appendChild(
-                card
-            );
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className =
+                'rounded-lg bg-red-50 px-2 py-1 text-xs font-semibold text-red-700';
+            remove.textContent = 'Remove';
+
+            remove.addEventListener('click', function () {
+                selectedDprPhotos.splice(index, 1);
+                renderDprPhotoPreview();
+                syncDprPhotoInput();
+            });
+
+            footer.append(size, remove);
+            meta.append(fileName, footer);
+            card.append(image, meta);
+            dprPhotoPreview.appendChild(card);
+        });
+    }
+
+    function addDprPhotos(fileList) {
+        const incoming = Array.from(fileList || []);
+
+        if (incoming.length === 0) {
+            return;
+        }
+
+        const oversized = incoming.find(
+            file => file.size > 10 * 1024 * 1024
+        );
+
+        if (oversized) {
+            alert(`"${oversized.name}" is larger than 10 MB.`);
+            return;
+        }
+
+        const allowedTypes = [
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+        ];
+
+        const invalid = incoming.find(file => {
+            return file.type && !allowedTypes.includes(file.type);
         });
 
-        submitBar.classList.remove('hidden');
-        updateSelectedCount();
+        if (invalid) {
+            alert(`"${invalid.name}" is not a supported image format.`);
+            return;
+        }
+
+        const existingKeys = new Set(
+            selectedDprPhotos.map(photoKey)
+        );
+
+        incoming.forEach(file => {
+            const key = photoKey(file);
+
+            if (!existingKeys.has(key)) {
+                selectedDprPhotos.push(file);
+                existingKeys.add(key);
+            }
+        });
+
+        renderDprPhotoPreview();
+        syncDprPhotoInput();
+
+        if (selectedDprPhotos.length > 0) {
+            submitBar.classList.remove('hidden');
+        }
+    }
+
+    takeDprPhotoButton?.addEventListener('click', function () {
+        dprCameraInput.click();
     });
+
+    chooseDprPhotosButton?.addEventListener('click', function () {
+        dprGalleryInput.click();
+    });
+
+    dprCameraInput?.addEventListener('change', function () {
+        addDprPhotos(this.files);
+
+        // Reset so another camera capture can be added immediately.
+        this.value = '';
+    });
+
+    dprGalleryInput?.addEventListener('change', function () {
+        addDprPhotos(this.files);
+
+        // Reset so the same gallery can be opened again.
+        this.value = '';
+    });
+
+    syncDprPhotoInput();
 
     if (project.value && dprDate.value) {
         loadExecution();

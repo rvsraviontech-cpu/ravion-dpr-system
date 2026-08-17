@@ -3,7 +3,7 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2 sm:text-sm';
 
     $roleName = auth()->user()->role?->name;
 
@@ -33,7 +33,7 @@
     {{-- Page Header --}}
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Daily Work Execution
             </h1>
 
@@ -43,7 +43,7 @@
         </div>
 
         <a href="{{ route('work-done.create') }}"
-           class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white shadow-sm hover:bg-blue-700">
+           class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto sm:py-2.5">
             + Add Work Execution
         </a>
     </div>
@@ -62,14 +62,14 @@
     @endif
 
     {{-- Summary --}}
-    <div class="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div class="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Register Entries
             </div>
 
-            <div class="mt-2 text-3xl font-bold text-gray-800">
+            <div class="mt-1 text-2xl font-bold text-gray-800 sm:mt-2 sm:text-3xl">
                 {{ number_format($workDoneHeaders->total()) }}
             </div>
 
@@ -78,12 +78,12 @@
             </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Activities
             </div>
 
-            <div class="mt-2 text-3xl font-bold text-gray-800">
+            <div class="mt-1 text-2xl font-bold text-gray-800 sm:mt-2 sm:text-3xl">
                 {{ number_format($pageActivities) }}
             </div>
 
@@ -92,12 +92,12 @@
             </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Material Links
             </div>
 
-            <div class="mt-2 text-3xl font-bold text-gray-800">
+            <div class="mt-1 text-2xl font-bold text-gray-800 sm:mt-2 sm:text-3xl">
                 {{ number_format($pageMaterials) }}
             </div>
 
@@ -106,12 +106,12 @@
             </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Photos
             </div>
 
-            <div class="mt-2 text-3xl font-bold text-gray-800">
+            <div class="mt-1 text-2xl font-bold text-gray-800 sm:mt-2 sm:text-3xl">
                 {{ number_format($pagePhotos) }}
             </div>
 
@@ -123,7 +123,145 @@
     </div>
 
     {{-- Filters --}}
-    <form method="GET"
+    <div class="mb-6" x-data="{ filtersOpen: false }">
+
+        <button
+            type="button"
+            @click="filtersOpen = !filtersOpen"
+            class="mb-3 flex w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 text-left shadow-sm lg:hidden"
+        >
+            <div>
+                <div class="text-sm font-bold text-gray-800">
+                    Filters
+                </div>
+                <div class="text-xs text-gray-500">
+                    Project, date, DPR link and search
+                </div>
+            </div>
+
+            <svg
+                class="h-5 w-5 text-gray-500 transition-transform"
+                :class="filtersOpen ? 'rotate-180' : ''"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+            >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+
+        <div x-show="filtersOpen" x-cloak class="lg:hidden">
+<form method="GET"
+          action="{{ route('work-done.index') }}"
+          class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
+
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Project
+                </label>
+
+                <select name="project_id"
+                        class="{{ $inputClass }}">
+                    <option value="">All Projects</option>
+
+                    @foreach($projects as $project)
+                        <option value="{{ $project->id }}"
+                            {{ (string) request('project_id') === (string) $project->id ? 'selected' : '' }}>
+                            {{ $project->project_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Work Date
+                </label>
+
+                <input type="date"
+                       name="work_date"
+                       value="{{ request('work_date') }}"
+                       class="{{ $inputClass }}">
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Engineer
+                </label>
+
+                @if($roleName === 'Engineer')
+                    <input type="text"
+                           value="{{ auth()->user()->name }}"
+                           class="{{ $inputClass }} bg-gray-100"
+                           readonly>
+                @else
+                    <select name="user_id"
+                            class="{{ $inputClass }}">
+                        <option value="">All Engineers</option>
+
+                        @foreach($engineers as $engineer)
+                            <option value="{{ $engineer->id }}"
+                                {{ (string) request('user_id') === (string) $engineer->id ? 'selected' : '' }}>
+                                {{ $engineer->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @endif
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    DPR Link
+                </label>
+
+                <select name="dpr_link"
+                        class="{{ $inputClass }}">
+                    <option value="">All</option>
+
+                    <option value="unlinked"
+                        {{ request('dpr_link') === 'unlinked' ? 'selected' : '' }}>
+                        Has Unlinked Activity
+                    </option>
+
+                    <option value="linked"
+                        {{ request('dpr_link') === 'linked' ? 'selected' : '' }}>
+                        Has Linked Activity
+                    </option>
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1 block text-sm font-semibold text-gray-700">
+                    Search
+                </label>
+
+                <input type="text"
+                       name="search"
+                       value="{{ request('search') }}"
+                       class="{{ $inputClass }}"
+                       placeholder="Project, activity, contractor">
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit"
+                        class="w-full rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-2.5">
+                    Filter
+                </button>
+
+                <a href="{{ route('work-done.index') }}"
+                   class="w-full rounded-lg bg-gray-600 px-5 py-3 text-center text-sm font-semibold text-white hover:bg-gray-700 sm:w-auto sm:py-2.5">
+                    Clear
+                </a>
+            </div>
+
+        </div>
+    </form>
+        </div>
+
+        <div class="hidden lg:block">
+<form method="GET"
           action="{{ route('work-done.index') }}"
           class="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
 
@@ -230,9 +368,270 @@
 
         </div>
     </form>
+        </div>
+    </div>
+
+    {{-- Mobile Work Execution Register --}}
+    <div class="space-y-4 lg:hidden">
+
+        <div class="flex items-end justify-between">
+            <div>
+                <h2 class="text-lg font-bold text-gray-800">
+                    Work Execution Register
+                </h2>
+
+                <p class="text-xs text-gray-500">
+                    {{ $workDoneHeaders->total() }} matching entr{{ $workDoneHeaders->total() === 1 ? 'y' : 'ies' }}
+                </p>
+            </div>
+
+            <div class="text-xs text-gray-500">
+                {{ $workDoneHeaders->firstItem() ?? 0 }}–{{ $workDoneHeaders->lastItem() ?? 0 }}
+            </div>
+        </div>
+
+        @forelse($workDoneHeaders as $index => $header)
+            @php
+                $activityCount = $header->items->count();
+
+                $materialCount = $header->items->sum(
+                    fn ($item) => $item->materialConsumptions->count()
+                );
+
+                $photoCount = $header->items->sum(
+                    fn ($item) => $item->photos->count()
+                );
+
+                $linkedCount = $header->items
+                    ->whereNotNull('dpr_id')
+                    ->count();
+
+                $unlinkedCount = $activityCount - $linkedCount;
+
+                $allLinked = $activityCount > 0 && $linkedCount === $activityCount;
+
+                $hasLinked = $linkedCount > 0;
+
+                $canEditHeader = $unlinkedCount > 0;
+                $canDeleteHeader = ! $hasLinked;
+
+                $statusClass = match (strtolower((string) ($header->status ?: 'Draft'))) {
+                    'approved', 'completed' => 'bg-green-100 text-green-700',
+                    'rejected' => 'bg-red-100 text-red-700',
+                    'submitted', 'pending' => 'bg-amber-100 text-amber-700',
+                    default => 'bg-slate-100 text-slate-700',
+                };
+            @endphp
+
+            <article class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+
+                <div class="bg-[#0F2A52] px-4 py-4 text-white">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-xs font-medium text-blue-100">
+                                {{ $header->work_date?->format('d M Y') ?? '-' }}
+                                @if($header->work_date)
+                                    · {{ $header->work_date->format('D') }}
+                                @endif
+                            </p>
+
+                            <h3 class="mt-1 truncate text-base font-bold">
+                                {{ $header->project?->project_name ?? '-' }}
+                            </h3>
+
+                            @if($roleName !== 'Engineer')
+                                <p class="mt-1 truncate text-xs text-blue-100">
+                                    {{ $header->engineer?->name ?? '-' }}
+                                </p>
+                            @endif
+                        </div>
+
+                        <span class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $statusClass }}">
+                            {{ $header->status ?: 'Draft' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="p-4">
+
+                    <div class="grid grid-cols-4 gap-2">
+                        <div class="rounded-xl bg-blue-50 px-2 py-3 text-center">
+                            <div class="text-lg font-bold text-blue-800">
+                                {{ $activityCount }}
+                            </div>
+                            <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700">
+                                Activities
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-orange-50 px-2 py-3 text-center">
+                            <div class="text-lg font-bold text-orange-800">
+                                {{ $materialCount }}
+                            </div>
+                            <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-700">
+                                Materials
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-purple-50 px-2 py-3 text-center">
+                            <div class="text-lg font-bold text-purple-800">
+                                {{ $photoCount }}
+                            </div>
+                            <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-700">
+                                Photos
+                            </div>
+                        </div>
+
+                        <div class="rounded-xl bg-gray-50 px-2 py-3 text-center">
+                            <div class="text-lg font-bold text-gray-800">
+                                {{ $linkedCount }}/{{ $activityCount }}
+                            </div>
+                            <div class="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                                DPR
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        @if($activityCount === 0)
+                            <span class="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                                No Activities
+                            </span>
+                        @elseif($allLinked)
+                            <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
+                                All Activities Linked to DPR
+                            </span>
+                        @elseif($hasLinked)
+                            <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                                Partially Linked · {{ $linkedCount }}/{{ $activityCount }}
+                            </span>
+                        @else
+                            <span class="inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
+                                Not Linked to DPR
+                            </span>
+                        @endif
+                    </div>
+
+                    @if($header->items->isNotEmpty())
+                        <div class="mt-4 space-y-2">
+                            @foreach($header->items->take(3) as $item)
+                                <div class="rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                                    <div class="font-semibold text-gray-800">
+                                        {{ $item->activity_name ?? 'Activity' }}
+                                    </div>
+
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        @if($item->location_path)
+                                            {{ $item->location_path }}
+                                        @else
+                                            Location not specified
+                                        @endif
+                                    </div>
+
+                                    <div class="mt-1 text-xs font-semibold text-[#0F2A52]">
+                                        {{ rtrim(rtrim(number_format((float) $item->quantity_completed, 3, '.', ''), '0'), '.') }}
+                                        {{ $item->unit ?? '' }}
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @if($header->items->count() > 3)
+                                <div class="text-center text-xs font-semibold text-gray-500">
+                                    +{{ $header->items->count() - 3 }} more activit{{ $header->items->count() - 3 === 1 ? 'y' : 'ies' }}
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+
+                    @if($header->remarks)
+                        <div class="mt-4 rounded-xl bg-slate-50 px-3 py-3">
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                                Daily Remarks
+                            </div>
+                            <div class="mt-1 line-clamp-2 text-sm text-gray-700">
+                                {{ $header->remarks }}
+                            </div>
+                        </div>
+                    @endif
+
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        <a
+                            href="{{ route('work-done.show', $header) }}"
+                            class="rounded-xl bg-[#0F2A52] px-4 py-3 text-center text-sm font-semibold text-white"
+                        >
+                            View
+                        </a>
+
+                        @if($canEditHeader)
+                            <a
+                                href="{{ route('work-done.edit', $header) }}"
+                                class="rounded-xl bg-amber-500 px-4 py-3 text-center text-sm font-semibold text-white"
+                            >
+                                Edit
+                            </a>
+                        @else
+                            <div class="flex items-center justify-center rounded-xl bg-gray-100 px-4 py-3 text-center text-xs font-semibold text-gray-500">
+                                DPR Linked
+                            </div>
+                        @endif
+                    </div>
+
+                    @if($canDeleteHeader)
+                        <details class="mt-3">
+                            <summary class="cursor-pointer text-center text-xs font-semibold text-red-600">
+                                More Actions
+                            </summary>
+
+                            <form
+                                method="POST"
+                                action="{{ route('work-done.destroy', $header) }}"
+                                class="mt-3"
+                            >
+                                @csrf
+                                @method('DELETE')
+
+                                <button
+                                    type="submit"
+                                    onclick="return confirm('Delete this Daily Work Execution entry and all its Work Activities?')"
+                                    class="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"
+                                >
+                                    Delete Work Execution
+                                </button>
+                            </form>
+                        </details>
+                    @endif
+
+                </div>
+            </article>
+
+        @empty
+            <div class="rounded-2xl border border-gray-200 bg-white px-5 py-10 text-center shadow-sm">
+                <div class="text-base font-semibold text-gray-700">
+                    No Daily Work Execution records found
+                </div>
+
+                <p class="mt-2 text-sm text-gray-500">
+                    Adjust the filters or create the first Work Execution entry.
+                </p>
+
+                <a
+                    href="{{ route('work-done.create') }}"
+                    class="mt-4 inline-flex rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white"
+                >
+                    + Add Work Execution
+                </a>
+            </div>
+        @endforelse
+
+        @if($workDoneHeaders->hasPages())
+            <div class="rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-sm">
+                {{ $workDoneHeaders->links() }}
+            </div>
+        @endif
+    </div>
 
     {{-- Register --}}
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
 
         <div class="border-b border-gray-200 px-5 py-4">
             <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">

@@ -58,7 +58,7 @@
 
         <div>
             <div class="flex flex-wrap items-center gap-3">
-                <h1 class="text-3xl font-bold text-gray-800">
+                <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                     Daily Progress Report
                 </h1>
 
@@ -72,21 +72,21 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap gap-2">
+        <div class="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
 
             <a href="{{ route('dprs.index') }}"
-               class="rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+               class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-3 py-3 text-sm font-semibold text-white hover:bg-gray-700 sm:px-5 sm:py-2.5">
                 Back
             </a>
 
             <button type="button"
                     onclick="window.print()"
-                    class="rounded-lg bg-slate-700 px-5 py-2.5 font-semibold text-white hover:bg-slate-800">
+                    class="inline-flex items-center justify-center rounded-lg bg-slate-700 px-3 py-3 text-sm font-semibold text-white hover:bg-slate-800 sm:px-5 sm:py-2.5">
                 Print
             </button>
 
             <a href="{{ route('dprs.pdf', $dpr->id) }}"
-               class="rounded-lg bg-green-600 px-5 py-2.5 font-semibold text-white hover:bg-green-700">
+               class="inline-flex items-center justify-center rounded-lg bg-green-600 px-3 py-3 text-center text-sm font-semibold text-white hover:bg-green-700 sm:px-5 sm:py-2.5">
                 Download PDF
             </a>
 
@@ -107,7 +107,7 @@
     @endif
 
     {{-- DPR Header --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="DPR Overview"
@@ -161,7 +161,7 @@
     </div>
 
     {{-- Summary Cards --}}
-    <div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-8">
+    <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
 
         @php
             $summaryCards = [
@@ -177,7 +177,7 @@
         @endphp
 
         @foreach($summaryCards as $card)
-            <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
                 <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                     {{ $card['label'] }}
                 </div>
@@ -190,8 +190,23 @@
 
     </div>
 
+    {{-- Mobile Section Navigation --}}
+    <div class="sticky top-0 z-20 -mx-1 mt-5 overflow-x-auto bg-gray-50/95 px-1 py-2 backdrop-blur lg:static lg:bg-transparent lg:py-0">
+        <div class="flex min-w-max gap-2">
+            <a href="#dpr-labour" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Labour</a>
+            <a href="#dpr-work" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Work Done</a>
+            <a href="#dpr-received" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Received</a>
+            <a href="#dpr-consumed" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Consumed</a>
+            <a href="#dpr-required" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Required</a>
+            <a href="#dpr-issues" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Issues</a>
+            <a href="#dpr-machinery" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Machinery</a>
+            <a href="#dpr-photos" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Photos</a>
+            <a href="#dpr-tomorrow" class="rounded-full border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-sm">Tomorrow</a>
+        </div>
+    </div>
+
     {{-- Labour Attendance --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-labour" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Labour Attendance"
@@ -295,7 +310,7 @@
     </div>
 
     {{-- Work Done --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-work" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Work Done"
@@ -385,7 +400,7 @@
     </div>
 
     {{-- Material Received --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-received" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Material Received"
@@ -490,7 +505,7 @@
     </div>
 
     {{-- Material Consumed --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-consumed" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Material Consumed"
@@ -569,7 +584,7 @@
     </div>
 
     {{-- Material Required --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-required" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Material Required"
@@ -652,7 +667,7 @@
     </div>
 
     {{-- Site Issues --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-issues" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Site Issues"
@@ -760,7 +775,7 @@
     </div>
 
     {{-- Machinery --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-machinery" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Machinery / Equipment Used"
@@ -822,7 +837,7 @@
     </div>
 
     {{-- DPR Photos --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-photos" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="DPR Photos"
@@ -840,7 +855,7 @@
                        rel="noopener">
                         <img src="{{ asset('storage/' . ltrim($photo->photo_path, '/')) }}"
                              alt="DPR Photo"
-                             class="h-56 w-full rounded-xl border border-gray-200 bg-gray-100 object-cover shadow-sm">
+                             class="h-40 w-full rounded-xl border border-gray-200 bg-gray-100 object-cover shadow-sm sm:h-56">
                     </a>
                 @endforeach
 
@@ -856,7 +871,7 @@
     </div>
 
     {{-- Tomorrow Plan --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div id="dpr-tomorrow" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Tomorrow Plan"
@@ -888,7 +903,7 @@
                                 $planLocation = collect([
                                     $plan->block?->name,
                                     $plan->floor?->name,
-                                    $plan->unit?->name,
+                                    $plan->getRelation('unit')?->name,
                                     $plan->room?->name,
                                     $plan->subspace?->name,
                                 ])->filter()->implode(' → ');
@@ -979,7 +994,7 @@
         && $dpr->status === 'Pending'
     )
 
-        <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="PMO Review"
@@ -1006,7 +1021,7 @@
 
                     <button type="submit"
                             onclick="return confirm('Approve this DPR?')"
-                            class="mt-4 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700">
+                            class="mt-4 w-full rounded-lg bg-green-600 px-6 py-3 font-semibold text-white hover:bg-green-700 sm:w-auto">
                         Approve DPR
                     </button>
 
@@ -1030,7 +1045,7 @@
 
                     <button type="submit"
                             onclick="return confirm('Return this DPR for correction?')"
-                            class="mt-4 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700">
+                            class="mt-4 w-full rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:bg-red-700 sm:w-auto">
                         Return for Correction
                     </button>
 

@@ -3,7 +3,7 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2 sm:text-sm';
     $labelClass = 'mb-1 block text-sm font-semibold text-gray-700';
 
     $summaryItems = [
@@ -39,7 +39,7 @@
 
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Daily Work Execution
             </h1>
 
@@ -94,7 +94,7 @@
             :items="$summaryItems"
         />
 
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Project & Date"
@@ -138,7 +138,7 @@
                            required>
                 </div>
 
-                <div>
+                <div class="hidden sm:block">
                     <label class="{{ $labelClass }}">
                         Engineer
                     </label>
@@ -162,6 +162,10 @@
                 </div>
 
             </div>
+
+            <div class="mt-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800 sm:hidden">
+                Engineer: <span class="font-semibold">{{ auth()->user()->name }}</span>
+            </div>
         </div>
 
         <div class="mt-6">
@@ -180,7 +184,7 @@
                         :index="$workIndex"
                         :status="$work['execution_status'] ?? 'In Progress'"
                     >
-                        <div class="space-y-5 p-5">
+                        <div class="space-y-4 p-3 sm:space-y-5 sm:p-5">
 
                             <x-rds.location-selector
                                 :index="$workIndex"
@@ -192,7 +196,7 @@
                                 :values="$work"
                             />
 
-                            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                            <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4" x-data="{ moreDetails: false }">
 
                                 <x-rds.section-title
                                     title="Work Activity"
@@ -202,7 +206,7 @@
 
                                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-                                    <div>
+                                    <div class="hidden lg:block" x-show="moreDetails">
                                         <label class="{{ $labelClass }}">
                                             Work Stage
                                         </label>
@@ -239,7 +243,7 @@
                                         </select>
                                     </div>
 
-                                    <div class="md:col-span-2">
+                                    <div class="md:col-span-2 hidden lg:block" x-show="moreDetails">
                                         <label class="{{ $labelClass }}">
                                             Activity Mapping
                                         </label>
@@ -279,10 +283,11 @@
 
                                             @foreach($activities as $activity)
                                                 <option value="{{ $activity->id }}"
-                                                        data-unit="{{ $activity->unit }}"
-                                                    {{ (string) ($work['activity_id'] ?? '') === (string) $activity->id ? 'selected' : '' }}>
-                                                    {{ $activity->activity_name }}
-                                                </option>
+        data-division="{{ $activity->activity_division_id }}"
+        data-unit="{{ $activity->unit }}"
+    {{ (string) ($work['activity_id'] ?? '') === (string) $activity->id ? 'selected' : '' }}>
+    {{ $activity->activity_name }}
+</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -351,7 +356,7 @@
                                         </select>
                                     </div>
 
-                                    <div>
+                                    <div class="hidden lg:block" x-show="moreDetails">
                                         <label class="{{ $labelClass }}">
                                             Overall Progress %
                                         </label>
@@ -367,6 +372,14 @@
                                     </div>
 
                                 </div>
+
+                                <button
+                                    type="button"
+                                    @click="moreDetails = !moreDetails"
+                                    class="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-[#0F2A52] lg:hidden"
+                                >
+                                    <span x-text="moreDetails ? 'Hide More Details' : 'More Details'"></span>
+                                </button>
                             </div>
 
                             <x-rds.material-selector
@@ -374,7 +387,7 @@
                                 :selected-ids="$work['material_consumed_ids'] ?? []"
                             />
 
-                            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                            <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
 
                                 <x-rds.section-title
                                     title="Work Done Remarks"
@@ -405,7 +418,7 @@
                         index="__INDEX__"
                         status="In Progress"
                     >
-                        <div class="space-y-5 p-5">
+                        <div class="space-y-4 p-3 sm:space-y-5 sm:p-5">
 
                             <x-rds.location-selector
                                 index="__INDEX__"
@@ -416,7 +429,7 @@
                                 :subspaces="$projectSubspaces"
                             />
 
-                            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                            <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4" x-data="{ moreDetails: false }">
 
                                 <x-rds.section-title
                                     title="Work Activity"
@@ -426,7 +439,7 @@
 
                                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-                                    <div>
+                                    <div class="hidden lg:block" x-show="moreDetails">
                                         <label class="{{ $labelClass }}">Work Stage</label>
 
                                         <select name="works[__INDEX__][work_stage_id]"
@@ -453,7 +466,7 @@
                                         </select>
                                     </div>
 
-                                    <div class="md:col-span-2">
+                                    <div class="md:col-span-2 hidden lg:block" x-show="moreDetails">
                                         <label class="{{ $labelClass }}">Activity Mapping</label>
 
                                         <select name="works[__INDEX__][activity_mapping_id]"
@@ -486,9 +499,10 @@
                                             <option value="">Select Activity</option>
                                             @foreach($activities as $activity)
                                                 <option value="{{ $activity->id }}"
-                                                        data-unit="{{ $activity->unit }}">
-                                                    {{ $activity->activity_name }}
-                                                </option>
+        data-division="{{ $activity->activity_division_id }}"
+        data-unit="{{ $activity->unit }}">
+    {{ $activity->activity_name }}
+</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -548,7 +562,7 @@
                                         </select>
                                     </div>
 
-                                    <div>
+                                    <div class="hidden lg:block" x-show="moreDetails">
                                         <label class="{{ $labelClass }}">Overall Progress %</label>
 
                                         <input type="number"
@@ -561,13 +575,21 @@
                                     </div>
 
                                 </div>
+
+                                <button
+                                    type="button"
+                                    @click="moreDetails = !moreDetails"
+                                    class="mt-4 inline-flex w-full items-center justify-center rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-[#0F2A52] lg:hidden"
+                                >
+                                    <span x-text="moreDetails ? 'Hide More Details' : 'More Details'"></span>
+                                </button>
                             </div>
 
                             <x-rds.material-selector
                                 index="__INDEX__"
                             />
 
-                            <div class="rounded-lg border border-gray-200 bg-white p-4">
+                            <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
 
                                 <x-rds.section-title
                                     title="Work Done Remarks"
@@ -595,15 +617,15 @@
 
         </div>
 
-        <div class="mt-6 flex flex-wrap gap-3">
+        <div class="sticky bottom-[68px] z-30 mt-6 flex flex-col gap-3 border-t border-gray-200 bg-white/95 py-3 backdrop-blur sm:flex-row lg:static lg:border-0 lg:bg-transparent lg:py-0">
 
             <button type="submit"
-                    class="rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700">
+                    class="w-full rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700 sm:w-auto">
                 Save Daily Work Execution
             </button>
 
             <a href="{{ route('work-done.index') }}"
-               class="rounded-lg bg-gray-500 px-7 py-3 font-semibold text-white hover:bg-gray-600">
+               class="w-full rounded-lg bg-gray-500 px-7 py-3 text-center font-semibold text-white hover:bg-gray-600 sm:w-auto">
                 Cancel
             </a>
 
@@ -611,6 +633,6 @@
     </form>
 </div>
 
-<script src="{{ asset('js/ravion-execution.js') }}"></script>
+<script src="{{ asset('js/ravion-execution.js') }}?v=20260817-activity-filter-2"></script>
 
 @endsection

@@ -26,7 +26,7 @@
 
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Site Issue Details
             </h1>
 
@@ -35,14 +35,14 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap gap-2">
+        <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <a href="{{ route('site-issues.index') }}"
-               class="rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+               class="rounded-lg bg-gray-600 px-5 py-3 text-center font-semibold text-white hover:bg-gray-700 sm:py-2.5">
                 Back
             </a>
 
             <a href="{{ route('site-issues.edit', $siteIssue) }}"
-               class="rounded-lg bg-amber-500 px-5 py-2.5 font-semibold text-white hover:bg-amber-600">
+               class="rounded-lg bg-amber-500 px-5 py-3 text-center font-semibold text-white hover:bg-amber-600 sm:py-2.5">
                 Edit Issue
             </a>
         </div>
@@ -61,13 +61,13 @@
     @endif
 
     {{-- Summary --}}
-    <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 
             <div>
                 <div class="flex flex-wrap items-center gap-2">
-                    <h2 class="text-2xl font-bold text-gray-800">
+                    <h2 class="text-xl font-bold text-gray-800 sm:text-2xl">
                         {{ $siteIssue->title }}
                     </h2>
 
@@ -145,7 +145,7 @@
     </div>
 
     {{-- Location --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Issue Location"
@@ -217,7 +217,7 @@
     {{-- Activity + Responsibility --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Related Activity"
@@ -236,7 +236,7 @@
             @endif
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Responsibility & Closure"
@@ -284,7 +284,7 @@
     {{-- Description + Root Cause --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Description"
@@ -297,7 +297,7 @@
             </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Root Cause"
@@ -313,7 +313,7 @@
     </div>
 
     {{-- Escalation --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Escalation"
@@ -350,7 +350,7 @@
     {{-- Resolution --}}
     <div class="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Resolution"
@@ -363,7 +363,7 @@
             </div>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Remarks"
@@ -379,7 +379,7 @@
     </div>
 
     {{-- Photos --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Site Issue Photos"
@@ -451,7 +451,7 @@
     </div>
 
     {{-- Record Information --}}
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
             title="Record Information"
@@ -494,15 +494,15 @@
         </div>
     </div>
 
-    <div class="mt-6 flex flex-wrap gap-3">
+    <div class="mt-6 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap">
 
         <a href="{{ route('site-issues.edit', $siteIssue) }}"
-           class="rounded-lg bg-amber-500 px-6 py-3 font-semibold text-white hover:bg-amber-600">
+           class="rounded-xl bg-amber-500 px-6 py-3 text-center font-semibold text-white hover:bg-amber-600">
             Edit Issue
         </a>
 
         <a href="{{ route('site-issues.index') }}"
-           class="rounded-lg bg-gray-600 px-6 py-3 font-semibold text-white hover:bg-gray-700">
+           class="rounded-xl bg-gray-600 px-6 py-3 text-center font-semibold text-white hover:bg-gray-700">
             Back to Register
         </a>
 

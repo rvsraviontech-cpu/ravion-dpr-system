@@ -1,0 +1,31 @@
+{
+    "name": "Ravion DPR",
+    "short_name": "Ravion DPR",
+    "description": "Ravion Daily Progress Report & Site Execution",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#F8FAFC",
+    "theme_color": "#0F2A52",
+    "icons": [
+        {
+            "src": "/pwa/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/pwa/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/pwa/icons/icon-512-maskable.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

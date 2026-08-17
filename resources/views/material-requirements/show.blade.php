@@ -47,7 +47,7 @@
         <div>
             <div class="flex flex-wrap items-center gap-3">
 
-                <h1 class="text-3xl font-bold text-gray-800">
+                <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                     Material Requirement #{{ $materialRequirement->id }}
                 </h1>
 
@@ -66,14 +66,14 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap gap-2 print:hidden">
+        <div class="grid grid-cols-2 gap-2 print:hidden sm:flex sm:flex-wrap">
 
             @if(
                 $materialRequirement->status === 'Draft'
                 && $canEdit
             )
                 <a href="{{ route('material-requirements.edit', $materialRequirement) }}"
-                   class="inline-flex items-center justify-center rounded-lg bg-yellow-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-yellow-600">
+                   class="inline-flex items-center justify-center rounded-lg bg-yellow-500 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-yellow-600 sm:py-2.5">
                     Edit
                 </a>
             @endif
@@ -87,7 +87,7 @@
 
                     <button type="submit"
                             onclick="return confirm('Submit this material requirement for approval?')"
-                            class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                            class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-blue-700 sm:py-2.5">
                         Submit
                     </button>
                 </form>
@@ -105,7 +105,7 @@
 
                     <button type="submit"
                             onclick="return confirm('Approve this material requirement?')"
-                            class="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700">
+                            class="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-green-700 sm:py-2.5">
                         Approve
                     </button>
                 </form>
@@ -113,12 +113,12 @@
 
             <button type="button"
                     onclick="window.print()"
-                    class="inline-flex items-center justify-center rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                    class="inline-flex items-center justify-center rounded-lg bg-slate-700 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800 sm:py-2.5">
                 Print
             </button>
 
             <a href="{{ route('material-requirements.index') }}"
-               class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700">
+               class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-gray-700 sm:py-2.5">
                 Back
             </a>
 
@@ -140,7 +140,7 @@
 
     <div class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 xl:col-span-2">
 
             <h2 class="mb-5 text-xl font-bold text-gray-800">
                 Requirement Information
@@ -258,7 +258,7 @@
 
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <h2 class="mb-5 text-xl font-bold text-gray-800">
                 Quantity Summary
@@ -338,7 +338,84 @@
 
         </div>
 
-        <div class="overflow-x-auto">
+        {{-- Mobile Requirement Items --}}
+        <div class="space-y-3 p-3 lg:hidden">
+            @if($hasNewItems)
+                @foreach($materialRequirement->items as $index => $item)
+                    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Requirement Item {{ $index + 1 }}</div>
+                                <div class="mt-1 text-base font-bold text-gray-800">
+                                    {{ $item->materialType?->material_type_name ?? '-' }}
+                                </div>
+                                <div class="mt-1 text-xs text-gray-500">
+                                    {{ $item->activity?->activity_name ?? '-' }}
+                                </div>
+                            </div>
+
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-blue-700">
+                                    {{ formatQuantity($item->required_quantity) }}
+                                </div>
+                                <div class="text-xs font-semibold text-gray-500">
+                                    {{ $item->unit?->unit_name ?? '-' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div class="rounded-lg bg-gray-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Brand</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->brand?->brand_name ?? '-' }}</div>
+                            </div>
+                            <div class="rounded-lg bg-gray-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Specification</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->specification?->specification_name ?? '-' }}</div>
+                            </div>
+                            <div class="rounded-lg bg-green-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-green-600">Fulfilled</div>
+                                <div class="mt-1 font-bold text-green-700">{{ formatQuantity($item->fulfilled_quantity) }}</div>
+                            </div>
+                            <div class="rounded-lg bg-orange-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-orange-600">Pending</div>
+                                <div class="mt-1 font-bold text-orange-700">{{ formatQuantity($item->pending_quantity) }}</div>
+                            </div>
+                        </div>
+
+                        @if($item->remarks)
+                            <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                {{ $item->remarks }}
+                            </div>
+                        @endif
+                    </article>
+                @endforeach
+            @else
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="text-base font-bold text-gray-800">
+                        {{ $materialRequirement->material?->material_name ?? '-' }}
+                    </div>
+                    <div class="mt-2 text-lg font-bold text-blue-700">
+                        {{ formatQuantity($materialRequirement->required_quantity) }} {{ $materialRequirement->unit ?? '' }}
+                    </div>
+
+                    <div class="mt-3 grid grid-cols-2 gap-3">
+                        <div class="rounded-lg bg-green-50 px-3 py-2">
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-green-600">Fulfilled</div>
+                            <div class="mt-1 font-bold text-green-700">{{ formatQuantity($materialRequirement->fulfilled_quantity) }}</div>
+                        </div>
+                        <div class="rounded-lg bg-orange-50 px-3 py-2">
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-orange-600">Pending</div>
+                            <div class="mt-1 font-bold text-orange-700">
+                                {{ formatQuantity(max(0, (float) ($materialRequirement->required_quantity ?? 0) - (float) ($materialRequirement->fulfilled_quantity ?? 0))) }}
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            @endif
+        </div>
+
+        <div class="hidden overflow-x-auto lg:block">
 
             <table class="min-w-[1600px] w-full text-sm">
 

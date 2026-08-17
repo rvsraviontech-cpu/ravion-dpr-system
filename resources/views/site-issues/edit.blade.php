@@ -3,8 +3,8 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
-    $labelClass = 'mb-1 block text-sm font-semibold text-gray-700';
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2.5 sm:text-sm';
+    $labelClass = 'mb-1.5 block text-sm font-semibold text-gray-700';
 
     $selectedActivityId = old('activity_id', $siteIssue->activity_id);
 
@@ -21,7 +21,7 @@
 
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Edit Site Issue
             </h1>
 
@@ -72,7 +72,7 @@
         @method('PUT')
 
         {{-- Project & Issue Date --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Project & Issue Date"
@@ -129,7 +129,7 @@
         </div>
 
         {{-- Location --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Issue Location"
@@ -236,7 +236,7 @@
         </div>
 
         {{-- Related Activity --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Related Activity"
@@ -287,7 +287,7 @@
         </div>
 
         {{-- Issue Details --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Issue Details"
@@ -434,7 +434,7 @@
         </div>
 
         {{-- Escalation --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Escalation"
@@ -484,7 +484,7 @@
         </div>
 
         {{-- Resolution --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Resolution"
@@ -500,7 +500,7 @@
         </div>
 
         {{-- Existing Photos --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Existing Photos"
@@ -578,7 +578,7 @@
         </div>
 
         {{-- Add Photos --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Add More Photos"
@@ -588,7 +588,7 @@
                 <x-slot:actions>
                     <button type="button"
                             id="addPhotoButton"
-                            class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+                            class="w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 sm:w-auto sm:py-2">
                         + Add Photo
                     </button>
                 </x-slot:actions>
@@ -748,7 +748,7 @@
         </div>
 
         {{-- Remarks --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Remarks"
@@ -765,12 +765,12 @@
         <div class="mt-6 flex flex-wrap gap-3">
 
             <button type="submit"
-                    class="rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700">
+                    class="w-full rounded-xl bg-blue-600 px-7 py-3.5 text-center font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-3">
                 Update Site Issue
             </button>
 
             <a href="{{ route('site-issues.show', $siteIssue) }}"
-               class="rounded-lg bg-gray-600 px-7 py-3 font-semibold text-white hover:bg-gray-700">
+               class="w-full rounded-xl bg-gray-600 px-7 py-3.5 text-center font-semibold text-white hover:bg-gray-700 sm:w-auto sm:py-3">
                 Cancel
             </a>
 
@@ -780,14 +780,12 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-
-    /*
+document.addEventListener('DOMContentLoaded', async function     /*
     |--------------------------------------------------------------------------
-    | Cascading Project Location
+    | Project -> Block -> Floor -> Unit -> Room -> Sub-space
+    | AJAX cascade - same proven endpoints as Create / Work Done
     |--------------------------------------------------------------------------
     */
-
     const project = document.getElementById('project_id');
     const block = document.getElementById('project_block_id');
     const floor = document.getElementById('project_floor_id');
@@ -795,120 +793,127 @@ document.addEventListener('DOMContentLoaded', function () {
     const room = document.getElementById('project_room_id');
     const subspace = document.getElementById('project_subspace_id');
 
-    function filterOptions(select, predicate) {
+    const savedLocation = {
+        block: @json(old('project_block_id', $siteIssue->project_block_id)),
+        floor: @json(old('project_floor_id', $siteIssue->project_floor_id)),
+        unit: @json(old('project_unit_id', $siteIssue->project_unit_id)),
+        room: @json(old('project_room_id', $siteIssue->project_room_id)),
+        subspace: @json(old('project_subspace_id', $siteIssue->project_subspace_id)),
+    };
+
+    function resetSelect(select, placeholder) {
         if (!select) return;
+        select.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = placeholder;
+        select.appendChild(option);
+    }
 
-        Array.from(select.options).forEach(option => {
-            const visible = predicate(option);
-
-            option.hidden = !visible;
-            option.disabled = !visible && option.value !== '';
-
-            if (!visible && option.selected) {
-                select.value = '';
-            }
+    function populateSelect(select, rows, selectedValue, placeholder) {
+        resetSelect(select, placeholder);
+        rows.forEach(row => {
+            const option = document.createElement('option');
+            option.value = String(row.id);
+            option.textContent = row.name || row.label || `#${row.id}`;
+            option.selected = String(row.id) === String(selectedValue || '');
+            select.appendChild(option);
         });
     }
 
-    function filterLocations() {
-        const projectId = project?.value || '';
-        const blockId = block?.value || '';
-        const floorId = floor?.value || '';
-        const unitId = unit?.value || '';
-        const roomId = room?.value || '';
-
-        filterOptions(block, option => {
-            return option.value === ''
-                || (
-                    projectId
-                    && String(option.dataset.project) === String(projectId)
-                );
-        });
-
-        filterOptions(floor, option => {
-            if (option.value === '') return true;
-
-            return projectId
-                && String(option.dataset.project) === String(projectId)
-                && (
-                    !blockId
-                    || String(option.dataset.block) === String(blockId)
-                );
-        });
-
-        filterOptions(unit, option => {
-            if (option.value === '') return true;
-
-            return projectId
-                && String(option.dataset.project) === String(projectId)
-                && (
-                    !blockId
-                    || String(option.dataset.block) === String(blockId)
-                )
-                && (
-                    !floorId
-                    || String(option.dataset.floor) === String(floorId)
-                );
-        });
-
-        filterOptions(room, option => {
-            return option.value === ''
-                || (
-                    unitId
-                    && String(option.dataset.unit) === String(unitId)
-                );
-        });
-
-        filterOptions(subspace, option => {
-            return option.value === ''
-                || (
-                    roomId
-                    && String(option.dataset.room) === String(roomId)
-                );
-        });
+    async function fetchRows(url) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+            if (!response.ok) throw new Error(`Location lookup failed (${response.status})`);
+            const payload = await response.json();
+            if (Array.isArray(payload)) return payload;
+            if (Array.isArray(payload.data)) return payload.data;
+            return [];
+        } catch (error) {
+            console.error(error);
+            alert('Unable to load project locations. Please try again.');
+            return [];
+        }
     }
 
-    project?.addEventListener('change', function () {
-        block.value = '';
-        floor.value = '';
-        unit.value = '';
-        room.value = '';
-        subspace.value = '';
+    function resetAfterProject() {
+        resetSelect(block, 'Select Block');
+        resetSelect(floor, 'Select Floor');
+        resetSelect(unit, 'Select Unit');
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+    function resetAfterBlock() {
+        resetSelect(floor, 'Select Floor');
+        resetSelect(unit, 'Select Unit');
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+    function resetAfterFloor() {
+        resetSelect(unit, 'Select Unit');
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+    function resetAfterUnit() {
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+    function resetAfterRoom() {
+        resetSelect(subspace, 'Select Sub-space');
+    }
 
-        filterLocations();
-    });
+    async function loadBlocks(selected = '') {
+        resetAfterProject();
+        if (!project?.value) return;
+        populateSelect(block, await fetchRows(`/ajax/projects/${encodeURIComponent(project.value)}/blocks`), selected, 'Select Block');
+    }
+    async function loadFloors(selected = '') {
+        resetAfterBlock();
+        if (!block?.value) return;
+        populateSelect(floor, await fetchRows(`/ajax/blocks/${encodeURIComponent(block.value)}/floors`), selected, 'Select Floor');
+    }
+    async function loadUnits(selected = '') {
+        resetAfterFloor();
+        if (!floor?.value) return;
+        populateSelect(unit, await fetchRows(`/ajax/floors/${encodeURIComponent(floor.value)}/units`), selected, 'Select Unit');
+    }
+    async function loadRooms(selected = '') {
+        resetAfterUnit();
+        if (!unit?.value) return;
+        populateSelect(room, await fetchRows(`/ajax/units/${encodeURIComponent(unit.value)}/rooms`), selected, 'Select Room');
+    }
+    async function loadSubspaces(selected = '') {
+        resetAfterRoom();
+        if (!room?.value) return;
+        populateSelect(subspace, await fetchRows(`/ajax/rooms/${encodeURIComponent(room.value)}/subspaces`), selected, 'Select Sub-space');
+    }
 
-    block?.addEventListener('change', function () {
-        floor.value = '';
-        unit.value = '';
-        room.value = '';
-        subspace.value = '';
+    project?.addEventListener('change', () => loadBlocks());
+    block?.addEventListener('change', () => loadFloors());
+    floor?.addEventListener('change', () => loadUnits());
+    unit?.addEventListener('change', () => loadRooms());
+    room?.addEventListener('change', () => loadSubspaces());
 
-        filterLocations();
-    });
+    async function initializeLocationCascade() {
+        if (!project?.value) {
+            resetAfterProject();
+            return;
+        }
+        await loadBlocks(savedLocation.block);
+        if (savedLocation.block) await loadFloors(savedLocation.floor);
+        if (savedLocation.floor) await loadUnits(savedLocation.unit);
+        if (savedLocation.unit) await loadRooms(savedLocation.room);
+        if (savedLocation.room) await loadSubspaces(savedLocation.subspace);
+    }
 
-    floor?.addEventListener('change', function () {
-        unit.value = '';
-        room.value = '';
-        subspace.value = '';
+    await initializeLocationCascade();
 
-        filterLocations();
-    });
-
-    unit?.addEventListener('change', function () {
-        room.value = '';
-        subspace.value = '';
-
-        filterLocations();
-    });
-
-    room?.addEventListener('change', function () {
-        subspace.value = '';
-
-        filterLocations();
-    });
-
-    filterLocations();
+s();
 
     /*
     |--------------------------------------------------------------------------

@@ -1,29 +1,29 @@
 {{-- Material item grid --}}
 <div class="mb-6 rounded-xl border border-gray-200 bg-white shadow-sm">
 
-    <div class="flex flex-col gap-3 border-b border-gray-200 p-5 md:flex-row md:items-center md:justify-between">
+    <div class="flex flex-col gap-3 border-b border-gray-200 bg-[#0F2A52] p-4 text-white md:flex-row md:items-center md:justify-between md:p-5">
         <div>
-            <h2 class="text-xl font-bold text-gray-800">
+            <h2 class="text-lg font-bold text-white sm:text-xl">
                 Material Items
             </h2>
 
-            <p class="mt-1 text-sm text-gray-500">
+            <p class="mt-1 text-xs text-blue-100 sm:text-sm">
                 Add every material received under this delivery.
             </p>
         </div>
 
         <button type="button"
                 id="add-item-row"
-                class="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">
+                class="w-full rounded-lg bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 md:w-auto md:py-2">
             + Add Material Row
         </button>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="overflow-visible lg:overflow-x-auto">
 
-        <table class="min-w-[1800px] w-full text-sm">
+        <table class="block w-full text-sm lg:table lg:min-w-[1800px]">
 
-            <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+            <thead class="hidden bg-gray-100 text-xs uppercase tracking-wide text-gray-600 lg:table-header-group">
                 <tr>
                     <th class="w-14 px-3 py-3 text-center">#</th>
                     <th class="min-w-44 px-3 py-3 text-left">Activity Division</th>
@@ -41,17 +41,22 @@
             </thead>
 
             <tbody id="material-items-body"
-                   class="divide-y divide-gray-200">
+                   class="block space-y-4 p-3 lg:table-row-group lg:space-y-0 lg:p-0 lg:divide-y lg:divide-gray-200">
 
                 @foreach($oldItems as $rowIndex => $oldItem)
-                    <tr class="material-item-row align-top"
+                    <tr class="material-item-row block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:table-row lg:rounded-none lg:border-0 lg:shadow-none"
                         data-row-index="{{ $rowIndex }}">
 
-                        <td class="row-number px-3 py-3 text-center font-semibold">
-                            {{ $loop->iteration }}
+                        <td class="block bg-slate-50 px-3 py-3 lg:table-cell lg:bg-transparent lg:text-center">
+                            <div class="flex items-center justify-between lg:block">
+                                <span class="text-xs font-bold uppercase tracking-wide text-gray-500 lg:hidden">Material Item</span>
+                                <span class="row-number inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-bold text-blue-800 lg:bg-transparent lg:text-sm lg:text-inherit">
+                                    {{ $loop->iteration }}
+                                </span>
+                            </div>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Activity Division" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select name="items[{{ $rowIndex }}][activity_division_id]"
                                     class="{{ $inputClass }} activity-division-select">
 
@@ -66,7 +71,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Activity / Material" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select name="items[{{ $rowIndex }}][activity_id]"
                                     class="{{ $inputClass }} activity-select">
 
@@ -82,7 +87,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Material Group" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select class="{{ $inputClass }} material-group-select">
                                 <option value="">Select Group</option>
 
@@ -94,7 +99,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Material Type" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select name="items[{{ $rowIndex }}][material_type_id]"
                                     class="{{ $inputClass }} material-type-select"
                                     required>
@@ -113,7 +118,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Brand" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select name="items[{{ $rowIndex }}][brand_master_id]"
                                     class="{{ $inputClass }} brand-select">
 
@@ -129,7 +134,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Specification" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select name="items[{{ $rowIndex }}][material_specification_id]"
                                     class="{{ $inputClass }} specification-select">
 
@@ -145,7 +150,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Grade / Rating" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <select name="items[{{ $rowIndex }}][material_grade_id]"
                                     class="{{ $inputClass }} grade-select">
 
@@ -161,7 +166,7 @@
                             </select>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Quantity" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <input type="number"
                                    step="0.001"
                                    min="0.001"
@@ -171,7 +176,7 @@
                                    required>
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Unit" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <input type="hidden"
                                    name="items[{{ $rowIndex }}][unit_master_id]"
                                    value="{{ $oldItem['unit_master_id'] ?? '' }}"
@@ -183,7 +188,7 @@
                                    placeholder="Auto">
                         </td>
 
-                        <td class="px-3 py-3">
+                        <td data-mobile-label="Remarks" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                             <input type="text"
                                    name="items[{{ $rowIndex }}][remarks]"
                                    value="{{ $oldItem['remarks'] ?? '' }}"
@@ -191,9 +196,9 @@
                                    placeholder="Optional">
                         </td>
 
-                        <td class="px-3 py-3 text-center">
+                        <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-center lg:before:hidden">
                             <button type="button"
-                                    class="remove-item-row rounded bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">
+                                    class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:border-0 lg:bg-red-600 lg:text-white lg:hover:bg-red-700">
                                 Remove
                             </button>
                         </td>
@@ -205,7 +210,7 @@
         </table>
     </div>
 
-    <div class="border-t border-gray-200 p-5 text-sm text-gray-500">
+    <div class="border-t border-gray-200 p-4 text-xs text-gray-500 sm:p-5 sm:text-sm">
         Brand, Specification, Grade/Rating and Unit are filtered automatically from the selected Material Type.
     </div>
 </div>

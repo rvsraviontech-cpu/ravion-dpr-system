@@ -1,11 +1,12 @@
 {{-- Project and delivery header --}}
-<div class="mb-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+<div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
-    <h2 class="mb-5 text-xl font-bold text-gray-800">
-        Delivery Information
-    </h2>
+    <div class="mb-4 rounded-xl bg-[#0F2A52] px-4 py-3 text-white sm:mb-5">
+        <h2 class="text-lg font-bold sm:text-xl">Delivery Information</h2>
+        <p class="mt-1 text-xs text-blue-100">Project, location and supplier details for this receipt.</p>
+    </div>
 
-    <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
         <div>
             <label class="{{ $labelClass }}">
@@ -130,7 +131,7 @@
         <div>
             <label class="{{ $labelClass }}">Contractor Supply</label>
 
-            <label class="mt-3 inline-flex items-center gap-3">
+            <label class="mt-2 flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-3">
                 <input type="checkbox"
                        name="supplied_by_contractor"
                        id="supplied_by_contractor"

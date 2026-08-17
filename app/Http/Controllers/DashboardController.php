@@ -120,51 +120,106 @@ class DashboardController extends Controller
     public function engineer()
 {
     $user = auth()->user();
+    $today = today();
+
+    /*
+    |--------------------------------------------------------------------------
+    | Engineer Assigned Projects
+    |--------------------------------------------------------------------------
+    */
+
+    $assignedProjects = $user->projects()
+        ->orderBy('project_name')
+        ->get();
+
+    $projectIds = $assignedProjects->pluck('id');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Today's DPR
+    |--------------------------------------------------------------------------
+    */
+
+    $todayDpr = \App\Models\Dpr::with('project')
+        ->where('user_id', $user->id)
+        ->whereDate('dpr_date', $today)
+        ->latest('id')
+        ->first();
+
+    $todayDprs = \App\Models\Dpr::where('user_id', $user->id)
+        ->whereDate('dpr_date', $today)
+        ->count();
+
+    /*
+    |--------------------------------------------------------------------------
+    | DPR Summary
+    |--------------------------------------------------------------------------
+    */
 
     $totalDprs = \App\Models\Dpr::where(
         'user_id',
         $user->id
     )->count();
 
-    $todayDprs = \App\Models\Dpr::where(
-        'user_id',
-        $user->id
-    )
-    ->whereDate(
-        'dpr_date',
-        today()
-    )
-    ->count();
-
     $recentDprs = \App\Models\Dpr::with('project')
         ->where('user_id', $user->id)
-        ->latest()
+        ->latest('dpr_date')
         ->take(5)
         ->get();
 
-    // Open Site Issues
+    /*
+    |--------------------------------------------------------------------------
+    | Open Site Issues
+    |--------------------------------------------------------------------------
+    |
+    | Restrict the Engineer dashboard to assigned projects.
+    |
+    */
 
     $openSiteIssues = \App\Models\SiteIssue::whereIn(
-        'status',
-        ['Open', 'In Progress']
-    )->count();
+            'project_id',
+            $projectIds
+        )
+        ->whereIn('status', [
+            'Open',
+            'In Progress',
+        ])
+        ->count();
 
-    // Pending Material Requirements
+    /*
+    |--------------------------------------------------------------------------
+    | Pending Material Requirements
+    |--------------------------------------------------------------------------
+    */
 
     $pendingMaterialRequests =
         \App\Models\MaterialRequirement::whereIn(
-            'status',
-            ['Pending', 'Submitted']
-        )->count();
+            'project_id',
+            $projectIds
+        )
+        ->whereIn('status', [
+            'Pending',
+            'Submitted',
+            'Draft',
+        ])
+        ->count();
 
-    // Today's Labour Count
+    /*
+    |--------------------------------------------------------------------------
+    | Today's Labour
+    |--------------------------------------------------------------------------
+    |
+    | Keep the existing proven DPR labour calculation for now.
+    |
+    */
 
     $labourToday =
         \App\Models\DprLabour::whereHas(
             'dpr',
-            function ($q) use ($user) {
-                $q->where('user_id', $user->id)
-                  ->whereDate('dpr_date', today());
+            function ($query) use ($user, $today) {
+                $query
+                    ->where('user_id', $user->id)
+                    ->whereDate('dpr_date', $today);
             }
         )
         ->sum('total_count');
@@ -172,8 +227,10 @@ class DashboardController extends Controller
     return view(
         'dashboards.engineer',
         compact(
-            'totalDprs',
+            'assignedProjects',
+            'todayDpr',
             'todayDprs',
+            'totalDprs',
             'recentDprs',
             'openSiteIssues',
             'pendingMaterialRequests',

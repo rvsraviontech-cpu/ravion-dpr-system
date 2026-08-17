@@ -23,7 +23,7 @@
         </div>
 
         <button type="button"
-                class="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                class="w-full rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-2.5"
                 data-ref-add-activity
                 data-ref-template-id="{{ $templateId }}"
                 data-ref-container-id="{{ $containerId }}">
@@ -45,7 +45,7 @@
 
     <div class="flex justify-center">
         <button type="button"
-                class="rounded-lg border border-blue-300 bg-blue-50 px-5 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-100"
+                class="w-full rounded-lg border border-blue-300 bg-blue-50 px-5 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-100 sm:w-auto sm:py-2.5"
                 data-ref-add-activity
                 data-ref-template-id="{{ $templateId }}"
                 data-ref-container-id="{{ $containerId }}">

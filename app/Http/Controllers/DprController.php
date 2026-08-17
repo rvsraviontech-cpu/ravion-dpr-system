@@ -2109,7 +2109,7 @@ class DprController extends Controller
         $location = collect([
             $plan->block?->name,
             $plan->floor?->name,
-            $plan->unit?->name,
+            $plan->getRelation('unit')?->name,
             $plan->room?->name,
             $plan->subspace?->name,
         ])

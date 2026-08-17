@@ -116,7 +116,8 @@ Route::resource('work-stages', WorkStageController::class)
     */
 
     Route::get('/admin-dashboard', [DashboardController::class, 'admin'])
-        ->middleware('permission:dashboard.view');
+    ->name('admin-dashboard')
+    ->middleware('permission:dashboard.view');
 
     Route::get('/engineer-dashboard', [DashboardController::class, 'engineer'])
         ->name('engineer-dashboard')

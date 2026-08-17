@@ -218,13 +218,18 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildNewRow(index) {
         const row = document.createElement('tr');
 
-        row.className = 'material-item-row align-top';
+        row.className = 'material-item-row block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:table-row lg:rounded-none lg:border-0 lg:shadow-none';
         row.dataset.rowIndex = index;
 
         row.innerHTML = `
-            <td class="row-number px-3 py-3 text-center font-semibold"></td>
+            <td class="block bg-slate-50 px-3 py-3 lg:table-cell lg:bg-transparent lg:text-center">
+                <div class="flex items-center justify-between lg:block">
+                    <span class="text-xs font-bold uppercase tracking-wide text-gray-500 lg:hidden">Material Item</span>
+                    <span class="row-number inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-bold text-blue-800 lg:bg-transparent lg:text-sm lg:text-inherit"></span>
+                </div>
+            </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Activity Division" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select name="items[${index}][activity_division_id]"
                         class="{{ $inputClass }} activity-division-select">
                     <option value="">Select Division</option>
@@ -237,14 +242,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Activity / Material" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select name="items[${index}][activity_id]"
                         class="{{ $inputClass }} activity-select">
                     <option value="">Select Activity</option>
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Material Group" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select class="{{ $inputClass }} material-group-select">
                     <option value="">Select Group</option>
 
@@ -254,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Material Type" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select name="items[${index}][material_type_id]"
                         class="{{ $inputClass }} material-type-select"
                         required>
@@ -262,28 +267,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Brand" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select name="items[${index}][brand_master_id]"
                         class="{{ $inputClass }} brand-select">
                     <option value="">Select Brand</option>
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Specification" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select name="items[${index}][material_specification_id]"
                         class="{{ $inputClass }} specification-select">
                     <option value="">Select Specification</option>
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Grade / Rating" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <select name="items[${index}][material_grade_id]"
                         class="{{ $inputClass }} grade-select">
                     <option value="">Select Grade / Rating</option>
                 </select>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Quantity" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <input type="number"
                        step="0.001"
                        min="0.001"
@@ -292,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
                        required>
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Unit" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <input type="hidden"
                        name="items[${index}][unit_master_id]"
                        class="unit-id-input">
@@ -303,16 +308,16 @@ document.addEventListener('DOMContentLoaded', function () {
                        placeholder="Auto">
             </td>
 
-            <td class="px-3 py-3">
+            <td data-mobile-label="Remarks" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                 <input type="text"
                        name="items[${index}][remarks]"
                        class="{{ $inputClass }}"
                        placeholder="Optional">
             </td>
 
-            <td class="px-3 py-3 text-center">
+            <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-center lg:before:hidden">
                 <button type="button"
-                        class="remove-item-row rounded bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">
+                        class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:border-0 lg:bg-red-600 lg:text-white lg:hover:bg-red-700">
                     Remove
                 </button>
             </td>
@@ -491,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function buildPhotoRow(index) {
         const row = document.createElement('div');
 
-        row.className = 'photo-row p-5';
+        row.className = 'photo-row p-3 sm:p-5';
         row.dataset.photoIndex = index;
 
         row.innerHTML = `

@@ -38,12 +38,14 @@
                     Cancel
                 </x-rds.button>
 
-                <x-rds.button
-                    type="submit"
-                    variant="primary"
-                >
-                    Save Attendance
-                </x-rds.button>
+                <div class="hidden sm:block">
+                    <x-rds.button
+                        type="submit"
+                        variant="primary"
+                    >
+                        Save Attendance
+                    </x-rds.button>
+                </div>
 
             </div>
         </x-rds.card>

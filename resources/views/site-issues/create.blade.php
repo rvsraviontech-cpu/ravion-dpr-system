@@ -3,8 +3,8 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
-    $labelClass = 'mb-1 block text-sm font-semibold text-gray-700';
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2.5 sm:text-sm';
+    $labelClass = 'mb-1.5 block text-sm font-semibold text-gray-700';
 
     $oldPhotos = collect(old('photos', [
         [
@@ -18,7 +18,7 @@
 
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Report Site Issue
             </h1>
 
@@ -28,7 +28,7 @@
         </div>
 
         <a href="{{ route('site-issues.index') }}"
-           class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+           class="inline-flex w-full items-center justify-center rounded-lg bg-gray-600 px-5 py-3 font-semibold text-white hover:bg-gray-700 sm:w-auto sm:py-2.5">
             Back
         </a>
     </div>
@@ -61,7 +61,7 @@
         @csrf
 
         {{-- Project & Issue Date --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Project & Issue Date"
@@ -118,7 +118,7 @@
         </div>
 
         {{-- Location --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Issue Location"
@@ -225,7 +225,7 @@
         </div>
 
         {{-- Related Activity --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Related Activity"
@@ -276,7 +276,7 @@
         </div>
 
         {{-- Issue Details --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Issue Details"
@@ -418,7 +418,7 @@
         </div>
 
         {{-- Escalation --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Escalation"
@@ -468,7 +468,7 @@
         </div>
 
         {{-- Photos --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6"
              id="photoUploader">
 
             <x-rds.section-title
@@ -479,7 +479,7 @@
                 <x-slot:actions>
                     <button type="button"
                             id="addPhotoButton"
-                            class="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-700">
+                            class="w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 sm:w-auto sm:py-2">
                         + Add Photo
                     </button>
                 </x-slot:actions>
@@ -646,7 +646,7 @@
         </div>
 
         {{-- Remarks --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <x-rds.section-title
                 title="Remarks"
@@ -683,7 +683,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Cascading Project Location
+    | Project -> Block -> Floor -> Unit -> Room -> Sub-space
+    | AJAX cascade (same endpoints used by Work Done)
     |--------------------------------------------------------------------------
     */
 
@@ -694,120 +695,258 @@ document.addEventListener('DOMContentLoaded', function () {
     const room = document.getElementById('project_room_id');
     const subspace = document.getElementById('project_subspace_id');
 
-    function filterOptions(select, predicate) {
+    const oldLocation = {
+        block: @json(old('project_block_id')),
+        floor: @json(old('project_floor_id')),
+        unit: @json(old('project_unit_id')),
+        room: @json(old('project_room_id')),
+        subspace: @json(old('project_subspace_id')),
+    };
+
+    function resetSelect(select, placeholder) {
         if (!select) return;
 
-        Array.from(select.options).forEach(option => {
-            const visible = predicate(option);
+        select.innerHTML = '';
 
-            option.hidden = !visible;
-            option.disabled = !visible && option.value !== '';
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = placeholder;
 
-            if (!visible && option.selected) {
-                select.value = '';
-            }
+        select.appendChild(option);
+    }
+
+    function populateSelect(
+        select,
+        rows,
+        selectedValue,
+        placeholder
+    ) {
+        resetSelect(select, placeholder);
+
+        rows.forEach(row => {
+            const option = document.createElement('option');
+
+            option.value = String(row.id);
+            option.textContent =
+                row.name
+                || row.label
+                || `#${row.id}`;
+
+            option.selected =
+                String(row.id) === String(selectedValue || '');
+
+            select.appendChild(option);
         });
     }
 
-    function filterLocations() {
+    async function fetchLocationRows(url) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    `Location lookup failed (${response.status})`
+                );
+            }
+
+            const payload = await response.json();
+
+            if (Array.isArray(payload)) {
+                return payload;
+            }
+
+            if (Array.isArray(payload.data)) {
+                return payload.data;
+            }
+
+            return [];
+        } catch (error) {
+            console.error(error);
+
+            alert(
+                'Unable to load project locations. Please try again.'
+            );
+
+            return [];
+        }
+    }
+
+    function resetAfterProject() {
+        resetSelect(block, 'Select Block');
+        resetSelect(floor, 'Select Floor');
+        resetSelect(unit, 'Select Unit');
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+
+    function resetAfterBlock() {
+        resetSelect(floor, 'Select Floor');
+        resetSelect(unit, 'Select Unit');
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+
+    function resetAfterFloor() {
+        resetSelect(unit, 'Select Unit');
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+
+    function resetAfterUnit() {
+        resetSelect(room, 'Select Room');
+        resetSelect(subspace, 'Select Sub-space');
+    }
+
+    function resetAfterRoom() {
+        resetSelect(subspace, 'Select Sub-space');
+    }
+
+    async function loadBlocks(selectedValue = '') {
+        resetAfterProject();
+
         const projectId = project?.value || '';
+
+        if (!projectId) return;
+
+        const rows = await fetchLocationRows(
+            `/ajax/projects/${encodeURIComponent(projectId)}/blocks`
+        );
+
+        populateSelect(
+            block,
+            rows,
+            selectedValue,
+            'Select Block'
+        );
+    }
+
+    async function loadFloors(selectedValue = '') {
+        resetAfterBlock();
+
         const blockId = block?.value || '';
+
+        if (!blockId) return;
+
+        const rows = await fetchLocationRows(
+            `/ajax/blocks/${encodeURIComponent(blockId)}/floors`
+        );
+
+        populateSelect(
+            floor,
+            rows,
+            selectedValue,
+            'Select Floor'
+        );
+    }
+
+    async function loadUnits(selectedValue = '') {
+        resetAfterFloor();
+
         const floorId = floor?.value || '';
+
+        if (!floorId) return;
+
+        const rows = await fetchLocationRows(
+            `/ajax/floors/${encodeURIComponent(floorId)}/units`
+        );
+
+        populateSelect(
+            unit,
+            rows,
+            selectedValue,
+            'Select Unit'
+        );
+    }
+
+    async function loadRooms(selectedValue = '') {
+        resetAfterUnit();
+
         const unitId = unit?.value || '';
+
+        if (!unitId) return;
+
+        const rows = await fetchLocationRows(
+            `/ajax/units/${encodeURIComponent(unitId)}/rooms`
+        );
+
+        populateSelect(
+            room,
+            rows,
+            selectedValue,
+            'Select Room'
+        );
+    }
+
+    async function loadSubspaces(selectedValue = '') {
+        resetAfterRoom();
+
         const roomId = room?.value || '';
 
-        filterOptions(block, option => {
-            return option.value === ''
-                || (
-                    projectId
-                    && String(option.dataset.project) === String(projectId)
-                );
-        });
+        if (!roomId) return;
 
-        filterOptions(floor, option => {
-            if (option.value === '') return true;
+        const rows = await fetchLocationRows(
+            `/ajax/rooms/${encodeURIComponent(roomId)}/subspaces`
+        );
 
-            return projectId
-                && String(option.dataset.project) === String(projectId)
-                && (
-                    !blockId
-                    || String(option.dataset.block) === String(blockId)
-                );
-        });
-
-        filterOptions(unit, option => {
-            if (option.value === '') return true;
-
-            return projectId
-                && String(option.dataset.project) === String(projectId)
-                && (
-                    !blockId
-                    || String(option.dataset.block) === String(blockId)
-                )
-                && (
-                    !floorId
-                    || String(option.dataset.floor) === String(floorId)
-                );
-        });
-
-        filterOptions(room, option => {
-            return option.value === ''
-                || (
-                    unitId
-                    && String(option.dataset.unit) === String(unitId)
-                );
-        });
-
-        filterOptions(subspace, option => {
-            return option.value === ''
-                || (
-                    roomId
-                    && String(option.dataset.room) === String(roomId)
-                );
-        });
+        populateSelect(
+            subspace,
+            rows,
+            selectedValue,
+            'Select Sub-space'
+        );
     }
 
-    project?.addEventListener('change', function () {
-        block.value = '';
-        floor.value = '';
-        unit.value = '';
-        room.value = '';
-        subspace.value = '';
-
-        filterLocations();
+    project?.addEventListener('change', async function () {
+        await loadBlocks();
     });
 
-    block?.addEventListener('change', function () {
-        floor.value = '';
-        unit.value = '';
-        room.value = '';
-        subspace.value = '';
-
-        filterLocations();
+    block?.addEventListener('change', async function () {
+        await loadFloors();
     });
 
-    floor?.addEventListener('change', function () {
-        unit.value = '';
-        room.value = '';
-        subspace.value = '';
-
-        filterLocations();
+    floor?.addEventListener('change', async function () {
+        await loadUnits();
     });
 
-    unit?.addEventListener('change', function () {
-        room.value = '';
-        subspace.value = '';
-
-        filterLocations();
+    unit?.addEventListener('change', async function () {
+        await loadRooms();
     });
 
-    room?.addEventListener('change', function () {
-        subspace.value = '';
-
-        filterLocations();
+    room?.addEventListener('change', async function () {
+        await loadSubspaces();
     });
 
-    filterLocations();
+    async function initializeLocationCascade() {
+        if (!project?.value) {
+            resetAfterProject();
+            return;
+        }
+
+        await loadBlocks(oldLocation.block);
+
+        if (oldLocation.block) {
+            await loadFloors(oldLocation.floor);
+        }
+
+        if (oldLocation.floor) {
+            await loadUnits(oldLocation.unit);
+        }
+
+        if (oldLocation.unit) {
+            await loadRooms(oldLocation.room);
+        }
+
+        if (oldLocation.room) {
+            await loadSubspaces(oldLocation.subspace);
+        }
+    }
+
+    initializeLocationCascade();
 
     /*
     |--------------------------------------------------------------------------
@@ -870,7 +1009,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     division?.addEventListener(
         'change',
-        filterActivities
+        function () {
+            if (activity) {
+                activity.value = '';
+            }
+
+            filterActivities();
+
+            if (activity) {
+                activity.value = '';
+            }
+        }
     );
 
     filterActivities();

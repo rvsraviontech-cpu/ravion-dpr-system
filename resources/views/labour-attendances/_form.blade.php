@@ -62,6 +62,160 @@
     ]);
 @endphp
 
+
+<style>
+@media (max-width: 1023px) {
+    .compact-attendance-wrap {
+        overflow: visible !important;
+    }
+
+    .compact-attendance-wrap table,
+    .compact-attendance-wrap tbody {
+        display: block;
+        width: 100%;
+        min-width: 0 !important;
+    }
+
+    .compact-attendance-wrap thead,
+    .compact-attendance-wrap colgroup {
+        display: none;
+    }
+
+    .compact-attendance-wrap tr.labour-group-heading {
+        display: block;
+        margin: 12px 0 6px;
+        background: transparent !important;
+    }
+
+    .compact-attendance-wrap tr.labour-group-heading td {
+        display: block;
+        width: 100%;
+        border: 0 !important;
+        border-radius: 10px;
+        background: #0F2A52 !important;
+        color: #fff !important;
+        padding: 10px 12px !important;
+        box-shadow: 0 1px 2px rgba(15, 42, 82, .18);
+    }
+
+    .compact-attendance-wrap tr.labour-group-heading td span {
+        color: #dbeafe !important;
+    }
+
+    .compact-attendance-wrap tr.attendance-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 44px 44px 92px;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        min-height: 54px;
+        padding: 7px 8px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #fff;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td {
+        display: block;
+        width: auto;
+        padding: 0 !important;
+        border: 0 !important;
+        min-width: 0;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(1) {
+        grid-column: 1;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(2) {
+        display: none;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(3) {
+        grid-column: 2;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(4) {
+        grid-column: 3;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(5) {
+        grid-column: 4;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(n+6) {
+        display: none;
+        grid-column: 1 / -1;
+        padding-top: 8px !important;
+    }
+
+    .compact-attendance-wrap tr.attendance-row.mobile-details-open > td:nth-child(n+6) {
+        display: block;
+    }
+
+    .compact-attendance-wrap .present-btn,
+    .compact-attendance-wrap .absent-btn {
+        width: 44px !important;
+        height: 40px !important;
+        border-radius: 9px !important;
+    }
+
+    .compact-attendance-wrap .more-status {
+        width: 92px !important;
+        min-height: 40px;
+        border-radius: 9px;
+        padding: 0 6px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(6)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(7)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(8)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(9)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(10)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(11)::before {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: #6b7280;
+    }
+
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(6)::before { content: "Working Status"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(7)::before { content: "Check In"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(8)::before { content: "Check Out"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(9)::before { content: "Normal Hours"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(10)::before { content: "OT Hours"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(11)::before { content: "Remarks"; }
+
+    .compact-attendance-wrap .working-status,
+    .compact-attendance-wrap .check-in,
+    .compact-attendance-wrap .check-out,
+    .compact-attendance-wrap .normal,
+    .compact-attendance-wrap .ot,
+    .compact-attendance-wrap input[type="text"] {
+        min-height: 42px;
+        font-size: 16px;
+    }
+
+    .mobile-details-toggle {
+        margin-top: 3px;
+        font-size: 10px;
+        line-height: 1;
+        font-weight: 700;
+        color: #0F2A52;
+    }
+}
+
+@media (min-width: 1024px) {
+    .mobile-details-toggle {
+        display: none !important;
+    }
+}
+</style>
+
 <div
     id="labour-attendance-form"
     data-editing="{{ $editingAttendance ? '1' : '0' }}"
@@ -206,7 +360,7 @@
                 ['id' => 'summary-normal', 'label' => 'Normal Hours'],
                 ['id' => 'summary-ot', 'label' => 'OT Hours'],
             ] as $summary)
-                <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm">
+                <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-sm {{ in_array($summary['id'], ['summary-working', 'summary-idle', 'summary-normal', 'summary-ot'], true) ? 'hidden sm:block' : '' }}">
                     <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{{ $summary['label'] }}</p>
                     <p id="{{ $summary['id'] }}" class="mt-1 text-xl font-bold text-gray-900">0</p>
                 </div>
@@ -220,21 +374,25 @@
                     type="text"
                     id="labour-table-search"
                     placeholder="Search by name or designation..."
-                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    class="block w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:py-2 sm:text-sm"
                 >
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <button type="button" id="mark-filtered-present" class="inline-flex items-center justify-center rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 shadow-sm transition hover:bg-green-100">
+                <button type="button" id="mark-filtered-present" class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-green-300 bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 shadow-sm transition hover:bg-green-100">
                     Mark Filtered Present
                 </button>
-                <button type="button" id="mark-filtered-absent" class="inline-flex items-center justify-center rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-100">
+                <button type="button" id="mark-filtered-absent" class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-100">
                     Mark Filtered Absent
                 </button>
-                <button type="button" id="logout-filtered-present" class="inline-flex items-center justify-center rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100">
+                <button type="button" id="logout-filtered-present" class="w-full sm:w-auto inline-flex items-center justify-center rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm transition hover:bg-blue-100">
                     Logout Filtered Present
                 </button>
             </div>
+        </div>
+
+        <div class="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800 lg:hidden">
+            Fast entry: use <strong>Mark Assigned Present</strong>, then change only absentees or special statuses. Tap <strong>Details</strong> only when hours, OT, check-in/out or remarks need adjustment.
         </div>
 
         <div id="labour-loading-message" class="hidden rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">Loading labour profiles...</div>
@@ -248,31 +406,71 @@
                 ['id' => 'assigned', 'title' => 'Assigned Labour', 'description' => 'Labour currently assigned to this project', 'border' => 'border-blue-200', 'head' => 'border-blue-200 bg-blue-50', 'text' => 'text-blue-900'],
                 ['id' => 'unassigned', 'title' => 'Unassigned Labour', 'description' => 'Labour not assigned to any project', 'border' => 'border-green-200', 'head' => 'border-green-200 bg-green-50', 'text' => 'text-green-900'],
             ] as $group)
-                <div id="{{ $group['id'] }}-section" class="overflow-hidden rounded-xl border {{ $group['border'] }}">
+                <div
+                    id="{{ $group['id'] }}-section"
+                    class="overflow-hidden rounded-xl border {{ $group['border'] }}"
+                    @if($group['id'] === 'unassigned')
+                        x-data="{ open: false }"
+                    @endif
+                >
                     <div class="border-b px-4 py-3 {{ $group['head'] }}">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
-                                <h3 class="font-semibold {{ $group['text'] }}">{{ $group['title'] }} (<span id="{{ $group['id'] }}-visible-count">0</span>)</h3>
-                                <p class="text-xs text-gray-600">{{ $group['description'] }}</p>
+                                <div class="flex items-center justify-between gap-3">
+                                    <div>
+                                        <h3 class="font-semibold {{ $group['text'] }}">
+                                            {{ $group['title'] }}
+                                            (<span id="{{ $group['id'] }}-visible-count">0</span>)
+                                        </h3>
+                                        <p class="text-xs text-gray-600">{{ $group['description'] }}</p>
+                                    </div>
+
+                                    @if($group['id'] === 'unassigned')
+                                        <button
+                                            type="button"
+                                            @click="open = !open"
+                                            class="lg:hidden inline-flex items-center justify-center rounded-lg border border-green-300 bg-white px-3 py-2 text-xs font-semibold text-green-700"
+                                        >
+                                            <span x-text="open ? 'Hide' : 'Show'"></span>
+                                            <svg
+                                                class="ml-1 h-4 w-4 transition-transform"
+                                                :class="open ? 'rotate-180' : ''"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
 
                             @if($group['id'] === 'assigned')
                                 <div class="flex flex-wrap gap-2">
-                                    <button type="button" id="mark-assigned-present" class="rounded-lg border border-green-300 bg-white px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50">
+                                    <button type="button" id="mark-assigned-present" class="w-full sm:w-auto rounded-lg border border-green-300 bg-white px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-50">
                                         Mark Assigned Present
                                     </button>
-                                    <button type="button" id="mark-assigned-absent" class="rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">
+                                    <button type="button" id="mark-assigned-absent" class="w-full sm:w-auto rounded-lg border border-red-300 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50">
                                         Mark Assigned Absent
                                     </button>
-                                    <button type="button" id="logout-assigned-present" class="rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">
+                                    <button type="button" id="logout-assigned-present" class="w-full sm:w-auto rounded-lg border border-blue-300 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50">
                                         Logout Assigned Present
                                     </button>
                                 </div>
                             @endif
                         </div>
                     </div>
-                    <div class="overflow-x-auto {{ $group['id'] === 'unassigned' ? 'max-h-[680px] overflow-y-auto' : '' }}">
-                        <table class="w-full min-w-[1500px] table-fixed">
+                    @if($group['id'] === 'unassigned')
+                        <div
+                            class="compact-attendance-wrap overflow-x-auto lg:block lg:max-h-[680px] lg:overflow-y-auto"
+                            x-show="open"
+                            x-cloak
+                        >
+                    @else
+                        <div class="compact-attendance-wrap overflow-x-auto">
+                    @endif
+                        <table class="w-full min-w-0 table-fixed lg:min-w-[1500px]">
                             <colgroup>
                                 <col class="w-[205px]"><col class="w-[170px]"><col class="w-[58px]"><col class="w-[58px]"><col class="w-[150px]">
                                 <col class="w-[160px]"><col class="w-[130px]"><col class="w-[130px]"><col class="w-[100px]"><col class="w-[90px]"><col class="w-[220px]">
@@ -288,12 +486,28 @@
                         </table>
                     </div>
 
+                    @if($group['id'] === 'unassigned')
+                        <div
+                            x-show="open"
+                            x-cloak
+                            class="border-t border-green-200 bg-green-50 px-4 py-3 lg:hidden"
+                        >
+                            <button
+                                type="button"
+                                data-attendance-submit
+                                class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            >
+                                {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
+                            </button>
+                        </div>
+                    @endif
+
                     @if($group['id'] === 'assigned')
                         <div class="flex justify-end border-t border-blue-200 bg-blue-50 px-4 py-3">
                             <button
                                 type="button"
                                 data-attendance-submit
-                                class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto sm:py-2.5"
                             >
                                 {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
                             </button>
@@ -301,12 +515,6 @@
                     @endif
                 </div>
             @endforeach
-        </div>
-
-        <div class="mt-5 flex justify-end">
-            <button type="button" data-attendance-submit class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
-            </button>
         </div>
 
         <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
@@ -415,7 +623,7 @@
 }
 
         function moreOptions(selectedId) {
-            let html = '<option value="">Select</option>';
+            let html = '<option value="">More</option>';
             statuses.forEach((status) => {
                 if (isPresent(status) || isAbsent(status)) return;
                 html += `<option value="${esc(status.id)}"${String(status.id) === String(selectedId) ? ' selected' : ''}>${esc(status.short_name || status.name)}</option>`;
@@ -448,10 +656,10 @@
             const group = labour.assignment_group === 'unassigned' ? 'unassigned' : (editing ? 'existing' : 'assigned');
 
             return `<tr class="attendance-row" data-existing="${old || labour.has_saved_attendance ? '1' : '0'}" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name, labour.labour_group_name].filter(Boolean).join(' ').toLowerCase())}">
-                <td class="px-3 py-3"><input type="hidden" name="details[${index}][labour_id]" value="${esc(id)}"><input class="status-id" type="hidden" name="details[${index}][attendance_status_id]" value="${esc(statusId)}"><input type="hidden" name="details[${index}][attendance_source]" value="${esc(source)}"><p class="truncate text-sm font-semibold text-gray-900">${esc(labour.full_name || 'Unavailable Labour')}</p></td>
+                <td class="px-3 py-3"><input type="hidden" name="details[${index}][labour_id]" value="${esc(id)}"><input class="status-id" type="hidden" name="details[${index}][attendance_status_id]" value="${esc(statusId)}"><input type="hidden" name="details[${index}][attendance_source]" value="${esc(source)}"><p class="truncate text-sm font-semibold text-gray-900">${esc(labour.full_name || 'Unavailable Labour')}</p><p class="mt-0.5 truncate text-[11px] text-gray-500 lg:hidden">${esc(labour.designation_role_name || '—')}</p><button type="button" class="mobile-details-toggle lg:hidden">Details</button></td>
                 <td class="px-3 py-3"><p class="truncate text-sm text-gray-700">${esc(labour.designation_role_name || '—')}</p><p class="mt-0.5 truncate text-[11px] font-medium text-gray-500">${esc(labour.labour_group_name || 'Un-grouped')}</p></td>
-                <td class="px-2 py-3 text-center"><button type="button" class="present-btn inline-flex h-9 w-10 items-center justify-center rounded-md border text-sm font-bold transition">P</button></td>
-                <td class="px-2 py-3 text-center"><button type="button" class="absent-btn inline-flex h-9 w-10 items-center justify-center rounded-md border text-sm font-bold transition">A</button></td>
+                <td class="px-2 py-3 text-center"><button type="button" class="present-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md">P</button></td>
+                <td class="px-2 py-3 text-center"><button type="button" class="absent-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md">A</button></td>
                 <td class="px-3 py-3"><select class="more-status block w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm">${moreOptions(moreId)}</select></td>
                 <td class="px-3 py-3"><select class="working-status block w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm" name="details[${index}][working_status_id]">${workingOptions(workingStatusId)}</select></td>
                 <td class="px-3 py-3"><input type="time" class="check-in block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][check_in_time]" value="${esc(checkIn)}"></td>
@@ -464,8 +672,8 @@
 
         function buttonState(row) {
             const status = byId(row.querySelector('.status-id').value);
-            row.querySelector('.present-btn').className = 'present-btn inline-flex h-9 w-10 items-center justify-center rounded-md border text-sm font-bold transition ' + (isPresent(status) ? 'border-green-600 bg-green-600 text-white' : 'border-green-300 bg-white text-green-700 hover:bg-green-50');
-            row.querySelector('.absent-btn').className = 'absent-btn inline-flex h-9 w-10 items-center justify-center rounded-md border text-sm font-bold transition ' + (isAbsent(status) ? 'border-red-600 bg-red-600 text-white' : 'border-red-300 bg-white text-red-700 hover:bg-red-50');
+            row.querySelector('.present-btn').className = 'present-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md ' + (isPresent(status) ? 'border-green-600 bg-green-600 text-white' : 'border-green-300 bg-white text-green-700 hover:bg-green-50');
+            row.querySelector('.absent-btn').className = 'absent-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md ' + (isAbsent(status) ? 'border-red-600 bg-red-600 text-white' : 'border-red-300 bg-white text-red-700 hover:bg-red-50');
         }
 
         function clearAttendance(row) {
@@ -683,6 +891,11 @@
 }
 
         function bind(row) {
+            row.querySelector('.mobile-details-toggle')?.addEventListener('click', function () {
+                const open = row.classList.toggle('mobile-details-open');
+                this.textContent = open ? 'Hide Details' : 'Details';
+            });
+
             row.querySelector('.present-btn').addEventListener('click', () => setStatus(row, present()));
             row.querySelector('.absent-btn').addEventListener('click', () => setStatus(row, absent()));
             row.querySelector('.more-status').addEventListener('change', function () {
@@ -735,10 +948,10 @@
 
         function groupHeadingHtml(groupName, labourCount) {
             return `
-                <tr class="labour-group-heading bg-slate-100">
-                    <td colspan="11" class="border-y border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700">
+                <tr class="labour-group-heading bg-[#0F2A52]">
+                    <td colspan="11" class="border-y border-[#0F2A52] bg-[#0F2A52] px-3 py-2 text-xs font-bold uppercase tracking-wide text-white">
                         ${esc(groupName || 'Un-grouped Labour')}
-                        <span class="ml-2 font-medium normal-case tracking-normal text-slate-500">
+                        <span class="ml-2 font-medium normal-case tracking-normal text-blue-100">
                             ${labourCount} labour${labourCount === 1 ? '' : 's'}
                         </span>
                     </td>

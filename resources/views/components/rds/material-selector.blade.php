@@ -10,7 +10,7 @@
         ->all();
 @endphp
 
-<div class="rounded-lg border border-gray-200 bg-white p-4"
+<div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4"
      data-ref-material-selector
      data-ref-work-index="{{ $index }}"
      data-ref-selected-materials='@json($selectedIds)'>
@@ -21,7 +21,7 @@
         icon="🧱"
     />
 
-    <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+    <div class="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 sm:px-4 sm:py-3 sm:text-sm">
         Material quantities are not entered again here. Link the Material Consumed transaction already recorded for this site so Stock Register, Material Ledger, Work Done and DPR remain synchronized.
     </div>
 

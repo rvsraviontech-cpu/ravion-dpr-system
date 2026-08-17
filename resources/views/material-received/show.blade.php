@@ -35,7 +35,7 @@
 
         <div>
             <div class="flex flex-wrap items-center gap-3">
-                <h1 class="text-3xl font-bold text-gray-800">
+                <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                     Material Receipt #{{ $materialReceived->id }}
                 </h1>
 
@@ -49,11 +49,11 @@
             </p>
         </div>
 
-        <div class="flex flex-wrap gap-2 print:hidden">
+        <div class="grid grid-cols-2 gap-2 print:hidden sm:flex sm:flex-wrap">
 
             @if($materialReceived->status === 'Draft')
                 <a href="{{ route('material-received.edit', $materialReceived) }}"
-                   class="inline-flex items-center justify-center rounded-lg bg-yellow-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-yellow-600">
+                   class="inline-flex items-center justify-center rounded-lg bg-yellow-500 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-yellow-600 sm:py-2.5">
                     Edit
                 </a>
 
@@ -64,7 +64,7 @@
 
                     <button type="submit"
                             onclick="return confirm('Submit this material receipt for approval?')"
-                            class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+                            class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-blue-700 sm:py-2.5">
                         Submit
                     </button>
                 </form>
@@ -95,7 +95,7 @@
 
         <button type="submit"
                 onclick="return confirm('Approve this material receipt?')"
-                class="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-green-700">
+                class="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-green-700 sm:py-2.5">
             Approve
         </button>
 
@@ -114,7 +114,7 @@
 
                     <button type="submit"
                             onclick="return confirm('Confirm that Accounts has verified this supplier bill?')"
-                            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-purple-700">
+                            class="inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-purple-700 sm:py-2.5">
                         Verify Bill
                     </button>
                 </form>
@@ -122,12 +122,12 @@
 
             <button type="button"
                     onclick="window.print()"
-                    class="inline-flex items-center justify-center rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800">
+                    class="inline-flex items-center justify-center rounded-lg bg-slate-700 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-slate-800 sm:py-2.5">
                 Print
             </button>
 
             <a href="{{ route('material-received.index') }}"
-               class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-700">
+               class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-gray-700 sm:py-2.5">
                 Back
             </a>
         </div>
@@ -149,7 +149,7 @@
     {{-- Receipt Information --}}
     <div class="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-3">
 
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm xl:col-span-2">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 xl:col-span-2">
 
             <h2 class="mb-5 text-xl font-bold text-gray-800">
                 Receipt Information
@@ -314,7 +314,7 @@
         </div>
 
         {{-- Verification Status --}}
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
             <h2 class="mb-5 text-xl font-bold text-gray-800">
                 Verification Status
@@ -447,7 +447,106 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
+        {{-- Mobile Material Items --}}
+        <div class="space-y-3 p-3 lg:hidden">
+            @if($hasNewItems)
+                @foreach($materialReceived->items as $index => $item)
+                    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div class="flex items-start justify-between gap-3">
+                            <div>
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">
+                                    Material {{ $index + 1 }}
+                                </div>
+                                <div class="mt-1 text-base font-bold text-gray-800">
+                                    {{ $item->materialType?->material_type_name ?? '-' }}
+                                </div>
+                                @if($item->activity)
+                                    <div class="mt-1 text-xs text-gray-500">
+                                        {{ $item->activity->activity_name }}
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-bold text-[#0F2A52]">
+                                    {{ formatQuantity($item->quantity_received) }}
+                                </div>
+                                <div class="text-xs font-semibold text-gray-500">
+                                    {{ $item->unit?->unit_name ?? '-' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div class="rounded-lg bg-gray-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Brand</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->brand?->brand_name ?? '-' }}</div>
+                            </div>
+                            <div class="rounded-lg bg-gray-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Specification</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->specification?->specification_name ?? '-' }}</div>
+                            </div>
+                            <div class="rounded-lg bg-gray-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Grade</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->grade?->grade_name ?? '-' }}</div>
+                            </div>
+                            <div class="rounded-lg bg-gray-50 px-3 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Condition</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->material_condition ?? 'Pending Verification' }}</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 grid grid-cols-4 gap-2 text-center">
+                            <div class="rounded-lg bg-green-50 px-2 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-green-700">Accepted</div>
+                                <div class="mt-1 text-sm font-bold text-green-800">{{ formatQuantity($item->accepted_quantity) }}</div>
+                            </div>
+                            <div class="rounded-lg bg-yellow-50 px-2 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-yellow-700">Short</div>
+                                <div class="mt-1 text-sm font-bold text-yellow-800">{{ formatQuantity($item->short_quantity) }}</div>
+                            </div>
+                            <div class="rounded-lg bg-orange-50 px-2 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-orange-700">Damaged</div>
+                                <div class="mt-1 text-sm font-bold text-orange-800">{{ formatQuantity($item->damaged_quantity) }}</div>
+                            </div>
+                            <div class="rounded-lg bg-red-50 px-2 py-2">
+                                <div class="text-[10px] font-bold uppercase tracking-wide text-red-700">Rejected</div>
+                                <div class="mt-1 text-sm font-bold text-red-800">{{ formatQuantity($item->rejected_quantity) }}</div>
+                            </div>
+                        </div>
+
+                        @if($item->remarks)
+                            <div class="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                                {{ $item->remarks }}
+                            </div>
+                        @endif
+                    </article>
+                @endforeach
+            @else
+                <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div class="text-base font-bold text-gray-800">
+                        {{ $materialReceived->material_name
+                            ?? $materialReceived->material?->material_name
+                            ?? '-' }}
+                    </div>
+                    <div class="mt-2 text-lg font-bold text-[#0F2A52]">
+                        {{ formatQuantity($materialReceived->quantity_received) }}
+                        {{ $materialReceived->unit ?? '' }}
+                    </div>
+                    <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                        <div class="rounded-lg bg-gray-50 px-3 py-2">
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Brand</div>
+                            <div class="mt-1 font-semibold">{{ $materialReceived->brand ?? '-' }}</div>
+                        </div>
+                        <div class="rounded-lg bg-gray-50 px-3 py-2">
+                            <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Specification</div>
+                            <div class="mt-1 font-semibold">{{ $materialReceived->specification ?? '-' }}</div>
+                        </div>
+                    </div>
+                </article>
+            @endif
+        </div>
+
+        <div class="hidden overflow-x-auto lg:block">
 
             <table class="min-w-[1500px] w-full text-sm">
 

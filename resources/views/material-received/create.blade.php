@@ -3,8 +3,8 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
-    $labelClass = 'mb-1 block text-sm font-semibold text-gray-700';
+    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2.5 sm:text-sm';
+    $labelClass = 'mb-1.5 block text-sm font-semibold text-gray-700';
 
     $oldItems = old('items', [
         [
@@ -77,7 +77,7 @@
 
     <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">
+            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
                 Add Material Receipt
             </h1>
 
@@ -87,7 +87,7 @@
         </div>
 
         <a href="{{ route('material-received.index') }}"
-           class="inline-flex items-center justify-center rounded-lg bg-gray-600 px-5 py-2.5 font-semibold text-white hover:bg-gray-700">
+           class="inline-flex w-full items-center justify-center rounded-lg bg-gray-600 px-5 py-3 font-semibold text-white hover:bg-gray-700 sm:w-auto sm:py-2.5">
             Back
         </a>
     </div>
@@ -123,14 +123,14 @@
         @include('material-received.partials.material-items')
         @include('material-received.partials.material-photos')
 
-        <div class="mt-6 flex flex-wrap gap-3">
+        <div class="sticky bottom-[68px] z-30 mt-6 grid grid-cols-1 gap-3 border-t border-gray-200 bg-white/95 py-3 backdrop-blur sm:flex sm:flex-wrap lg:static lg:border-0 lg:bg-transparent lg:py-0">
             <button type="submit"
-                    class="rounded-lg bg-blue-600 px-7 py-3 font-semibold text-white hover:bg-blue-700">
+                    class="w-full rounded-xl bg-blue-600 px-7 py-3.5 font-semibold text-white shadow-sm hover:bg-blue-700 sm:w-auto sm:py-3">
                 Save Material Receipt
             </button>
 
             <a href="{{ route('material-received.index') }}"
-               class="rounded-lg bg-gray-500 px-7 py-3 font-semibold text-white hover:bg-gray-600">
+               class="w-full rounded-xl bg-gray-500 px-7 py-3.5 text-center font-semibold text-white hover:bg-gray-600 sm:w-auto sm:py-3">
                 Cancel
             </a>
         </div>

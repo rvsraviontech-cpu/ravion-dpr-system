@@ -29,7 +29,7 @@
     data-ref-activity-card
     data-ref-index="{{ $index }}"
 >
-    <div class="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-5 py-4 md:flex-row md:items-center md:justify-between">
+    <div class="flex flex-col gap-3 border-b border-gray-200 bg-[#0F2A52] px-4 py-3 text-white md:flex-row md:items-center md:justify-between md:bg-gray-50 md:px-5 md:py-4 md:text-gray-800">
 
         <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
@@ -38,7 +38,7 @@
                     {{ $displayNumber }}
                 </span>
 
-                <h2 class="truncate text-lg font-bold text-gray-800"
+                <h2 class="truncate text-base font-bold text-white md:text-lg md:text-gray-800"
                     data-ref-activity-title>
                     {{ $cardTitle }}
                 </h2>
@@ -54,7 +54,7 @@
                 @endif
             </div>
 
-            <p class="mt-1 truncate text-sm text-gray-500"
+            <p class="mt-1 truncate text-xs text-blue-100 md:text-sm md:text-gray-500"
                data-ref-activity-location>
                 {{ $location ?: 'Location not selected' }}
             </p>
@@ -63,7 +63,7 @@
         <div class="flex flex-wrap gap-2">
             @if($collapsible)
                 <button type="button"
-                        class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+                        class="rounded-lg border border-white/40 bg-white/10 px-3 py-2 text-sm font-semibold text-white hover:bg-white/20 md:border-gray-300 md:bg-white md:text-gray-700 md:hover:bg-gray-100"
                         data-ref-toggle-activity>
                     {{ $collapsed ? 'Expand' : 'Collapse' }}
                 </button>
