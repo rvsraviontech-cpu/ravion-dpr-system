@@ -646,7 +646,13 @@ class LabourController extends Controller
         ];
 
         foreach ($defaults as $field => $defaultValue) {
-            if (($creating || ! array_key_exists($field, $data)) && $defaultValue !== null) {
+            // Designation values are defaults only. Never overwrite an
+            // explicit wage/OT value submitted from the Labour form.
+            $hasSubmittedValue = array_key_exists($field, $data)
+                && $data[$field] !== null
+                && $data[$field] !== '';
+
+            if (! $hasSubmittedValue && $defaultValue !== null) {
                 $data[$field] = $defaultValue;
             }
         }
