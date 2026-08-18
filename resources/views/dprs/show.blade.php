@@ -903,7 +903,7 @@
                                 $planLocation = collect([
                                     $plan->block?->name,
                                     $plan->floor?->name,
-                                    $plan->getRelation('unit')?->name,
+                                    $plan->projectUnit?->name,
                                     $plan->room?->name,
                                     $plan->subspace?->name,
                                 ])->filter()->implode(' → ');

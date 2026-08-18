@@ -2331,7 +2331,7 @@ class DprController extends Controller
                 'tomorrowPlans.activity',
                 'tomorrowPlans.block',
                 'tomorrowPlans.floor',
-                'tomorrowPlans.unit',
+                'tomorrowPlans.projectUnit',
                 'tomorrowPlans.room',
                 'tomorrowPlans.subspace',
 

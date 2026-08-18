@@ -49,27 +49,54 @@ class TomorrowPlan extends Model
 
     public function block()
     {
-        return $this->belongsTo(ProjectBlock::class, 'project_block_id');
+        return $this->belongsTo(
+            ProjectBlock::class,
+            'project_block_id'
+        );
     }
 
     public function floor()
     {
-        return $this->belongsTo(ProjectFloor::class, 'project_floor_id');
+        return $this->belongsTo(
+            ProjectFloor::class,
+            'project_floor_id'
+        );
     }
 
-    public function unit()
+    /*
+    |--------------------------------------------------------------------------
+    | Project Unit
+    |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    | This relationship must NOT be named "unit" because tomorrow_plans also
+    | contains a database column named "unit" for values such as Nos, Sqft,
+    | Cum, etc.
+    |
+    */
+
+    public function projectUnit()
     {
-        return $this->belongsTo(ProjectUnit::class, 'project_unit_id');
+        return $this->belongsTo(
+            ProjectUnit::class,
+            'project_unit_id'
+        );
     }
 
     public function room()
     {
-        return $this->belongsTo(ProjectRoom::class, 'project_room_id');
+        return $this->belongsTo(
+            ProjectRoom::class,
+            'project_room_id'
+        );
     }
 
     public function subspace()
     {
-        return $this->belongsTo(ProjectSubspace::class, 'project_subspace_id');
+        return $this->belongsTo(
+            ProjectSubspace::class,
+            'project_subspace_id'
+        );
     }
 
     public function activity()
@@ -84,11 +111,17 @@ class TomorrowPlan extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(
+            User::class,
+            'created_by'
+        );
     }
 
     public function approver()
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(
+            User::class,
+            'approved_by'
+        );
     }
 }

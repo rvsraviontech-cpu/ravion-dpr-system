@@ -20,9 +20,17 @@ class TomorrowPlanController extends Controller
     public function index(Request $request)
     {
         $query = TomorrowPlan::with([
-            'project', 'block', 'floor', 'unit', 'room',
-            'subspace', 'activity', 'contractor', 'creator', 'approver',
-        ])->latest();
+    'project',
+    'block',
+    'floor',
+    'projectUnit',
+    'room',
+    'subspace',
+    'activity',
+    'contractor',
+    'creator',
+    'approver',
+])->latest();
 
         if ($request->filled('planned_date')) {
             $query->whereDate('planned_date', $request->planned_date);
@@ -155,9 +163,17 @@ class TomorrowPlanController extends Controller
     public function show(TomorrowPlan $tomorrowPlan)
     {
         $tomorrowPlan->load([
-            'project', 'block', 'floor', 'unit', 'room',
-            'subspace', 'activity', 'contractor', 'creator', 'approver',
-        ]);
+    'project',
+    'block',
+    'floor',
+    'projectUnit',
+    'room',
+    'subspace',
+    'activity',
+    'contractor',
+    'creator',
+    'approver',
+]);
 
         return view('tomorrow-plans.show', compact('tomorrowPlan'));
     }

@@ -269,37 +269,52 @@
         ->count();
 
     $presentCount = $attendanceDetails
-        ->filter(fn ($detail) =>
-            strtolower((string) (
-                $detail->attendanceStatus?->code
-                ?? $detail->attendanceStatus?->name
-                ?? ''
-            )) === 'present'
-        )
-        ->count();
+    ->filter(function ($detail) {
+        $code = strtoupper(trim((string) (
+            $detail->attendanceStatus?->code ?? ''
+        )));
 
-    $absentCount = $attendanceDetails
-        ->filter(fn ($detail) =>
-            strtolower((string) (
-                $detail->attendanceStatus?->code
-                ?? $detail->attendanceStatus?->name
-                ?? ''
-            )) === 'absent'
-        )
-        ->count();
+        $name = strtoupper(trim((string) (
+            $detail->attendanceStatus?->name ?? ''
+        )));
 
-    $halfDayCount = $attendanceDetails
-        ->filter(fn ($detail) =>
-            str_contains(
-                strtolower((string) (
-                    $detail->attendanceStatus?->code
-                    ?? $detail->attendanceStatus?->name
-                    ?? ''
-                )),
-                'half'
-            )
-        )
-        ->count();
+        return in_array($code, ['P', 'PRESENT'], true)
+            || $name === 'PRESENT';
+    })
+    ->count();
+
+$absentCount = $attendanceDetails
+    ->filter(function ($detail) {
+        $code = strtoupper(trim((string) (
+            $detail->attendanceStatus?->code ?? ''
+        )));
+
+        $name = strtoupper(trim((string) (
+            $detail->attendanceStatus?->name ?? ''
+        )));
+
+        return in_array($code, ['A', 'ABSENT'], true)
+            || $name === 'ABSENT';
+    })
+    ->count();
+
+$halfDayCount = $attendanceDetails
+    ->filter(function ($detail) {
+        $code = strtoupper(trim((string) (
+            $detail->attendanceStatus?->code ?? ''
+        )));
+
+        $name = strtoupper(trim((string) (
+            $detail->attendanceStatus?->name ?? ''
+        )));
+
+        return in_array(
+            $code,
+            ['HD', 'HALF_DAY', 'HALFDAY'],
+            true
+        ) || str_contains($name, 'HALF');
+    })
+    ->count();
 
     $normalHours = round(
         (float) $attendanceDetails->sum('normal_hours'),
@@ -533,7 +548,7 @@
                         @foreach($attendance->details as $detail)
                             <tr>
                                 <td>
-                                    {{ $detail->labour?->name ?? '-' }}
+                                    {{ $detail->labour?->full_name ?? '-' }}
                                 </td>
 
                                 <td>
@@ -1170,7 +1185,7 @@
                             $planLocation = collect([
                                 $plan->block?->name,
                                 $plan->floor?->name,
-                                $plan->unit?->name,
+                                $plan->projectUnit?->name,
                                 $plan->room?->name,
                                 $plan->subspace?->name,
                             ])

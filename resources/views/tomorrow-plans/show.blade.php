@@ -18,7 +18,7 @@
     $location = collect([
         $tomorrowPlan->block?->name,
         $tomorrowPlan->floor?->name,
-        $tomorrowPlan->getRelation('unit')?->name,
+        $tomorrowPlan->projectUnit?->name,
         $tomorrowPlan->room?->name,
         $tomorrowPlan->subspace?->name,
     ])->filter()->implode(' › ');
