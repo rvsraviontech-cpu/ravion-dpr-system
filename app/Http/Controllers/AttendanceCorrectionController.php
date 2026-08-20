@@ -174,11 +174,13 @@ class AttendanceCorrectionController extends Controller
                 ->all();
 
             /*
-             * Correction Add Labour pool:
-             * - project-assigned labour omitted from this approved sheet,
-             * - currently unassigned labour,
-             * - never labour assigned to another project,
-             * - never labour already recorded on another project on this date.
+             * Cross-project correction rule:
+             * A labour may be added to this project when their attendance
+             * elsewhere on the same date is non-working/non-payable
+             * (Absent, Leave, Weekly Off, Holiday, etc.).
+             *
+             * Only another active attendance detail whose Attendance Status
+             * has a positive payable factor is treated as a conflict.
              */
             $conflictingLabourIds = LabourAttendanceDetail::query()
                 ->join(
@@ -186,6 +188,12 @@ class AttendanceCorrectionController extends Controller
                     'labour_attendances.id',
                     '=',
                     'labour_attendance_details.labour_attendance_id'
+                )
+                ->join(
+                    'attendance_statuses',
+                    'attendance_statuses.id',
+                    '=',
+                    'labour_attendance_details.attendance_status_id'
                 )
                 ->whereDate(
                     'labour_attendances.attendance_date',
@@ -211,6 +219,15 @@ class AttendanceCorrectionController extends Controller
                     true
                 )
                 ->whereNull('labour_attendance_details.deleted_at')
+                ->where(
+                    'attendance_statuses.is_active',
+                    true
+                )
+                ->where(
+                    'attendance_statuses.payable_factor',
+                    '>',
+                    0
+                )
                 ->pluck('labour_attendance_details.labour_id')
                 ->map(fn ($id): int => (int) $id)
                 ->unique()
@@ -219,16 +236,6 @@ class AttendanceCorrectionController extends Controller
 
             $availableLabours = Labour::query()
                 ->active()
-                ->where(function (Builder $query) use (
-                    $selectedAttendance
-                ): void {
-                    $query
-                        ->where(
-                            'current_project_id',
-                            $selectedAttendance->project_id
-                        )
-                        ->orWhereNull('current_project_id');
-                })
                 ->when(
                     ! empty($existingLabourIds),
                     fn (Builder $query): Builder =>
@@ -242,6 +249,7 @@ class AttendanceCorrectionController extends Controller
                 ->with([
                     'designationRole',
                     'labourGroup',
+                    'currentProject:id,project_name,project_code',
                 ])
                 ->orderByRaw(
                     '
@@ -1449,27 +1457,23 @@ class AttendanceCorrectionController extends Controller
                     ->firstOrFail();
 
                 /*
-                 * Backend security mirrors the create-page list:
-                 * only project-assigned or unassigned labour may be added.
+                 * Project assignment does not block temporary movement.
+                 * A labour assigned to another project can be added here
+                 * provided they do not already have payable attendance on
+                 * another project for this date.
                  */
-                if (
-                    $labourToAdd->current_project_id !== null
-                    && (int) $labourToAdd->current_project_id
-                        !== (int) $attendance->project_id
-                ) {
-                    throw ValidationException::withMessages([
-                        "details.{$rowIndex}.labour_id" => [
-                            'The selected labour is assigned to another project and cannot be added to this attendance sheet.',
-                        ],
-                    ]);
-                }
-
                 $hasConflictingAttendance = LabourAttendanceDetail::query()
                     ->join(
                         'labour_attendances',
                         'labour_attendances.id',
                         '=',
                         'labour_attendance_details.labour_attendance_id'
+                    )
+                    ->join(
+                        'attendance_statuses',
+                        'attendance_statuses.id',
+                        '=',
+                        'labour_attendance_details.attendance_status_id'
                     )
                     ->where(
                         'labour_attendance_details.labour_id',
@@ -1499,12 +1503,21 @@ class AttendanceCorrectionController extends Controller
                         true
                     )
                     ->whereNull('labour_attendances.deleted_at')
+                    ->where(
+                        'attendance_statuses.is_active',
+                        true
+                    )
+                    ->where(
+                        'attendance_statuses.payable_factor',
+                        '>',
+                        0
+                    )
                     ->exists();
 
                 if ($hasConflictingAttendance) {
                     throw ValidationException::withMessages([
                         "details.{$rowIndex}.labour_id" => [
-                            'This labour already has attendance recorded on another project for the same date.',
+                            'This labour already has working/payable attendance recorded on another project for the same date.',
                         ],
                     ]);
                 }

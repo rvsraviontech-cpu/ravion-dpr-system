@@ -885,11 +885,6 @@ public function reopen(
             $pool = Labour::query()
                 ->active()
                 ->whereNotIn('employment_status', ['exited', 'suspended'])
-                ->where(function (Builder $query) use ($project, $existingByLabour): void {
-                    $query->where('current_project_id', $project->id)
-                        ->orWhereNull('current_project_id')
-                        ->orWhereIn('id', $existingByLabour->keys());
-                })
                 ->where(function (Builder $query) use ($allocatedLabourIds, $existingByLabour): void {
                     $query
                         ->whereNotIn('id', $allocatedLabourIds)
@@ -900,7 +895,15 @@ public function reopen(
                 ->get()
                 ->map(function (Labour $labour) use ($project, $existingByLabour): array {
                     $detail = $existingByLabour->get($labour->id);
-                    $isAssigned = (int) $labour->current_project_id === (int) $project->id;
+
+                    $assignmentGroup = match (true) {
+                        (int) $labour->current_project_id === (int) $project->id
+                            => 'selected_project',
+                        $labour->current_project_id === null
+                            => 'unassigned',
+                        default
+                            => 'other_project',
+                    };
 
                     return [
                         'detail_id' => $detail?->id,
@@ -926,8 +929,14 @@ public function reopen(
                         'attendance_source' => $detail?->attendance_source ?? 'manual',
                         'remarks' => $detail?->remarks,
                         'has_saved_attendance' => (bool) $detail,
-                        'assignment_group' => $isAssigned ? 'selected_project' : 'unassigned',
-                        'assignment_label' => $isAssigned ? 'Assigned to Project' : 'Unassigned',
+                        'assignment_group' => $assignmentGroup,
+                        'assignment_label' => match ($assignmentGroup) {
+                            'selected_project' => 'Assigned to Project',
+                            'unassigned' => 'Unassigned',
+                            default => 'Other Project Labour',
+                        },
+                        'home_project_id' => $labour->current_project_id,
+                        'home_project_name' => $labour->currentProject?->project_name,
                     ];
                 })
                 ->sortBy([
@@ -939,6 +948,7 @@ public function reopen(
 
             $assigned = $pool->where('assignment_group', 'selected_project')->values();
             $unassigned = $pool->where('assignment_group', 'unassigned')->values();
+            $otherProject = $pool->where('assignment_group', 'other_project')->values();
 
             return response()->json([
                 'mode' => 'edit',
@@ -949,8 +959,10 @@ public function reopen(
                 'existing_count' => $existingByLabour->count(),
                 'assigned_count' => $assigned->count(),
                 'unassigned_count' => $unassigned->count(),
+                'other_project_count' => $otherProject->count(),
                 'assigned_labours' => $assigned,
                 'unassigned_labours' => $unassigned,
+                'other_project_labours' => $otherProject,
                 'existing_labours' => $pool->where('has_saved_attendance', true)->values(),
                 'labours' => $pool,
             ]);
@@ -1007,16 +1019,6 @@ public function reopen(
                     'suspended',
                 ]
             )
-            ->where(function (
-                Builder $query
-            ) use ($project): void {
-                $query
-                    ->where(
-                        'current_project_id',
-                        $project->id
-                    )
-                    ->orWhereNull('current_project_id');
-            })
             ->whereNotIn('id', $allocatedLabourIds)
             ->with([
                 'labourGroup',
@@ -1029,9 +1031,14 @@ public function reopen(
             ->map(function (
                 Labour $labour
             ) use ($project): array {
-                $isAssignedToProject =
-                    (int) $labour->current_project_id
-                    === (int) $project->id;
+                $assignmentGroup = match (true) {
+                    (int) $labour->current_project_id === (int) $project->id
+                        => 'selected_project',
+                    $labour->current_project_id === null
+                        => 'unassigned',
+                    default
+                        => 'other_project',
+                };
 
                 return [
                     'id' => $labour->id,
@@ -1060,15 +1067,19 @@ public function reopen(
                             ?? 0
                         ),
 
-                    'assignment_group' =>
-                        $isAssignedToProject
-                            ? 'selected_project'
-                            : 'unassigned',
+                    'assignment_group' => $assignmentGroup,
 
-                    'assignment_label' =>
-                        $isAssignedToProject
-                            ? 'Assigned to Project'
-                            : 'Unassigned',
+                    'assignment_label' => match ($assignmentGroup) {
+                        'selected_project' => 'Assigned to Project',
+                        'unassigned' => 'Unassigned',
+                        default => 'Other Project Labour',
+                    },
+
+                    'home_project_id' =>
+                        $labour->current_project_id,
+
+                    'home_project_name' =>
+                        $labour->currentProject?->project_name,
                 ];
             })
             ->values();
@@ -1087,6 +1098,13 @@ public function reopen(
             )
             ->values();
 
+        $otherProjectLabours = $labours
+            ->where(
+                'assignment_group',
+                'other_project'
+            )
+            ->values();
+
         return response()->json([
             'mode' => 'create',
             'project_id' => $project->id,
@@ -1095,9 +1113,11 @@ public function reopen(
             'available_count' => $labours->count(),
             'assigned_count' => $assignedLabours->count(),
             'unassigned_count' => $unassignedLabours->count(),
+            'other_project_count' => $otherProjectLabours->count(),
             'existing_count' => 0,
             'assigned_labours' => $assignedLabours,
             'unassigned_labours' => $unassignedLabours,
+            'other_project_labours' => $otherProjectLabours,
             'existing_labours' => [],
             'labours' => $labours,
         ]);

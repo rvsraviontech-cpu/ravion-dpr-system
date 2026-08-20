@@ -206,10 +206,18 @@
                             ?? 'Un-grouped Labour',
                         'assignment_type' => $labour->current_project_id === null
                             ? 'unassigned'
-                            : 'assigned',
+                            : (
+                                (int) $labour->current_project_id === (int) $selectedAttendance->project_id
+                                    ? 'assigned'
+                                    : 'other_project'
+                            ),
                         'assignment' => $labour->current_project_id === null
-                            ? 'Unassigned'
-                            : 'Assigned to Project',
+                            ? 'Unassigned Labour'
+                            : (
+                                (int) $labour->current_project_id === (int) $selectedAttendance->project_id
+                                    ? 'Assigned to ' . ($selectedAttendance->project?->project_name ?? 'this Project')
+                                    : 'Home: ' . ($labour->currentProject?->project_name ?? 'Other Project')
+                            ),
                     ]
                 )->values()
             )
@@ -694,7 +702,7 @@
                         </h2>
 
                         <p class="mt-1 text-sm text-gray-500">
-                            Add labour omitted from the original attendance. Only project-assigned and unassigned labour are shown.
+                            Add labour omitted from the original attendance. Labour from another project is also available when they have no working/payable attendance elsewhere on this date.
                         </p>
                     </div>
 
@@ -1311,6 +1319,7 @@
                         labour_id: labourId,
                         search: '',
                         selected_name: labour?.name ?? '',
+                        selected_group: labour?.group_name ?? '',
                         selected_designation: labour?.designation ?? '',
                         selected_assignment: labour?.assignment ?? '',
                         status_id: String(
@@ -1600,8 +1609,11 @@
                         return searchableText.includes(term);
                     })
                     .sort((a, b) => {
-                        const assignmentRank = (value) =>
-                            value === 'assigned' ? 0 : 1;
+                        const assignmentRank = (value) => {
+                            if (value === 'assigned') return 0;
+                            if (value === 'unassigned') return 1;
+                            return 2;
+                        };
 
                         const assignmentDifference =
                             assignmentRank(a.assignment_type)

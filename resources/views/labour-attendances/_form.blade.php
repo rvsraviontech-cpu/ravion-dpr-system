@@ -331,10 +331,10 @@
     <x-rds.section
         title="Labour Attendance"
         description="{{ $editingAttendance
-            ? 'Previously saved attendance is retained. Assigned/unassigned eligible labour not yet marked is also shown.'
-            : 'Assigned labour is shown first, followed by unassigned labour.' }}"
+            ? 'Previously saved attendance is retained. Assigned, unassigned and eligible other-project labour are shown.'
+            : 'Assigned labour is shown first. Unassigned and other-project labour can be opened when needed.' }}"
     >
-        <div id="labour-pool-summary" class="mb-5 hidden grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div id="labour-pool-summary" class="mb-5 hidden grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-xl border border-green-200 bg-green-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-green-700">Assigned Labour</p>
                 <p id="pool-assigned-count" class="mt-2 text-2xl font-bold text-green-800">0</p>
@@ -356,6 +356,24 @@
                 </div>
                 <p class="mt-2 text-xs text-blue-700">Click to view labour not currently assigned to a project.</p>
             </button>
+            <button type="button" id="open-other-project-labour"
+                class="group rounded-xl border border-amber-200 bg-amber-50 p-4 text-left transition hover:border-amber-300 hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
+                aria-controls="other-project-section" aria-expanded="false">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-amber-700">Other Project Labour</p>
+                        <p id="pool-other-project-count" class="mt-2 text-2xl font-bold text-amber-800">0</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-700 shadow-sm group-hover:bg-amber-50">
+                        <span id="open-other-project-labour-label">View Labour</span>
+                        <svg id="open-other-project-labour-icon" class="ml-1 h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </span>
+                </div>
+                <p class="mt-2 text-xs text-amber-700">Temporarily use labour normally assigned to another project.</p>
+            </button>
+
             <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Total Available</p>
                 <p id="pool-total-count" class="mt-2 text-2xl font-bold text-violet-800">0</p>
@@ -418,6 +436,7 @@
             @foreach([
                 ['id' => 'assigned', 'title' => 'Assigned Labour', 'description' => 'Labour currently assigned to this project', 'border' => 'border-blue-200', 'head' => 'border-blue-200 bg-blue-50', 'text' => 'text-blue-900'],
                 ['id' => 'unassigned', 'title' => 'Unassigned Labour', 'description' => 'Labour not assigned to any project', 'border' => 'border-green-200', 'head' => 'border-green-200 bg-green-50', 'text' => 'text-green-900'],
+                ['id' => 'other-project', 'title' => 'Other Project Labour', 'description' => 'Labour normally assigned to another project but available on this date', 'border' => 'border-amber-200', 'head' => 'border-amber-200 bg-amber-50', 'text' => 'text-amber-900'],
             ] as $group)
                 <div
                     id="{{ $group['id'] }}-section"
@@ -444,6 +463,15 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                             </svg>
                                         </button>
+                                    @elseif($group['id'] === 'other-project')
+                                        <button type="button" id="toggle-other-project-labour"
+                                            class="inline-flex items-center justify-center rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-semibold text-amber-700 shadow-sm transition hover:bg-amber-50"
+                                            aria-controls="other-project-labour-content" aria-expanded="false">
+                                            <span id="toggle-other-project-labour-label">Show Labour</span>
+                                            <svg id="toggle-other-project-labour-icon" class="ml-1 h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
                                     @endif
                                 </div>
                             </div>
@@ -465,6 +493,9 @@
                     </div>
                     @if($group['id'] === 'unassigned')
                         <div id="unassigned-labour-content"
+                            class="compact-attendance-wrap hidden overflow-x-auto lg:max-h-[680px] lg:overflow-y-auto">
+                    @elseif($group['id'] === 'other-project')
+                        <div id="other-project-labour-content"
                             class="compact-attendance-wrap hidden overflow-x-auto lg:max-h-[680px] lg:overflow-y-auto">
                     @else
                         <div class="compact-attendance-wrap overflow-x-auto">
@@ -489,6 +520,20 @@
                         <div id="unassigned-labour-footer" class="hidden border-t border-green-200 bg-green-50 px-4 py-3">
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <p class="text-xs text-green-800">Mark only the unassigned labour actually working on this project.</p>
+                                <button type="button" data-attendance-submit
+                                    class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto sm:py-2.5">
+                                    {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
+                                </button>
+                            </div>
+                        </div>
+                    @endif
+
+                    @if($group['id'] === 'other-project')
+                        <div id="other-project-labour-footer" class="hidden border-t border-amber-200 bg-amber-50 px-4 py-3">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <p class="text-xs text-amber-800">
+                                    Temporary attendance here does not change the labourer's default project assignment.
+                                </p>
                                 <button type="button" data-attendance-submit
                                     class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto sm:py-2.5">
                                     {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
@@ -536,6 +581,7 @@
         const shift = $('shift_id');
         const assignedRows = $('assigned-rows');
         const unassignedRows = $('unassigned-rows');
+        const otherProjectRows = $('other-project-rows');
         const statuses = JSON.parse(root.dataset.attendanceStatuses || '[]');
         const workingStatuses = JSON.parse(root.dataset.workingStatuses || '[]');
         const existing = JSON.parse(root.dataset.existingDetails || '[]');
@@ -648,11 +694,21 @@
             const remarks = old?.remarks || labour.remarks || '';
             const source = old?.attendance_source || labour.attendance_source || 'manual';
 
-            const group = labour.assignment_group === 'unassigned' ? 'unassigned' : (editing ? 'existing' : 'assigned');
+            const group = labour.assignment_group === 'unassigned'
+                ? 'unassigned'
+                : (labour.assignment_group === 'other_project'
+                    ? 'other-project'
+                    : (editing ? 'existing' : 'assigned'));
 
-            return `<tr class="attendance-row" data-existing="${old || labour.has_saved_attendance ? '1' : '0'}" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name, labour.labour_group_name].filter(Boolean).join(' ').toLowerCase())}">
+            return `<tr class="attendance-row" data-existing="${old || labour.has_saved_attendance ? '1' : '0'}" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name, labour.labour_group_name, labour.home_project_name].filter(Boolean).join(' ').toLowerCase())}">
                 <td class="px-3 py-3"><input type="hidden" name="details[${index}][labour_id]" value="${esc(id)}"><input class="status-id" type="hidden" name="details[${index}][attendance_status_id]" value="${esc(statusId)}"><input type="hidden" name="details[${index}][attendance_source]" value="${esc(source)}"><p class="truncate text-sm font-semibold text-gray-900">${esc(labour.full_name || 'Unavailable Labour')}</p><p class="mt-0.5 truncate text-[11px] text-gray-500 lg:hidden">${esc(labour.designation_role_name || '—')}</p><button type="button" class="mobile-details-toggle lg:hidden">Details</button></td>
-                <td class="px-3 py-3"><p class="truncate text-sm text-gray-700">${esc(labour.designation_role_name || '—')}</p><p class="mt-0.5 truncate text-[11px] font-medium text-gray-500">${esc(labour.labour_group_name || 'Un-grouped')}</p></td>
+                <td class="px-3 py-3">
+                    <p class="truncate text-sm text-gray-700">${esc(labour.designation_role_name || '—')}</p>
+                    <p class="mt-0.5 truncate text-[11px] font-medium text-gray-500">${esc(labour.labour_group_name || 'Un-grouped')}</p>
+                    ${labour.assignment_group === 'other_project' && labour.home_project_name
+                        ? `<p class="mt-0.5 truncate text-[10px] font-semibold text-amber-700">Home: ${esc(labour.home_project_name)}</p>`
+                        : ''}
+                </td>
                 <td class="px-2 py-3 text-center"><button type="button" class="present-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md">P</button></td>
                 <td class="px-2 py-3 text-center"><button type="button" class="absent-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md">A</button></td>
                 <td class="px-3 py-3"><select class="more-status block w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm">${moreOptions(moreId)}</select></td>
@@ -1023,13 +1079,17 @@
             };
         }
 
-        function render(assigned, unassigned) {
+        function render(assigned, unassigned, otherProject) {
             assigned = Array.isArray(assigned)
                 ? assigned
                 : [];
 
             unassigned = Array.isArray(unassigned)
                 ? unassigned
+                : [];
+
+            otherProject = Array.isArray(otherProject)
+                ? otherProject
                 : [];
 
             const assignedResult = groupedRowsHtml(
@@ -1042,11 +1102,19 @@
                 assignedResult.nextIndex
             );
 
+            const otherProjectResult = groupedRowsHtml(
+                otherProject,
+                unassignedResult.nextIndex
+            );
+
             assignedRows.innerHTML =
                 assignedResult.html;
 
             unassignedRows.innerHTML =
                 unassignedResult.html;
+
+            otherProjectRows.innerHTML =
+                otherProjectResult.html;
 
             rows = Array.from(
                 document.querySelectorAll(
@@ -1062,8 +1130,11 @@
             $('pool-unassigned-count').textContent =
                 unassigned.length;
 
+            $('pool-other-project-count').textContent =
+                otherProject.length;
+
             $('pool-total-count').textContent =
-                assigned.length + unassigned.length;
+                assigned.length + unassigned.length + otherProject.length;
 
             $('labour-pool-summary')
                 .classList.remove('hidden');
@@ -1074,6 +1145,7 @@
             );
 
             setUnassignedOpen(false);
+            setOtherProjectOpen(false);
 
             $('labour-empty-message').classList.toggle(
                 'hidden',
@@ -1106,6 +1178,38 @@
 
         function unassignedIsOpen() {
             const content = $('unassigned-labour-content');
+            return Boolean(content && !content.classList.contains('hidden'));
+        }
+
+        function setOtherProjectOpen(open, scrollToSection = false) {
+            const section = $('other-project-section');
+            const content = $('other-project-labour-content');
+            const footer = $('other-project-labour-footer');
+            if (!section || !content) return;
+
+            content.classList.toggle('hidden', !open);
+            footer?.classList.toggle('hidden', !open);
+            $('toggle-other-project-labour')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+            $('open-other-project-labour')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+            if ($('toggle-other-project-labour-label')) {
+                $('toggle-other-project-labour-label').textContent = open ? 'Hide Labour' : 'Show Labour';
+            }
+
+            if ($('open-other-project-labour-label')) {
+                $('open-other-project-labour-label').textContent = open ? 'Hide Labour' : 'View Labour';
+            }
+
+            $('toggle-other-project-labour-icon')?.classList.toggle('rotate-180', open);
+            $('open-other-project-labour-icon')?.classList.toggle('rotate-180', open);
+
+            if (scrollToSection && open) {
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        function otherProjectIsOpen() {
+            const content = $('other-project-labour-content');
             return Boolean(content && !content.classList.contains('hidden'));
         }
 
@@ -1210,6 +1314,10 @@
                 unassignedRows
             );
 
+            refreshGroupHeadingVisibility(
+                otherProjectRows
+            );
+
             const visibleAssigned =
                 Array.from(
                     assignedRows.querySelectorAll(
@@ -1234,11 +1342,26 @@
                         )
                 );
 
+            const visibleOtherProject =
+                Array.from(
+                    otherProjectRows.querySelectorAll(
+                        '.attendance-row'
+                    )
+                ).filter(
+                    (row) =>
+                        ! row.classList.contains(
+                            'hidden'
+                        )
+                );
+
             $('assigned-visible-count').textContent =
                 visibleAssigned.length;
 
             $('unassigned-visible-count').textContent =
                 visibleUnassigned.length;
+
+            $('other-project-visible-count').textContent =
+                visibleOtherProject.length;
 
             $('assigned-section').classList.toggle(
                 'hidden',
@@ -1250,6 +1373,13 @@
             $('unassigned-section').classList.toggle(
                 'hidden',
                 unassignedRows.querySelectorAll(
+                    '.attendance-row'
+                ).length === 0
+            );
+
+            $('other-project-section').classList.toggle(
+                'hidden',
+                otherProjectRows.querySelectorAll(
                     '.attendance-row'
                 ).length === 0
             );
@@ -1350,7 +1480,7 @@
 
         async function load() {
             if (!project?.value || !date?.value) {
-                render([], []);
+                render([], [], []);
                 return;
             }
 
@@ -1365,9 +1495,13 @@
                 if (sequence !== requestNo) return;
                 const payload = await response.json();
                 if (!response.ok) throw new Error(payload.message || 'Unable to load labour profiles.');
-                render(payload.assigned_labours || [], payload.unassigned_labours || []);
+                render(
+                    payload.assigned_labours || [],
+                    payload.unassigned_labours || [],
+                    payload.other_project_labours || []
+                );
             } catch (error) {
-                render([], []);
+                render([], [], []);
                 $('labour-error-message').textContent = error.message || 'Unable to load labour profiles.';
                 $('labour-error-message').classList.remove('hidden');
             } finally {
@@ -1395,6 +1529,16 @@
 
         $('toggle-unassigned-labour')?.addEventListener('click', () => {
             setUnassignedOpen(!unassignedIsOpen(), false);
+        });
+
+        $('open-other-project-labour')?.addEventListener('click', () => {
+            if (otherProjectRows.querySelectorAll('.attendance-row').length === 0) return;
+            const nextOpen = !otherProjectIsOpen();
+            setOtherProjectOpen(nextOpen, nextOpen);
+        });
+
+        $('toggle-other-project-labour')?.addEventListener('click', () => {
+            setOtherProjectOpen(!otherProjectIsOpen(), false);
         });
 
         $('mark-assigned-present')?.addEventListener('click', () => {
