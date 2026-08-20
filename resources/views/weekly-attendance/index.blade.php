@@ -8,6 +8,30 @@
 
 <x-rds.alert />
 
+@if(session('success'))
+    <div
+        class="mb-5 rounded-xl border border-green-300 bg-green-50 px-4 py-4 text-green-900 shadow-sm"
+        role="status"
+        aria-live="polite"
+    >
+        <div class="flex items-start gap-3">
+            <div class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-600 text-sm font-bold text-white">
+                ✓
+            </div>
+
+            <div>
+                <p class="font-semibold">
+                    Weekly attendance saved successfully.
+                </p>
+
+                <p class="mt-1 text-sm text-green-800">
+                    {{ session('success') }}
+                </p>
+            </div>
+        </div>
+    </div>
+@endif
+
 <x-rds.card>
     <form method="GET" action="{{ route('weekly-attendance.index') }}">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -126,9 +150,13 @@
                     <tbody class="bg-white">
                         @php $serial = 0; @endphp
                         @forelse($groupedLabours as $groupName => $groupLabours)
-                            <tr class="bg-slate-100">
-                                <td colspan="9" class="border-y border-slate-200 px-3 py-2 text-xs font-bold uppercase tracking-wide text-slate-700">
-                                    {{ $groupName }} ({{ $groupLabours->count() }})
+                            <tr class="bg-[#0F2A52]">
+                                <td colspan="9" class="border-y border-[#0F2A52] bg-[#0F2A52] px-3 py-2 text-xs font-bold uppercase tracking-wide text-white">
+                                    {{ $groupName }}
+                                    <span class="ml-2 font-medium normal-case tracking-normal text-blue-100">
+                                        {{ $groupLabours->count() }}
+                                        labour{{ $groupLabours->count() === 1 ? '' : 's' }}
+                                    </span>
                                 </td>
                             </tr>
 
@@ -306,8 +334,26 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.weekly-status-btn')
         .forEach(function (button) {
             button.addEventListener('click', function () {
+                const cell = button.closest('.weekly-status-cell');
+
+                if (!cell) {
+                    return;
+                }
+
+                const input = cell.querySelector('.weekly-status-input');
+                const clickedStatusId = String(button.dataset.statusId || '');
+                const currentStatusId = String(input?.value || '');
+
+                if (
+                    clickedStatusId
+                    && currentStatusId === clickedStatusId
+                ) {
+                    setCellStatus(cell, '', '');
+                    return;
+                }
+
                 setCellStatus(
-                    button.closest('.weekly-status-cell'),
+                    cell,
                     button.dataset.statusId,
                     button.dataset.statusLabel
                 );
