@@ -41,6 +41,7 @@ use App\Http\Controllers\ProjectDashboardController;
 use App\Http\Controllers\ActivityProgressController;
 use App\Http\Controllers\ProjectHealthDashboardController;
 use App\Http\Controllers\PmoExceptionDashboardController;
+use App\Http\Controllers\PmoDashboardController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RolePermissionController;
@@ -71,6 +72,8 @@ use App\Http\Controllers\DprWorkItemController;
 use App\Http\Controllers\WorkDoneController;
 use App\Http\Controllers\LabourGroupController;
 use App\Http\Controllers\WeeklyAttendanceController;
+use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\EmployeeDesignationController;
 
 
 Route::get('/', function () {
@@ -123,7 +126,7 @@ Route::resource('work-stages', WorkStageController::class)
         ->name('engineer-dashboard')
         ->middleware('permission:engineer_dashboard.view');
 
-    Route::get('/pmo-dashboard', [DashboardController::class, 'pmo'])
+    Route::get('/pmo-dashboard', [PmoDashboardController::class, 'index'])
         ->name('pmo-dashboard')
         ->middleware('permission:pmo_dashboard.view');
 
@@ -1381,32 +1384,175 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
         ->middleware('permission:mapping_queue.manage');
 
 
+   
+
     /*
+|--------------------------------------------------------------------------
+| Users
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/users', [UserController::class, 'index'])
+    ->name('users.index')
+    ->middleware('permission:users.view');
+
+Route::get('/users/create', [UserController::class, 'create'])
+    ->name('users.create')
+    ->middleware('permission:users.manage');
+
+Route::post('/users/store', [UserController::class, 'store'])
+    ->name('users.store')
+    ->middleware('permission:users.manage');
+
+Route::get('/users/{id}', [UserController::class, 'show'])
+    ->whereNumber('id')
+    ->name('users.show')
+    ->middleware('permission:users.view');
+
+Route::get('/users/{id}/edit', [UserController::class, 'edit'])
+    ->whereNumber('id')
+    ->name('users.edit')
+    ->middleware('permission:users.manage');
+
+Route::post('/users/{id}/update', [UserController::class, 'update'])
+    ->whereNumber('id')
+    ->name('users.update')
+    ->middleware('permission:users.manage');
+
+/*
+|--------------------------------------------------------------------------
+| User Password Management
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/users/{id}/password', [UserController::class, 'password'])
+    ->whereNumber('id')
+    ->name('users.password')
+    ->middleware('permission:users.manage');
+
+Route::post('/users/{id}/password', [UserController::class, 'updatePassword'])
+    ->whereNumber('id')
+    ->name('users.password.update')
+    ->middleware('permission:users.manage');
+
+/*
+|--------------------------------------------------------------------------
+| User Account Status Management
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/users/{id}/activate', [UserController::class, 'activate'])
+    ->whereNumber('id')
+    ->name('users.activate')
+    ->middleware('permission:users.manage');
+
+Route::post('/users/{id}/deactivate', [UserController::class, 'deactivate'])
+    ->whereNumber('id')
+    ->name('users.deactivate')
+    ->middleware('permission:users.manage');
+
+Route::post('/users/{id}/suspend', [UserController::class, 'suspend'])
+    ->whereNumber('id')
+    ->name('users.suspend')
+    ->middleware('permission:users.manage');
+
+Route::post('/users/{id}/exit', [UserController::class, 'exitUser'])
+    ->whereNumber('id')
+    ->name('users.exit')
+    ->middleware('permission:users.manage');
+
+    /*
+|--------------------------------------------------------------------------
+| Department Master
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/departments', [DepartmentController::class, 'index'])
+    ->name('departments.index')
+    ->middleware('permission:departments.view');
+
+Route::get('/departments/create', [DepartmentController::class, 'create'])
+    ->name('departments.create')
+    ->middleware('permission:departments.manage');
+
+Route::post('/departments/store', [DepartmentController::class, 'store'])
+    ->name('departments.store')
+    ->middleware('permission:departments.manage');
+
+Route::get('/departments/{id}', [DepartmentController::class, 'show'])
+    ->whereNumber('id')
+    ->name('departments.show')
+    ->middleware('permission:departments.view');
+
+Route::get('/departments/{id}/edit', [DepartmentController::class, 'edit'])
+    ->whereNumber('id')
+    ->name('departments.edit')
+    ->middleware('permission:departments.manage');
+
+Route::post('/departments/{id}/update', [DepartmentController::class, 'update'])
+    ->whereNumber('id')
+    ->name('departments.update')
+    ->middleware('permission:departments.manage');
+
+Route::post('/departments/{id}/activate', [DepartmentController::class, 'activate'])
+    ->whereNumber('id')
+    ->name('departments.activate')
+    ->middleware('permission:departments.manage');
+
+Route::post('/departments/{id}/deactivate', [DepartmentController::class, 'deactivate'])
+    ->whereNumber('id')
+    ->name('departments.deactivate')
+    ->middleware('permission:departments.manage');
+
+
+/*
+|--------------------------------------------------------------------------
+| Employee Designation Master
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/employee-designations', [EmployeeDesignationController::class, 'index'])
+    ->name('employee-designations.index')
+    ->middleware('permission:employee_designations.view');
+
+Route::get('/employee-designations/create', [EmployeeDesignationController::class, 'create'])
+    ->name('employee-designations.create')
+    ->middleware('permission:employee_designations.manage');
+
+Route::post('/employee-designations/store', [EmployeeDesignationController::class, 'store'])
+    ->name('employee-designations.store')
+    ->middleware('permission:employee_designations.manage');
+
+Route::get('/employee-designations/{id}', [EmployeeDesignationController::class, 'show'])
+    ->whereNumber('id')
+    ->name('employee-designations.show')
+    ->middleware('permission:employee_designations.view');
+
+Route::get('/employee-designations/{id}/edit', [EmployeeDesignationController::class, 'edit'])
+    ->whereNumber('id')
+    ->name('employee-designations.edit')
+    ->middleware('permission:employee_designations.manage');
+
+Route::post('/employee-designations/{id}/update', [EmployeeDesignationController::class, 'update'])
+    ->whereNumber('id')
+    ->name('employee-designations.update')
+    ->middleware('permission:employee_designations.manage');
+
+Route::post('/employee-designations/{id}/activate', [EmployeeDesignationController::class, 'activate'])
+    ->whereNumber('id')
+    ->name('employee-designations.activate')
+    ->middleware('permission:employee_designations.manage');
+
+Route::post('/employee-designations/{id}/deactivate', [EmployeeDesignationController::class, 'deactivate'])
+    ->whereNumber('id')
+    ->name('employee-designations.deactivate')
+    ->middleware('permission:employee_designations.manage');
+
+     /*
     |--------------------------------------------------------------------------
     | Administration
     |--------------------------------------------------------------------------
     */
-
-    Route::get('/users', [UserController::class, 'index'])
-        ->name('users.index')
-        ->middleware('permission:users.view');
-
-    Route::get('/users/create', [UserController::class, 'create'])
-        ->name('users.create')
-        ->middleware('permission:users.manage');
-
-    Route::post('/users/store', [UserController::class, 'store'])
-        ->name('users.store')
-        ->middleware('permission:users.manage');
-
-    Route::get('/users/{id}/edit', [UserController::class, 'edit'])
-        ->name('users.edit')
-        ->middleware('permission:users.manage');
-
-    Route::post('/users/{id}/update', [UserController::class, 'update'])
-        ->name('users.update')
-        ->middleware('permission:users.manage');
-
     Route::resource('roles', RoleController::class)
         ->middleware('permission:roles.view');
 

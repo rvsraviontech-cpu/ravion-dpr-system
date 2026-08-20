@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         // User::factory(10)->create();
         $this->call(ActivityDivisionSeeder::class);
         $this->call([PermissionSeeder::class,]);
+        $this->call([DepartmentSeeder::class, EmployeeDesignationSeeder::class,]);
         
         User::factory()->create([
             'name' => 'Test User',

@@ -11,7 +11,7 @@ return new class extends Migration
     {
         /*
         |--------------------------------------------------------------------------
-        | Add Project ID
+        | Add project_id
         |--------------------------------------------------------------------------
         */
 
@@ -27,56 +27,65 @@ return new class extends Migration
 
         /*
         |--------------------------------------------------------------------------
-        | Backfill existing Work Done rows from their DPR
+        | Backfill existing DPR-linked Work Done records
         |--------------------------------------------------------------------------
+        |
+        | Use correlated subqueries instead of MySQL UPDATE ... INNER JOIN.
+        | This works with both MySQL and SQLite.
+        |
         */
 
-        DB::statement("
-            UPDATE dpr_work_items
-            INNER JOIN dprs
-                ON dprs.id = dpr_work_items.dpr_id
-            SET
-                dpr_work_items.project_id = dprs.project_id,
-                dpr_work_items.user_id = COALESCE(
-                    dpr_work_items.user_id,
-                    dprs.user_id
-                ),
-                dpr_work_items.work_date = COALESCE(
-                    dpr_work_items.work_date,
-                    dprs.dpr_date
-                )
-            WHERE dpr_work_items.dpr_id IS NOT NULL
-        ");
+        DB::table('dpr_work_items')
+            ->whereNotNull('dpr_id')
+            ->orderBy('id')
+            ->chunkById(200, function ($workItems) {
+                foreach ($workItems as $workItem) {
+                    $dpr = DB::table('dprs')
+                        ->where('id', $workItem->dpr_id)
+                        ->first([
+                            'project_id',
+                            'user_id',
+                            'dpr_date',
+                        ]);
+
+                    if (! $dpr) {
+                        continue;
+                    }
+
+                    DB::table('dpr_work_items')
+                        ->where('id', $workItem->id)
+                        ->update([
+                            'project_id' => $workItem->project_id
+                                ?? $dpr->project_id,
+
+                            'user_id' => $workItem->user_id
+                                ?? $dpr->user_id,
+
+                            'work_date' => $workItem->work_date
+                                ?? $dpr->dpr_date,
+                        ]);
+                }
+            });
 
         /*
         |--------------------------------------------------------------------------
-        | Make DPR Optional
+        | Make dpr_id nullable
         |--------------------------------------------------------------------------
         |
-        | Work Done is created first.
-        | DPR linkage happens later.
+        | Work Done is now allowed to exist independently and can later
+        | be linked to a DPR.
         |
         */
 
         Schema::table('dpr_work_items', function (Blueprint $table) {
-            $table->dropForeign(['dpr_id']);
-        });
-
-        DB::statement("
-            ALTER TABLE dpr_work_items
-            MODIFY dpr_id BIGINT UNSIGNED NULL
-        ");
-
-        Schema::table('dpr_work_items', function (Blueprint $table) {
-            $table->foreign('dpr_id')
-                ->references('id')
-                ->on('dprs')
-                ->nullOnDelete();
+            $table->foreignId('dpr_id')
+                ->nullable()
+                ->change();
         });
 
         /*
         |--------------------------------------------------------------------------
-        | Helpful Index
+        | Daily Work / DPR Link Index
         |--------------------------------------------------------------------------
         */
 
@@ -95,6 +104,12 @@ return new class extends Migration
 
     public function down(): void
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Remove daily-link index
+        |--------------------------------------------------------------------------
+        */
+
         Schema::table('dpr_work_items', function (Blueprint $table) {
             $table->dropIndex(
                 'dpr_work_items_daily_link_index'
@@ -102,9 +117,14 @@ return new class extends Migration
         });
 
         /*
-         * Do not automatically make dpr_id NOT NULL here because
-         * standalone records may exist after this migration.
-         */
+        |--------------------------------------------------------------------------
+        | Remove project_id
+        |--------------------------------------------------------------------------
+        |
+        | We intentionally do NOT force dpr_id back to NOT NULL because
+        | standalone Work Done records may already exist.
+        |
+        */
 
         if (Schema::hasColumn('dpr_work_items', 'project_id')) {
             Schema::table('dpr_work_items', function (Blueprint $table) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -36,13 +37,50 @@ class LoginRequest extends FormRequest
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * Only Active Ravion ERP users are permitted to log in.
+     *
      * @throws ValidationException
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        $email = Str::lower(
+            trim($this->string('email')->toString())
+        );
+
+        /*
+         * Check the account separately so that we can provide
+         * an appropriate message when a valid ERP account has
+         * been administratively disabled.
+         */
+        $user = User::query()
+            ->whereRaw('LOWER(email) = ?', [$email])
+            ->first();
+
+        if ($user && $user->account_status !== 'Active') {
+            RateLimiter::hit($this->throttleKey());
+
+            $message = match ($user->account_status) {
+                'Suspended' => 'Your Ravion ERP account has been suspended. Please contact the administrator.',
+                'Inactive' => 'Your Ravion ERP account is inactive. Please contact the administrator.',
+                'Exited' => 'Your Ravion ERP account is no longer active.',
+                default => 'Your Ravion ERP account is not permitted to log in.',
+            };
+
+            throw ValidationException::withMessages([
+                'email' => $message,
+            ]);
+        }
+
+        if (! Auth::attempt(
+            [
+                'email' => $email,
+                'password' => $this->string('password')->toString(),
+                'account_status' => 'Active',
+            ],
+            $this->boolean('remember')
+        )) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -66,7 +104,9 @@ class LoginRequest extends FormRequest
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = RateLimiter::availableIn(
+            $this->throttleKey()
+        );
 
         throw ValidationException::withMessages([
             'email' => trans('auth.throttle', [
@@ -81,6 +121,9 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+        return Str::transliterate(
+            Str::lower($this->string('email')->toString())
+            .'|'.$this->ip()
+        );
     }
 }

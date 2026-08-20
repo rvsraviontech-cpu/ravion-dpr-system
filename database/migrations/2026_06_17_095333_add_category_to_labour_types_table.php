@@ -10,18 +10,21 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-{
-    Schema::create('labour_categories', function (Blueprint $table) {
-        $table->id();
-        $table->string('category_name');
-        $table->boolean('is_active')->default(true);
-        $table->text('remarks')->nullable();
-        $table->timestamps();
-    });
-}
+    {
+        Schema::table('labour_types', function (Blueprint $table) {
+            $table->string('category')
+                ->nullable()
+                ->after('labour_type_name');
+        });
+    }
 
-public function down(): void
-{
-    Schema::dropIfExists('labour_categories');
-}
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('labour_types', function (Blueprint $table) {
+            $table->dropColumn('category');
+        });
+    }
 };

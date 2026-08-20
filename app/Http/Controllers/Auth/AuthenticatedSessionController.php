@@ -28,25 +28,44 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        $user = auth()->user();
+        $user = $request->user();
 
-if ($user->role->name == 'Admin') {
-    return redirect('/admin-dashboard');
-}
+        /*
+         * Record successful login information.
+         */
+        $user->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+        ])->save();
 
-if ($user->role->name == 'Engineer') {
-    return redirect('/engineer-dashboard');
-}
+        /*
+         * Users whose password was reset by an administrator
+         * must change it before continuing to the ERP.
+         *
+         * We will connect this route in the next step.
+         */
+        if ($user->must_change_password) {
+            return redirect()
+                ->route('password.change-required');
+        }
 
-if ($user->role->name == 'PMO') {
-    return redirect('/pmo-dashboard');
-}
+        /*
+         * Role-specific dashboards.
+         */
+        return match ($user->role?->name) {
+            'Admin' => redirect('/admin-dashboard'),
 
-if ($user->role->name == 'CEO') {
-    return redirect('/ceo-dashboard');
-}
+            'Engineer',
+            'Site Engineer',
+            'Site Supervisor' => redirect('/engineer-dashboard'),
 
-return redirect('/dashboard');
+            'PMO',
+            'DGM' => redirect('/pmo-dashboard'),
+
+            'CEO' => redirect('/ceo-dashboard'),
+
+            default => redirect('/dashboard'),
+        };
     }
 
     /**

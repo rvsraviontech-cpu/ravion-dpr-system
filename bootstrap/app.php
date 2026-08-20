@@ -13,12 +13,38 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+
+        /*
+        |--------------------------------------------------------------------------
+        | Middleware Aliases
+        |--------------------------------------------------------------------------
+        */
+
         $middleware->alias([
-    'role' => \App\Http\Middleware\RoleMiddleware::class,
-    'permission' => \App\Http\Middleware\PermissionMiddleware::class,
-]);
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'permission' => \App\Http\Middleware\PermissionMiddleware::class,
+            'password.changed' => \App\Http\Middleware\EnsurePasswordIsChanged::class,
+            'account.active' => \App\Http\Middleware\EnsureUserAccountIsActive::class,
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Web Middleware
+        |--------------------------------------------------------------------------
+        |
+        | Order matters:
+        |
+        | 1. Confirm account is still Active.
+        | 2. Then enforce mandatory password change.
+        |
+        */
+
+        $middleware->appendToGroup('web', [
+            \App\Http\Middleware\EnsureUserAccountIsActive::class,
+            \App\Http\Middleware\EnsurePasswordIsChanged::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();

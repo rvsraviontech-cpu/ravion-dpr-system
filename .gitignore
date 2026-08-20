@@ -34,3 +34,5 @@ Thumbs.db
 .phpunit.result.cache
 bootstrap/cache/*.php
 database-backups
+# Local database exports / working SQL files
+*.sql

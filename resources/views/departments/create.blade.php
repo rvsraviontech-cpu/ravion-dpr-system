@@ -1,0 +1,156 @@
+@extends('layouts.app')
+
+@section('content')
+
+<div class="space-y-5">
+
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">
+                Create Department
+            </h1>
+
+            <p class="mt-1 text-sm text-gray-500">
+                Add a department for controlled employee classification.
+            </p>
+        </div>
+
+        <a href="{{ route('departments.index') }}"
+           class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+            Back to Departments
+        </a>
+    </div>
+
+
+    @if($errors->any())
+        <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div class="font-semibold">
+                Please correct the following:
+            </div>
+
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+
+    <form method="POST"
+          action="{{ route('departments.store') }}"
+          class="space-y-5">
+
+        @csrf
+
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+            <div class="border-b border-gray-200 bg-gray-50 px-5 py-3">
+                <h2 class="text-sm font-semibold text-gray-900">
+                    Department Details
+                </h2>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
+
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Department Code <span class="text-red-500">*</span>
+                    </label>
+
+                    <input type="text"
+                           name="code"
+                           value="{{ old('code') }}"
+                           required
+                           maxlength="30"
+                           placeholder="e.g. PRJ"
+                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm uppercase text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200">
+
+                    <p class="mt-1 text-xs text-gray-400">
+                        Short unique code used internally.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Department Name <span class="text-red-500">*</span>
+                    </label>
+
+                    <input type="text"
+                           name="name"
+                           value="{{ old('name') }}"
+                           required
+                           maxlength="150"
+                           placeholder="e.g. Projects"
+                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200">
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Sort Order
+                    </label>
+
+                    <input type="number"
+                           name="sort_order"
+                           value="{{ old('sort_order', 0) }}"
+                           min="0"
+                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200">
+
+                    <p class="mt-1 text-xs text-gray-400">
+                        Lower numbers appear first.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Status
+                    </label>
+
+                    <label class="flex h-[42px] cursor-pointer items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4">
+                        <input type="checkbox"
+                               name="is_active"
+                               value="1"
+                               class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                               {{ old('is_active', true) ? 'checked' : '' }}>
+
+                        <span class="text-sm font-medium text-gray-800">
+                            Active
+                        </span>
+                    </label>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                        Remarks
+                    </label>
+
+                    <textarea name="remarks"
+                              rows="3"
+                              placeholder="Optional notes..."
+                              class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200">{{ old('remarks') }}</textarea>
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+
+            <a href="{{ route('departments.index') }}"
+               class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50">
+                Cancel
+            </a>
+
+            <button type="submit"
+                    class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                Create Department
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+@endsection

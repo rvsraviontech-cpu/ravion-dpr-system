@@ -7,6 +7,7 @@ return [
         'icon' => 'home',
         'items' => [
             ['title' => 'Main Dashboard', 'route' => 'dashboard', 'permission' => 'dashboard.view', 'icon' => 'home'],
+            ['title' => 'PMO Action Desk', 'route' => 'pmo-dashboard', 'permission' => 'pmo_dashboard.view', 'icon' => 'clipboard'],
             ['title' => 'Engineer Dashboard', 'route' => 'engineer-dashboard', 'permission' => 'engineer_dashboard.view', 'icon' => 'user'],
             ['title' => 'Executive Dashboard', 'route' => 'project-progress-dashboard.index', 'permission' => 'project_progress_dashboard.view', 'icon' => 'chart'],
         ],
@@ -226,15 +227,58 @@ return [
     ],
 ],
     [
-        'title' => 'Administration',
-        'icon' => 'cog',
-        'items' => [
-            ['title' => 'Users', 'route' => 'users.index', 'permission' => 'users.view', 'icon' => 'user'],
-            ['title' => 'Roles', 'route' => 'roles.index', 'permission' => 'roles.view', 'icon' => 'key'],
-            ['title' => 'Permissions', 'route' => 'permissions.index', 'permission' => 'permissions.view', 'icon' => 'lock'],
-            ['title' => 'Role Permissions', 'route' => 'role-permissions.index', 'permission' => 'role_permissions.view', 'icon' => 'shield'],
-            ['title' => 'Audit Trail', 'route' => 'audit-logs.index', 'permission' => 'audit_trail.view', 'icon' => 'history'],
+    'title' => 'Administration',
+    'icon' => 'cog',
+    'items' => [
+        [
+            'title' => 'Users',
+            'route' => 'users.index',
+            'permission' => 'users.view',
+            'icon' => 'user',
+        ],
+
+        [
+            'title' => 'Departments',
+            'route' => 'departments.index',
+            'permission' => 'departments.view',
+            'icon' => 'building',
+        ],
+
+        [
+            'title' => 'Employee Designations',
+            'route' => 'employee-designations.index',
+            'permission' => 'employee_designations.view',
+            'icon' => 'briefcase',
+        ],
+
+        [
+            'title' => 'Roles',
+            'route' => 'roles.index',
+            'permission' => 'roles.view',
+            'icon' => 'key',
+        ],
+
+        [
+            'title' => 'Permissions',
+            'route' => 'permissions.index',
+            'permission' => 'permissions.view',
+            'icon' => 'lock',
+        ],
+
+        [
+            'title' => 'Role Permissions',
+            'route' => 'role-permissions.index',
+            'permission' => 'role_permissions.view',
+            'icon' => 'shield',
+        ],
+
+        [
+            'title' => 'Audit Trail',
+            'route' => 'audit-logs.index',
+            'permission' => 'audit_trail.view',
+            'icon' => 'history',
         ],
     ],
+],
 
 ];
