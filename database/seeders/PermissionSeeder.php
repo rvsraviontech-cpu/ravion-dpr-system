@@ -281,14 +281,27 @@ class PermissionSeeder extends Seeder
             ['module' => 'Reports', 'name' => 'reports.project_summary'],
 
             // Administration
-            ['module' => 'Users', 'name' => 'users.view'],
-            ['module' => 'Users', 'name' => 'users.manage'],
+            // Administration
 
-            ['module' => 'Roles', 'name' => 'roles.view'],
-            ['module' => 'Roles', 'name' => 'roles.manage'],
+// Users
+['module' => 'Users', 'name' => 'users.view'],
+['module' => 'Users', 'name' => 'users.manage'],
 
-            ['module' => 'Permissions', 'name' => 'permissions.view'],
-            ['module' => 'Permissions', 'name' => 'permissions.manage'],
+// Departments
+['module' => 'Departments', 'name' => 'departments.view'],
+['module' => 'Departments', 'name' => 'departments.manage'],
+
+// Employee Designations
+['module' => 'Employee Designations', 'name' => 'employee_designations.view'],
+['module' => 'Employee Designations', 'name' => 'employee_designations.manage'],
+
+// Roles
+['module' => 'Roles', 'name' => 'roles.view'],
+['module' => 'Roles', 'name' => 'roles.manage'],
+
+// Permissions
+['module' => 'Permissions', 'name' => 'permissions.view'],
+['module' => 'Permissions', 'name' => 'permissions.manage'],
 
             // Future Modules
             ['module' => 'Audit Trail', 'name' => 'audit_trail.view'],
