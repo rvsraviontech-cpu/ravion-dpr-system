@@ -339,10 +339,23 @@
                 <p class="text-xs font-semibold uppercase tracking-wide text-green-700">Assigned Labour</p>
                 <p id="pool-assigned-count" class="mt-2 text-2xl font-bold text-green-800">0</p>
             </div>
-            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
-                <p class="text-xs font-semibold uppercase tracking-wide text-blue-700">Unassigned Labour</p>
-                <p id="pool-unassigned-count" class="mt-2 text-2xl font-bold text-blue-800">0</p>
-            </div>
+            <button type="button" id="open-unassigned-labour"
+                class="group rounded-xl border border-blue-200 bg-blue-50 p-4 text-left transition hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                aria-controls="unassigned-section" aria-expanded="false">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-blue-700">Unassigned Labour</p>
+                        <p id="pool-unassigned-count" class="mt-2 text-2xl font-bold text-blue-800">0</p>
+                    </div>
+                    <span class="inline-flex items-center rounded-lg border border-blue-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-blue-700 shadow-sm group-hover:bg-blue-50">
+                        <span id="open-unassigned-labour-label">View Labour</span>
+                        <svg id="open-unassigned-labour-icon" class="ml-1 h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </span>
+                </div>
+                <p class="mt-2 text-xs text-blue-700">Click to view labour not currently assigned to a project.</p>
+            </button>
             <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
                 <p class="text-xs font-semibold uppercase tracking-wide text-violet-700">Total Available</p>
                 <p id="pool-total-count" class="mt-2 text-2xl font-bold text-violet-800">0</p>
@@ -409,9 +422,6 @@
                 <div
                     id="{{ $group['id'] }}-section"
                     class="overflow-hidden rounded-xl border {{ $group['border'] }}"
-                    @if($group['id'] === 'unassigned')
-                        x-data="{ open: false }"
-                    @endif
                 >
                     <div class="border-b px-4 py-3 {{ $group['head'] }}">
                         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -426,19 +436,11 @@
                                     </div>
 
                                     @if($group['id'] === 'unassigned')
-                                        <button
-                                            type="button"
-                                            @click="open = !open"
-                                            class="lg:hidden inline-flex items-center justify-center rounded-lg border border-green-300 bg-white px-3 py-2 text-xs font-semibold text-green-700"
-                                        >
-                                            <span x-text="open ? 'Hide' : 'Show'"></span>
-                                            <svg
-                                                class="ml-1 h-4 w-4 transition-transform"
-                                                :class="open ? 'rotate-180' : ''"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
+                                        <button type="button" id="toggle-unassigned-labour"
+                                            class="inline-flex items-center justify-center rounded-lg border border-green-300 bg-white px-3 py-2 text-xs font-semibold text-green-700 shadow-sm transition hover:bg-green-50"
+                                            aria-controls="unassigned-labour-content" aria-expanded="false">
+                                            <span id="toggle-unassigned-labour-label">Show Labour</span>
+                                            <svg id="toggle-unassigned-labour-icon" class="ml-1 h-4 w-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                             </svg>
                                         </button>
@@ -462,11 +464,8 @@
                         </div>
                     </div>
                     @if($group['id'] === 'unassigned')
-                        <div
-                            class="compact-attendance-wrap overflow-x-auto lg:block lg:max-h-[680px] lg:overflow-y-auto"
-                            x-show="open"
-                            x-cloak
-                        >
+                        <div id="unassigned-labour-content"
+                            class="compact-attendance-wrap hidden overflow-x-auto lg:max-h-[680px] lg:overflow-y-auto">
                     @else
                         <div class="compact-attendance-wrap overflow-x-auto">
                     @endif
@@ -487,18 +486,14 @@
                     </div>
 
                     @if($group['id'] === 'unassigned')
-                        <div
-                            x-show="open"
-                            x-cloak
-                            class="border-t border-green-200 bg-green-50 px-4 py-3 lg:hidden"
-                        >
-                            <button
-                                type="button"
-                                data-attendance-submit
-                                class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                            >
-                                {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
-                            </button>
+                        <div id="unassigned-labour-footer" class="hidden border-t border-green-200 bg-green-50 px-4 py-3">
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <p class="text-xs text-green-800">Mark only the unassigned labour actually working on this project.</p>
+                                <button type="button" data-attendance-submit
+                                    class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 sm:w-auto sm:py-2.5">
+                                    {{ $editingAttendance ? 'Update Attendance' : 'Save Attendance' }}
+                                </button>
+                            </div>
                         </div>
                     @endif
 
@@ -1078,6 +1073,8 @@
                 rows.length === 0
             );
 
+            setUnassignedOpen(false);
+
             $('labour-empty-message').classList.toggle(
                 'hidden',
                 rows.length > 0
@@ -1085,6 +1082,31 @@
 
             filterRows();
             updateSummary();
+        }
+
+        function setUnassignedOpen(open, scrollToSection = false) {
+            const section = $('unassigned-section');
+            const content = $('unassigned-labour-content');
+            const footer = $('unassigned-labour-footer');
+            if (!section || !content) return;
+
+            content.classList.toggle('hidden', !open);
+            footer?.classList.toggle('hidden', !open);
+            $('toggle-unassigned-labour')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+            $('open-unassigned-labour')?.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+            if ($('toggle-unassigned-labour-label')) $('toggle-unassigned-labour-label').textContent = open ? 'Hide Labour' : 'Show Labour';
+            if ($('open-unassigned-labour-label')) $('open-unassigned-labour-label').textContent = open ? 'Hide Labour' : 'View Labour';
+
+            $('toggle-unassigned-labour-icon')?.classList.toggle('rotate-180', open);
+            $('open-unassigned-labour-icon')?.classList.toggle('rotate-180', open);
+
+            if (scrollToSection && open) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function unassignedIsOpen() {
+            const content = $('unassigned-labour-content');
+            return Boolean(content && !content.classList.contains('hidden'));
         }
 
         function visibleRows() {
@@ -1364,6 +1386,16 @@
         });
 
         $('labour-table-search').addEventListener('input', filterRows);
+
+        $('open-unassigned-labour')?.addEventListener('click', () => {
+            if (unassignedRows.querySelectorAll('.attendance-row').length === 0) return;
+            const nextOpen = !unassignedIsOpen();
+            setUnassignedOpen(nextOpen, nextOpen);
+        });
+
+        $('toggle-unassigned-labour')?.addEventListener('click', () => {
+            setUnassignedOpen(!unassignedIsOpen(), false);
+        });
 
         $('mark-assigned-present')?.addEventListener('click', () => {
             visibleAssignedRows().forEach((row) => {
