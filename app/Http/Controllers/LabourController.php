@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Throwable;
+use App\Models\LabourGroup;
 
 class LabourController extends Controller
 {
@@ -542,15 +543,16 @@ class LabourController extends Controller
         }
 
         $nullableForeignKeys = [
-            'gender_id',
-            'labour_category_id',
-            'labour_type_id',
-            'skill_category_id',
-            'designation_role_id',
-            'default_shift_id',
-            'contractor_id',
-            'current_project_id',
-        ];
+    'gender_id',
+    'labour_group_id',
+    'labour_category_id',
+    'labour_type_id',
+    'skill_category_id',
+    'designation_role_id',
+    'default_shift_id',
+    'contractor_id',
+    'current_project_id',
+];
 
         foreach ($nullableForeignKeys as $field) {
             $data[$field] = ! empty($data[$field])
@@ -610,6 +612,26 @@ class LabourController extends Controller
         $designationRole = DesignationRole::query()
             ->where('is_active', true)
             ->findOrFail($designationRoleId);
+
+            /*
+ * Automatically map Labour Group from Designation Role.
+ *
+ * Example:
+ * Hindi Mason -> Hindi Mason
+ * Hindi Female Mason Helper -> Hindi Female Mason Helper
+ * Telugu Mason -> Telugu Mason
+ *
+ * Exact name matching prevents an unrelated group from being
+ * assigned accidentally.
+ */
+$matchingLabourGroup = LabourGroup::query()
+    ->where('is_active', true)
+    ->where('name', $designationRole->name)
+    ->first();
+
+if ($matchingLabourGroup) {
+    $data['labour_group_id'] = $matchingLabourGroup->id;
+}
 
         // Skill is always controlled by the Designation Role master.
         $data['skill_category_id'] = $designationRole->skill_category_id;
