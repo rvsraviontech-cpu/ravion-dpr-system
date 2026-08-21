@@ -65,6 +65,7 @@ use App\Http\Controllers\LabourAttendanceCorrectionController;
 use App\Http\Controllers\AttendanceCorrectionController;
 use App\Http\Controllers\LabourAttendanceRegisterController;
 use App\Http\Controllers\WeeklyWageSheetController;
+use App\Http\Controllers\WeeklyLabourPaymentController;
 use App\Http\Controllers\MaterialSpecificationController;
 use App\Http\Controllers\MaterialTypeController;
 use App\Http\Controllers\MaterialGradeController;
@@ -716,6 +717,59 @@ Route::get(
 )
     ->middleware('permission:weekly_wage_sheets.export')
     ->name('weekly-wage-sheets.export-pdf');
+
+/*
+|--------------------------------------------------------------------------
+| Weekly Labour Payment Register
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'permission:weekly_labour_payments.view',
+])->group(function (): void {
+
+    Route::get('/weekly-labour-payments', [WeeklyLabourPaymentController::class, 'index'])
+        ->name('weekly-labour-payments.index');
+
+    Route::get('/weekly-labour-payments/create', [WeeklyLabourPaymentController::class, 'create'])
+        ->middleware('permission:weekly_labour_payments.create')
+        ->name('weekly-labour-payments.create');
+
+    Route::post('/weekly-labour-payments', [WeeklyLabourPaymentController::class, 'store'])
+        ->middleware('permission:weekly_labour_payments.create')
+        ->name('weekly-labour-payments.store');
+
+    Route::get('/weekly-labour-payments/{weeklyLabourPayment}', [WeeklyLabourPaymentController::class, 'show'])
+        ->name('weekly-labour-payments.show');
+
+    Route::post('/weekly-labour-payments/{weeklyLabourPayment}/generate', [WeeklyLabourPaymentController::class, 'generate'])
+        ->middleware('permission:weekly_labour_payments.calculate')
+        ->name('weekly-labour-payments.generate');
+
+    Route::put('/weekly-labour-payments/{weeklyLabourPayment}/adjustments', [WeeklyLabourPaymentController::class, 'updateAdjustments'])
+        ->middleware('permission:weekly_labour_payments.manage_adjustments')
+        ->name('weekly-labour-payments.adjustments.update');
+
+    Route::post('/weekly-labour-payments/{weeklyLabourPayment}/submit', [WeeklyLabourPaymentController::class, 'submit'])
+        ->middleware('permission:weekly_labour_payments.submit')
+        ->name('weekly-labour-payments.submit');
+
+    Route::post('/weekly-labour-payments/{weeklyLabourPayment}/approve', [WeeklyLabourPaymentController::class, 'approve'])
+        ->middleware('permission:weekly_labour_payments.approve')
+        ->name('weekly-labour-payments.approve');
+
+    Route::post('/weekly-labour-payments/{weeklyLabourPayment}/reject', [WeeklyLabourPaymentController::class, 'reject'])
+        ->middleware('permission:weekly_labour_payments.reject')
+        ->name('weekly-labour-payments.reject');
+
+    Route::post('/weekly-labour-payments/{weeklyLabourPayment}/mark-paid', [WeeklyLabourPaymentController::class, 'markPaid'])
+        ->middleware('permission:weekly_labour_payments.mark_paid')
+        ->name('weekly-labour-payments.mark-paid');
+
+    Route::get('/weekly-labour-payments/{weeklyLabourPayment}/export/pdf', [WeeklyLabourPaymentController::class, 'exportPdf'])
+        ->middleware('permission:weekly_labour_payments.export')
+        ->name('weekly-labour-payments.export-pdf');
+});
 
     /*
 |--------------------------------------------------------------------------

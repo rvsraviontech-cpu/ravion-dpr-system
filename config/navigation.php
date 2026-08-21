@@ -31,6 +31,12 @@ return [
                 'permission' => 'weekly_wage_sheets.view',
                 'icon' => 'currency',
             ],
+            [
+                'title' => 'Labour Payment Register',
+                'route' => 'weekly-labour-payments.index',
+                'permission' => 'weekly_labour_payments.view',
+                'icon' => 'currency',
+            ],
         ],
     ],
 
