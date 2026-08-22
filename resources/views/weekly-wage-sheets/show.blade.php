@@ -322,7 +322,7 @@
                 'class' => 'text-gray-900',
             ],
             [
-                'label' => 'OT Wages',
+                'label' => 'OT Amount',
                 'value' => '₹' . number_format(
                     (float) $weeklyWageSheet->total_ot_wages,
                     2
@@ -368,7 +368,7 @@
                 </h2>
 
                 <p class="mt-1 text-sm text-gray-500">
-                    Payable days are calculated from approved attendance. OT rate is based on the wage snapshot stored for this sheet.
+                    Payable days are calculated from approved attendance. OT Hours and OT Amount are taken from approved attendance; OT Rate is shown as the reference hourly rate.
                 </p>
             </div>
 
@@ -1044,7 +1044,7 @@
                         'class' => 'text-gray-900',
                     ],
                     [
-                        'label' => 'OT Wages',
+                        'label' => 'OT Amount',
                         'value' => $weeklyWageSheet->total_ot_wages,
                         'class' => 'text-violet-700',
                     ],

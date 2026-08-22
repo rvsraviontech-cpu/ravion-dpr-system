@@ -999,6 +999,12 @@ class AttendanceCorrectionController extends Controller
                         ?? 0
                     ),
 
+                'ot_amount' =>
+                    (float) (
+                        $correctionDetail->new_ot_amount
+                        ?? 0
+                    ),
+
                 'attendance_source' =>
                     'attendance_correction',
 
@@ -1077,6 +1083,12 @@ class AttendanceCorrectionController extends Controller
                 'ot_hours' =>
                     (float) (
                         $correctionDetail->new_ot_hours
+                        ?? 0
+                    ),
+
+                'ot_amount' =>
+                    (float) (
+                        $correctionDetail->new_ot_amount
                         ?? 0
                     ),
 
@@ -1294,6 +1306,13 @@ class AttendanceCorrectionController extends Controller
                 'numeric',
                 'min:0',
                 'max:24',
+            ],
+
+            'details.*.new_ot_amount' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:99999999.99',
             ],
 
             'details.*.new_remarks' => [
@@ -1547,9 +1566,17 @@ class AttendanceCorrectionController extends Controller
                 $row['new_normal_hours'] ?? 0
             );
 
-            $otHours = (float) (
-                $row['new_ot_hours'] ?? 0
+            $labourForOt = Labour::query()
+                ->whereKey($labourId)
+                ->firstOrFail();
+
+            $otValues = $this->resolveCorrectionOtValues(
+                $labourForOt,
+                $row
             );
+
+            $otHours = $otValues['ot_hours'];
+            $otAmount = $otValues['ot_amount'];
 
             if (($normalHours + $otHours) > 24) {
                 throw ValidationException::withMessages([
@@ -1711,11 +1738,22 @@ class AttendanceCorrectionController extends Controller
                             ->ot_hours
                         : null,
 
+                'old_ot_amount' =>
+                    $originalDetail?->ot_amount !== null
+                        ? (float) $originalDetail->ot_amount
+                        : null,
+
                 'new_ot_hours' =>
                     $actionType
                         === AttendanceCorrectionDetail::ACTION_REMOVE
                             ? null
                             : $otHours,
+
+                'new_ot_amount' =>
+                    $actionType
+                        === AttendanceCorrectionDetail::ACTION_REMOVE
+                            ? null
+                            : $otAmount,
 
                 'old_remarks' =>
                     $this->nullableTrim(
@@ -1757,6 +1795,15 @@ class AttendanceCorrectionController extends Controller
         int $labourId,
         ?LabourAttendanceDetail $originalDetail
     ): array {
+        $labour = Labour::query()
+            ->whereKey($labourId)
+            ->firstOrFail();
+
+        $otValues = $this->resolveCorrectionOtValues(
+            $labour,
+            $row
+        );
+
         return [
             'labour_attendance_detail_id' =>
                 $originalDetail?->id,
@@ -1799,11 +1846,10 @@ class AttendanceCorrectionController extends Controller
                 ),
 
             'ot_hours' =>
-                (float) (
-                    $row[
-                        'new_ot_hours'
-                    ] ?? 0
-                ),
+                $otValues['ot_hours'],
+
+            'ot_amount' =>
+                $otValues['ot_amount'],
 
             'remarks' =>
                 $this->nullableTrim(
@@ -1827,6 +1873,7 @@ class AttendanceCorrectionController extends Controller
             'check_out_time',
             'normal_hours',
             'ot_hours',
+            'ot_amount',
             'remarks',
             'is_active',
         ];
@@ -1841,6 +1888,7 @@ class AttendanceCorrectionController extends Controller
                     [
                         'normal_hours',
                         'ot_hours',
+                        'ot_amount',
                     ],
                     true
                 )
@@ -1903,6 +1951,63 @@ class AttendanceCorrectionController extends Controller
         }
 
         return $value;
+    }
+
+
+    /**
+     * OT business rule for Attendance Corrections.
+     * OT Rate = Daily Wage Rate / 8.
+     *
+     * A submitted OT Amount overrides hours and recalculates OT Hours.
+     * If no amount is submitted, amount is calculated from OT Hours.
+     */
+    private function resolveCorrectionOtValues(
+        Labour $labour,
+        array $row
+    ): array {
+        $dailyRate = (float) ($labour->current_daily_rate ?? 0);
+        $otRate = $dailyRate > 0
+            ? $dailyRate / 8
+            : 0.0;
+
+        $submittedHours = max(
+            0,
+            (float) ($row['new_ot_hours'] ?? 0)
+        );
+
+        $hasAmount = array_key_exists('new_ot_amount', $row)
+            && $row['new_ot_amount'] !== null
+            && $row['new_ot_amount'] !== '';
+
+        if ($hasAmount) {
+            $otAmount = max(
+                0,
+                (float) $row['new_ot_amount']
+            );
+
+            $otHours = $otRate > 0
+                ? round($otAmount / $otRate, 2)
+                : $submittedHours;
+        } else {
+            $otHours = round($submittedHours, 2);
+            $otAmount = $otRate > 0 && $otHours > 0
+                ? round($otHours * $otRate, 2)
+                : 0.0;
+        }
+
+        if ($otHours > 24) {
+            throw ValidationException::withMessages([
+                'details' => [
+                    "Calculated OT hours for {$labour->full_name} exceed 24 hours.",
+                ],
+            ]);
+        }
+
+        return [
+            'ot_rate' => round($otRate, 2),
+            'ot_hours' => round($otHours, 2),
+            'ot_amount' => round($otAmount, 2),
+        ];
     }
 
     /*

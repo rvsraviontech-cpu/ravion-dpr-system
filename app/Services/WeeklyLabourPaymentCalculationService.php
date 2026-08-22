@@ -140,7 +140,29 @@ class WeeklyLabourPaymentCalculationService
     public function recalculateDetail(
         WeeklyLabourPaymentDetail $detail
     ): WeeklyLabourPaymentDetail {
-        $detail->recalculateValues();
+        /*
+         * OT Amount is sourced from approved attendance and must not be
+         * recalculated from OT Hours when labour additions/deductions change.
+         */
+        $detail->normal_wage = round(
+            (float) $detail->payable_days
+            * (float) $detail->daily_wage_rate,
+            2
+        );
+
+        $detail->gross_wage = round(
+            (float) $detail->normal_wage
+            + (float) $detail->ot_wage
+            + (float) $detail->additions,
+            2
+        );
+
+        $detail->net_payable = round(
+            (float) $detail->gross_wage
+            - (float) $detail->deductions,
+            2
+        );
+
         $detail->save();
 
         $this->recalculateRegisterTotals($detail->register);
@@ -266,6 +288,7 @@ class WeeklyLabourPaymentCalculationService
         $holidayDays = 0.0;
         $normalHours = 0.0;
         $otHours = 0.0;
+        $otAmount = 0.0;
 
         foreach ($dailyDetails as $detail) {
             $status = $detail->attendanceStatus;
@@ -307,6 +330,7 @@ class WeeklyLabourPaymentCalculationService
 
             if ((bool) $status->allows_ot_hours) {
                 $otHours += (float) $detail->ot_hours;
+                $otAmount += (float) ($detail->ot_amount ?? 0);
             }
         }
 
@@ -333,7 +357,13 @@ class WeeklyLabourPaymentCalculationService
         );
 
         $normalWage = round($payableDays * $dailyRate, 2);
-        $otWage = round($otHours * $otHourlyRate, 2);
+
+        /*
+         * Attendance OT Amount is authoritative. OT Hours and OT Rate are
+         * retained for transparency, but payment uses the approved amount.
+         */
+        $otWage = round($otAmount, 2);
+
         $grossWage = round($normalWage + $otWage + $additions, 2);
         $netPayable = round($grossWage - $deductions, 2);
 
@@ -394,6 +424,7 @@ class WeeklyLabourPaymentCalculationService
             $payableDays = 0.0;
             $normalHours = 0.0;
             $otHours = 0.0;
+            $otAmount = 0.0;
             $dates = [];
 
             foreach ($details as $detail) {
@@ -413,6 +444,7 @@ class WeeklyLabourPaymentCalculationService
 
                 if ((bool) $detail->attendanceStatus?->allows_ot_hours) {
                     $otHours += (float) $detail->ot_hours;
+                    $otAmount += (float) ($detail->ot_amount ?? 0);
                 }
 
                 $date = $detail->attendance?->attendance_date?->format('Y-m-d');
@@ -423,7 +455,7 @@ class WeeklyLabourPaymentCalculationService
             }
 
             $normalWage = round($payableDays * $dailyRate, 2);
-            $otWage = round($otHours * $otHourlyRate, 2);
+            $otWage = round($otAmount, 2);
 
             WeeklyLabourPaymentAllocation::create([
                 'weekly_labour_payment_detail_id' => $paymentDetail->id,

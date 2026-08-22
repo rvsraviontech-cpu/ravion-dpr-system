@@ -91,7 +91,7 @@
             <p class="mt-1 text-lg font-bold">₹{{ number_format((float)$register->total_normal_wages, 2) }}</p>
         </div>
         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-            <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">OT Wages</p>
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">OT Amount</p>
             <p class="mt-1 text-lg font-bold">₹{{ number_format((float)$register->total_ot_wages, 2) }}</p>
         </div>
         <div class="rounded-xl border border-green-200 bg-green-50 p-4 shadow-sm">
@@ -133,7 +133,7 @@
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-[1250px] w-full border-collapse text-xs">
+                    <table class="min-w-[1360px] w-full border-collapse text-xs">
                         <thead class="bg-[#0F2A52] text-white">
                             <tr>
                                 <th class="px-3 py-3 text-left">#</th>
@@ -143,7 +143,8 @@
                                 <th class="px-3 py-3 text-right">Rate</th>
                                 <th class="px-3 py-3 text-right">Normal</th>
                                 <th class="px-3 py-3 text-right">OT Hrs</th>
-                                <th class="px-3 py-3 text-right">OT Wage</th>
+                                <th class="px-3 py-3 text-right">OT Rate</th>
+                                <th class="px-3 py-3 text-right">OT Amount</th>
                                 <th class="px-3 py-3 text-right">Additions</th>
                                 <th class="px-3 py-3 text-right">Deductions</th>
                                 <th class="px-3 py-3 text-right">Net Payable</th>
@@ -154,7 +155,7 @@
                         @foreach($register->details->groupBy(fn($detail) => $detail->labourGroup?->name ?? $detail->labour?->labourGroup?->name ?? 'Un-grouped Labour') as $groupName => $groupDetails)
                             <tbody>
                                 <tr class="bg-blue-50">
-                                    <td colspan="12" class="border-y border-blue-200 px-3 py-2 font-bold uppercase tracking-wide text-[#0F2A52]">
+                                    <td colspan="13" class="border-y border-blue-200 px-3 py-2 font-bold uppercase tracking-wide text-[#0F2A52]">
                                         {{ $groupName }}
                                         <span class="ml-2 font-medium normal-case tracking-normal text-blue-700">
                                             {{ $groupDetails->count() }} labour{{ $groupDetails->count() === 1 ? '' : 's' }}
@@ -177,7 +178,8 @@
                                         <td class="px-3 py-3 text-right">₹{{ number_format((float)$detail->daily_wage_rate, 2) }}</td>
                                         <td class="px-3 py-3 text-right">₹{{ number_format((float)$detail->normal_wage, 2) }}</td>
                                         <td class="px-3 py-3 text-right">{{ rtrim(rtrim(number_format((float)$detail->ot_hours, 2, '.', ''), '0'), '.') }}</td>
-                                        <td class="px-3 py-3 text-right">₹{{ number_format((float)$detail->ot_wage, 2) }}</td>
+                                        <td class="px-3 py-3 text-right">₹{{ number_format((float)$detail->ot_hourly_rate, 2) }}</td>
+                                        <td class="px-3 py-3 text-right font-semibold text-violet-700">₹{{ number_format((float)$detail->ot_wage, 2) }}</td>
                                         <td class="px-3 py-3 text-right">
                                             <input type="hidden" name="details[{{ $detail->id }}][id]" value="{{ $detail->id }}">
                                             <input type="number" step="0.01" min="0"
@@ -206,7 +208,7 @@
                                     </tr>
 
                                     <tr id="allocation-{{ $detail->id }}" class="hidden bg-slate-50">
-                                        <td colspan="12" class="px-5 py-4">
+                                        <td colspan="13" class="px-5 py-4">
                                             <div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
                                                 <table class="w-full text-xs">
                                                     <thead class="bg-slate-100 text-slate-700">
@@ -216,7 +218,8 @@
                                                             <th class="px-3 py-2 text-right">Days</th>
                                                             <th class="px-3 py-2 text-right">Normal Wage</th>
                                                             <th class="px-3 py-2 text-right">OT Hrs</th>
-                                                            <th class="px-3 py-2 text-right">OT Wage</th>
+                                                            <th class="px-3 py-2 text-right">OT Rate</th>
+                                                            <th class="px-3 py-2 text-right">OT Amount</th>
                                                             <th class="px-3 py-2 text-right">Project Total</th>
                                                         </tr>
                                                     </thead>
@@ -230,7 +233,8 @@
                                                                 <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format((float)$allocation->payable_days, 2, '.', ''), '0'), '.') }}</td>
                                                                 <td class="px-3 py-2 text-right">₹{{ number_format((float)$allocation->normal_wage, 2) }}</td>
                                                                 <td class="px-3 py-2 text-right">{{ rtrim(rtrim(number_format((float)$allocation->ot_hours, 2, '.', ''), '0'), '.') }}</td>
-                                                                <td class="px-3 py-2 text-right">₹{{ number_format((float)$allocation->ot_wage, 2) }}</td>
+                                                                <td class="px-3 py-2 text-right">₹{{ number_format((float)$detail->ot_hourly_rate, 2) }}</td>
+                                                                <td class="px-3 py-2 text-right font-semibold text-violet-700">₹{{ number_format((float)$allocation->ot_wage, 2) }}</td>
                                                                 <td class="px-3 py-2 text-right font-bold">₹{{ number_format((float)$allocation->total_wage, 2) }}</td>
                                                             </tr>
                                                         @endforeach

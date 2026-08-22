@@ -29,6 +29,7 @@ class LabourAttendanceDetail extends Model
         'check_out_time',
         'normal_hours',
         'ot_hours',
+        'ot_amount',
 
         'attendance_source',
         'remarks',
@@ -40,6 +41,7 @@ class LabourAttendanceDetail extends Model
     protected $casts = [
         'normal_hours' => 'decimal:2',
         'ot_hours' => 'decimal:2',
+        'ot_amount' => 'decimal:2',
         'is_active' => 'boolean',
     ];
 

@@ -191,6 +191,7 @@ class WeeklyWageCalculationService
         $holidayDays = 0.0;
         $normalHours = 0.0;
         $otHours = 0.0;
+        $otAmount = 0.0;
 
         foreach ($attendanceDetails as $detail) {
             $status = $detail->attendanceStatus;
@@ -234,6 +235,7 @@ class WeeklyWageCalculationService
 
             if ((bool) $status->allows_ot_hours) {
                 $otHours += (float) $detail->ot_hours;
+                $otAmount += (float) ($detail->ot_amount ?? 0);
             }
         }
 
@@ -257,7 +259,17 @@ class WeeklyWageCalculationService
         );
 
         $normalWage = round($payableDays * $dailyRate, 2);
-        $otWage = round($otHours * $otHourlyRate, 2);
+
+        /*
+         * OT Amount is authoritative at attendance level.
+         *
+         * Attendance entry/correction already resolves the relationship between
+         * OT Hours, OT Rate and any manually entered flat OT Amount. The weekly
+         * wage sheet must therefore total the approved attendance OT Amount
+         * instead of recalculating it from OT Hours.
+         */
+        $otWage = round($otAmount, 2);
+
         $grossWage = round($normalWage + $otWage + $additions, 2);
         $netPayable = round($grossWage - $deductions, 2);
 

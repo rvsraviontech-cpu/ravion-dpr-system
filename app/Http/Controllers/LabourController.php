@@ -663,7 +663,6 @@ if ($matchingLabourGroup) {
             'current_daily_rate' => $designationRole->getRawOriginal('default_daily_rate'),
             'current_hourly_rate' => $designationRole->getRawOriginal('default_hourly_rate'),
             'current_monthly_rate' => $designationRole->getRawOriginal('default_monthly_rate'),
-            'current_ot_rate' => $designationRole->getRawOriginal('default_ot_rate'),
             'ot_multiplier' => $designationRole->getRawOriginal('default_ot_multiplier'),
         ];
 
@@ -745,7 +744,27 @@ if ($matchingLabourGroup) {
             'ot_calculation_type'
         ] ?? 'not_applicable';
 
-        if ($otCalculationType !== 'fixed_rate') {
+        /*
+         * Ravion OT rule:
+         * For daily-wage labour using a fixed OT rate, the hourly OT rate
+         * is always derived from the current daily wage:
+         *
+         *     OT Rate = Current Daily Rate / 8
+         *
+         * The submitted/browser value is intentionally ignored so that
+         * Labour Master remains financially consistent.
+         */
+        if (
+            $wageBasis === 'daily'
+            && $otCalculationType === 'fixed_rate'
+            && $data['current_daily_rate'] !== null
+            && $data['current_daily_rate'] !== ''
+        ) {
+            $data['current_ot_rate'] = round(
+                ((float) $data['current_daily_rate']) / 8,
+                2
+            );
+        } else {
             $data['current_ot_rate'] = null;
         }
 

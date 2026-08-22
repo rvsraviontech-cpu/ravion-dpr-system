@@ -23,6 +23,7 @@
             'check_out_time' => $detail->check_out_time ? substr((string) $detail->check_out_time, 0, 5) : '',
             'normal_hours' => $detail->normal_hours ?? 0,
             'ot_hours' => $detail->ot_hours ?? 0,
+            'ot_amount' => $detail->ot_amount,
             'attendance_source' => $detail->attendance_source ?? 'manual',
             'remarks' => $detail->remarks ?? '',
         ]);
@@ -57,6 +58,7 @@
         'check_out_time' => $detail['check_out_time'] ?? '',
         'normal_hours' => $detail['normal_hours'] ?? 0,
         'ot_hours' => $detail['ot_hours'] ?? 0,
+        'ot_amount' => $detail['ot_amount'] ?? null,
         'attendance_source' => $detail['attendance_source'] ?? 'manual',
         'remarks' => $detail['remarks'] ?? '',
     ]);
@@ -173,7 +175,9 @@
     .compact-attendance-wrap tr.attendance-row > td:nth-child(8)::before,
     .compact-attendance-wrap tr.attendance-row > td:nth-child(9)::before,
     .compact-attendance-wrap tr.attendance-row > td:nth-child(10)::before,
-    .compact-attendance-wrap tr.attendance-row > td:nth-child(11)::before {
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(11)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(12)::before,
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(13)::before {
         display: block;
         margin-bottom: 4px;
         font-size: 10px;
@@ -188,13 +192,17 @@
     .compact-attendance-wrap tr.attendance-row > td:nth-child(8)::before { content: "Check Out"; }
     .compact-attendance-wrap tr.attendance-row > td:nth-child(9)::before { content: "Normal Hours"; }
     .compact-attendance-wrap tr.attendance-row > td:nth-child(10)::before { content: "OT Hours"; }
-    .compact-attendance-wrap tr.attendance-row > td:nth-child(11)::before { content: "Remarks"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(11)::before { content: "OT Rate"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(12)::before { content: "OT Amount"; }
+    .compact-attendance-wrap tr.attendance-row > td:nth-child(13)::before { content: "Remarks"; }
 
     .compact-attendance-wrap .working-status,
     .compact-attendance-wrap .check-in,
     .compact-attendance-wrap .check-out,
     .compact-attendance-wrap .normal,
     .compact-attendance-wrap .ot,
+    .compact-attendance-wrap .ot-rate,
+    .compact-attendance-wrap .ot-amount,
     .compact-attendance-wrap input[type="text"] {
         min-height: 42px;
         font-size: 16px;
@@ -503,11 +511,11 @@
                         <table class="w-full min-w-0 table-fixed lg:min-w-[1500px]">
                             <colgroup>
                                 <col class="w-[205px]"><col class="w-[170px]"><col class="w-[58px]"><col class="w-[58px]"><col class="w-[150px]">
-                                <col class="w-[160px]"><col class="w-[130px]"><col class="w-[130px]"><col class="w-[100px]"><col class="w-[90px]"><col class="w-[220px]">
+                                <col class="w-[160px]"><col class="w-[130px]"><col class="w-[130px]"><col class="w-[100px]"><col class="w-[95px]"><col class="w-[100px]"><col class="w-[110px]"><col class="w-[220px]">
                             </colgroup>
                             <thead class="sticky top-0 z-10 bg-gray-50 shadow-sm">
                                 <tr>
-                                    @foreach(['Name', 'Designation', 'P', 'A', 'Status', 'Working Status', 'Check In', 'Check Out', 'Normal', 'OT', 'Remarks'] as $heading)
+                                    @foreach(['Name', 'Designation', 'P', 'A', 'Status', 'Working Status', 'Check In', 'Check Out', 'Normal', 'OT Hours', 'OT Rate', 'OT Amount', 'Remarks'] as $heading)
                                         <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ $heading }}</th>
                                     @endforeach
                                 </tr>
@@ -691,6 +699,22 @@
             const checkOut = old?.check_out_time || labour.check_out_time || '';
             const normal = old?.normal_hours ?? labour.normal_hours ?? 0;
             const ot = old?.ot_hours ?? labour.ot_hours ?? 0;
+            const otAmount =
+                old?.ot_amount
+                ?? labour.ot_amount
+                ?? '';
+
+            const dailyRate = Number(
+                labour.current_daily_rate
+                ?? labour.daily_wage_rate
+                ?? 0
+            );
+
+            const otRate = Number(
+                labour.ot_rate
+                ?? (dailyRate > 0 ? dailyRate / 8 : 0)
+            );
+
             const remarks = old?.remarks || labour.remarks || '';
             const source = old?.attendance_source || labour.attendance_source || 'manual';
 
@@ -716,7 +740,12 @@
                 <td class="px-3 py-3"><input type="time" class="check-in block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][check_in_time]" value="${esc(checkIn)}"></td>
                 <td class="px-3 py-3"><input type="time" class="check-out block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][check_out_time]" value="${esc(checkOut)}"></td>
                 <td class="px-3 py-3"><input type="number" class="normal block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][normal_hours]" value="${Number(normal || 0).toFixed(2)}" min="0" max="24" step="0.25"></td>
-                <td class="px-3 py-3"><input type="number" class="ot block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][ot_hours]" value="${Number(ot || 0).toFixed(2)}" min="0" max="24" step="0.25"></td>
+                <td class="px-3 py-3"><input type="number" class="ot block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][ot_hours]" value="${Number(ot || 0).toFixed(2)}" min="0" max="24" step="0.01"></td>
+                <td class="px-3 py-3">
+                    <input type="number" class="ot-rate block w-full rounded-md border border-gray-200 bg-gray-100 px-2 py-2 text-sm text-gray-700" value="${otRate.toFixed(2)}" readonly tabindex="-1">
+                    <input type="hidden" class="daily-rate" value="${dailyRate.toFixed(2)}">
+                </td>
+                <td class="px-3 py-3"><input type="number" class="ot-amount block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][ot_amount]" value="${otAmount === '' || otAmount === null ? (Number(ot || 0) > 0 && otRate > 0 ? (Number(ot) * otRate).toFixed(2) : '') : Number(otAmount).toFixed(2)}" min="0" step="0.01" placeholder="0.00"></td>
                 <td class="px-3 py-3"><input type="text" class="block w-full rounded-md border border-gray-300 px-2 py-2 text-sm" name="details[${index}][remarks]" value="${esc(remarks)}" maxlength="1000" placeholder="Optional remarks"></td>
             </tr>`;
         }
@@ -735,6 +764,7 @@
             row.querySelector('.check-out').value = '';
             row.querySelector('.normal').value = '0.00';
             row.querySelector('.ot').value = '0.00';
+            row.querySelector('.ot-amount').value = '';
             applyRules(row, false);
         }
 
@@ -744,6 +774,7 @@
             const checkOut = row.querySelector('.check-out');
             const normal = row.querySelector('.normal');
             const ot = row.querySelector('.ot');
+            const otAmount = row.querySelector('.ot-amount');
             const workingSelect = row.querySelector('.working-status');
             const hasAttendance = Boolean(status);
             const allocatesLabour = hasAttendance && !isNonWorking(status);
@@ -752,6 +783,7 @@
             checkOut.disabled = !allocatesLabour;
             normal.disabled = !allocatesLabour || !status?.allows_normal_hours;
             ot.disabled = !allocatesLabour || !status?.allows_ot_hours;
+            otAmount.disabled = !allocatesLabour || !status?.allows_ot_hours;
             workingSelect.disabled = !allocatesLabour;
 
             if (!hasAttendance) {
@@ -760,12 +792,14 @@
                 checkOut.value = '';
                 normal.value = '0.00';
                 ot.value = '0.00';
+                otAmount.value = '';
             } else if (!allocatesLabour) {
                 workingSelect.value = '';
                 checkIn.value = '';
                 checkOut.value = '';
                 normal.value = '0.00';
                 ot.value = '0.00';
+                otAmount.value = '';
             } else if (defaults) {
                 const data = shiftData();
 
@@ -844,6 +878,64 @@
             if (!value || !String(value).includes(':')) return null;
             const parts = String(value).split(':').map(Number);
             return parts.some(Number.isNaN) ? null : parts[0] * 60 + parts[1];
+        }
+
+        function rowOtRate(row) {
+            return Number(
+                row.querySelector('.ot-rate')?.value
+                || 0
+            );
+        }
+
+        function syncOtAmountFromHours(row) {
+            const rate = rowOtRate(row);
+            const hours = Number(
+                row.querySelector('.ot')?.value
+                || 0
+            );
+
+            const amount = row.querySelector(
+                '.ot-amount'
+            );
+
+            if (!amount) {
+                return;
+            }
+
+            if (rate <= 0 || hours <= 0) {
+                amount.value = '';
+                return;
+            }
+
+            amount.value = (
+                hours * rate
+            ).toFixed(2);
+        }
+
+        function syncOtHoursFromAmount(row) {
+            const rate = rowOtRate(row);
+            const amount = Number(
+                row.querySelector('.ot-amount')?.value
+                || 0
+            );
+
+            const hours = row.querySelector('.ot');
+
+            if (!hours) {
+                return;
+            }
+
+            if (rate <= 0 || amount <= 0) {
+                if (amount <= 0) {
+                    hours.value = '0.00';
+                }
+
+                return;
+            }
+
+            hours.value = (
+                amount / rate
+            ).toFixed(2);
         }
 
         function calculate(row) {
@@ -939,6 +1031,8 @@
 
     row.querySelector('.ot').value =
         (otMinutes / 60).toFixed(2);
+
+    syncOtAmountFromHours(row);
 }
 
         function bind(row) {
@@ -960,7 +1054,17 @@
             row.querySelector('.check-out').addEventListener('change', () => { calculate(row); updateSummary(); });
             row.querySelector('.working-status').addEventListener('change', updateSummary);
             row.querySelector('.normal').addEventListener('input', updateSummary);
-            row.querySelector('.ot').addEventListener('input', updateSummary);
+
+            row.querySelector('.ot').addEventListener('input', () => {
+                syncOtAmountFromHours(row);
+                updateSummary();
+            });
+
+            row.querySelector('.ot-amount').addEventListener('input', () => {
+                syncOtHoursFromAmount(row);
+                updateSummary();
+            });
+
             applyRules(row, false);
         }
 
@@ -1000,7 +1104,7 @@
         function groupHeadingHtml(groupName, labourCount) {
             return `
                 <tr class="labour-group-heading bg-[#0F2A52]">
-                    <td colspan="11" class="border-y border-[#0F2A52] bg-[#0F2A52] px-3 py-2 text-xs font-bold uppercase tracking-wide text-white">
+                    <td colspan="13" class="border-y border-[#0F2A52] bg-[#0F2A52] px-3 py-2 text-xs font-bold uppercase tracking-wide text-white">
                         ${esc(groupName || 'Un-grouped Labour')}
                         <span class="ml-2 font-medium normal-case tracking-normal text-blue-100">
                             ${labourCount} labour${labourCount === 1 ? '' : 's'}
@@ -1091,6 +1195,83 @@
             otherProject = Array.isArray(otherProject)
                 ? otherProject
                 : [];
+
+            if (editing) {
+                const allLabours = [
+                    ...assigned,
+                    ...unassigned,
+                    ...otherProject,
+                ];
+
+                const uniqueLabours = Array.from(
+                    new Map(
+                        allLabours.map((labour) => [
+                            String(
+                                labour.labour_id
+                                || labour.id
+                            ),
+                            labour,
+                        ])
+                    ).values()
+                );
+
+                const historicalLabours =
+                    uniqueLabours.filter((labour) => {
+                        const labourId =
+                            labour.labour_id
+                            || labour.id;
+
+                        return Boolean(
+                            labour.has_saved_attendance
+                            || saved(labourId)
+                        );
+                    });
+
+                const historicalIds = new Set(
+                    historicalLabours.map((labour) =>
+                        String(
+                            labour.labour_id
+                            || labour.id
+                        )
+                    )
+                );
+
+                assigned = [
+                    ...historicalLabours,
+
+                    ...assigned.filter((labour) => {
+                        const labourId =
+                            labour.labour_id
+                            || labour.id;
+
+                        return ! historicalIds.has(
+                            String(labourId)
+                        );
+                    }),
+                ];
+
+                unassigned =
+                    unassigned.filter((labour) => {
+                        const labourId =
+                            labour.labour_id
+                            || labour.id;
+
+                        return ! historicalIds.has(
+                            String(labourId)
+                        );
+                    });
+
+                otherProject =
+                    otherProject.filter((labour) => {
+                        const labourId =
+                            labour.labour_id
+                            || labour.id;
+
+                        return ! historicalIds.has(
+                            String(labourId)
+                        );
+                    });
+            }
 
             const assignedResult = groupedRowsHtml(
                 assigned,

@@ -810,7 +810,11 @@
                         ) }}"
                         min="0"
                         step="0.01"
+                        readonly
                     />
+                    <p class="mt-1 text-xs text-gray-500">
+                        Automatically calculated as Current Daily Rate ÷ 8.
+                    </p>
                 </div>
 
                 <div id="ot-multiplier-wrapper">
@@ -1299,11 +1303,6 @@
                         .defaultOtCalculationType;
             }
 
-            if (otRateInput) {
-                otRateInput.value =
-                    selectedOption.dataset.defaultOtRate || '';
-            }
-
             if (otMultiplierInput) {
                 otMultiplierInput.value =
                     selectedOption.dataset
@@ -1312,6 +1311,7 @@
 
             updateWageFields();
             updateOtFields();
+            calculateAutomaticOtRate();
         }
 
         function updateExitDateRequirement() {
@@ -1359,6 +1359,35 @@
                 monthlyRateInput.required =
                     wageBasis === 'monthly';
             }
+
+            calculateAutomaticOtRate();
+        }
+
+        function calculateAutomaticOtRate() {
+            if (!otRateInput) {
+                return;
+            }
+
+            const wageBasis =
+                wageBasisSelect?.value || '';
+
+            const otType =
+                otCalculationTypeSelect?.value || '';
+
+            const dailyRate =
+                parseFloat(dailyRateInput?.value || '');
+
+            if (
+                wageBasis === 'daily'
+                && otType === 'fixed_rate'
+                && Number.isFinite(dailyRate)
+                && dailyRate >= 0
+            ) {
+                otRateInput.value =
+                    (dailyRate / 8).toFixed(2);
+            } else {
+                otRateInput.value = '';
+            }
         }
 
         function updateOtFields() {
@@ -1388,6 +1417,8 @@
                 otMultiplierInput.required =
                     otType === 'multiplier';
             }
+
+            calculateAutomaticOtRate();
         }
 
         labourCategorySelect?.addEventListener(
@@ -1424,6 +1455,16 @@
         wageBasisSelect?.addEventListener(
             'change',
             updateWageFields
+        );
+
+        dailyRateInput?.addEventListener(
+            'input',
+            calculateAutomaticOtRate
+        );
+
+        dailyRateInput?.addEventListener(
+            'change',
+            calculateAutomaticOtRate
         );
 
         otCalculationTypeSelect?.addEventListener(

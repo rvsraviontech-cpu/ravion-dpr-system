@@ -348,7 +348,7 @@
         </td>
 
         <td>
-            <span class="summary-label">OT Wages</span>
+            <span class="summary-label">OT Amount</span>
             <span class="summary-value">{{ $money($register->total_ot_wages) }}</span>
         </td>
 
@@ -373,25 +373,26 @@
     <thead>
         <tr>
             <th style="width:3%;">#</th>
-            <th style="width:13%;">Labour</th>
-            <th style="width:11%;">Designation</th>
-            <th style="width:21%;">Projects Worked</th>
+            <th style="width:12%;">Labour</th>
+            <th style="width:10%;">Designation</th>
+            <th style="width:18%;">Projects Worked</th>
             <th style="width:5%;">Days</th>
             <th style="width:7%;">Rate</th>
             <th style="width:8%;">Normal</th>
             <th style="width:5%;">OT Hrs</th>
-            <th style="width:7%;">OT Wage</th>
-            <th style="width:6%;">Add.</th>
-            <th style="width:6%;">Ded.</th>
+            <th style="width:7%;">OT Rate</th>
+            <th style="width:8%;">OT Amount</th>
+            <th style="width:5%;">Add.</th>
+            <th style="width:5%;">Ded.</th>
             <th style="width:8%;">Net Payable</th>
-            <th style="width:10%;">Signature</th>
+            <th style="width:9%;">Signature</th>
         </tr>
     </thead>
 
     @foreach($groupedDetails as $groupName => $groupDetails)
         <tbody>
             <tr class="group-row">
-                <td colspan="13">
+                <td colspan="14">
                     {{ $groupName }} - {{ $groupDetails->count() }} labour{{ $groupDetails->count() === 1 ? '' : 's' }}
                 </td>
             </tr>
@@ -441,6 +442,10 @@
                     </td>
 
                     <td class="right">
+                        {{ $money($detail->ot_hourly_rate) }}
+                    </td>
+
+                    <td class="right">
                         {{ $money($detail->ot_wage) }}
                     </td>
 
@@ -469,6 +474,7 @@
             <td></td>
             <td class="right">{{ $money($register->total_normal_wages) }}</td>
             <td class="right">{{ $formatQty($register->total_ot_hours) }}</td>
+            <td></td>
             <td class="right">{{ $money($register->total_ot_wages) }}</td>
             <td class="right">{{ $money($register->total_additions) }}</td>
             <td class="right">{{ $money($register->total_deductions) }}</td>

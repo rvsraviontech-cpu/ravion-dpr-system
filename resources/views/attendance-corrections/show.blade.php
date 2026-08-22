@@ -162,7 +162,11 @@
                         </th>
 
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
-                            OT
+                            OT Hours
+                        </th>
+
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
+                            OT Amount
                         </th>
 
                         <th class="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-600">
@@ -222,6 +226,12 @@
                                     : '—' }}
                             </td>
 
+                            <td class="px-4 py-3 text-sm font-semibold text-gray-700">
+                                {{ $detail->new_ot_amount !== null
+                                    ? '₹' . number_format((float) $detail->new_ot_amount, 2)
+                                    : '—' }}
+                            </td>
+
                             <td class="px-4 py-3 text-sm text-gray-700">
                                 {{ $detail->line_reason }}
                             </td>
@@ -231,7 +241,7 @@
 
                         <tr>
                             <td
-                                colspan="9"
+                                colspan="10"
                                 class="px-4 py-10 text-center text-sm text-gray-500"
                             >
                                 No correction details were found.

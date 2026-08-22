@@ -204,6 +204,8 @@
                         'mobile' => $labour->mobile,
                         'group_name' => $labour->labourGroup?->name
                             ?? 'Un-grouped Labour',
+                        'daily_rate' => (float) ($labour->current_daily_rate ?? 0),
+                        'ot_rate' => round(((float) ($labour->current_daily_rate ?? 0)) / 8, 2),
                         'assignment_type' => $labour->current_project_id === null
                             ? 'unassigned'
                             : (
@@ -404,6 +406,8 @@
                         <col class="w-[100px]">
                         <col class="w-[105px]">
                         <col class="w-[95px]">
+                        <col class="w-[100px]">
+                        <col class="w-[110px]">
                         <col class="w-[300px]">
                     </colgroup>
 
@@ -434,7 +438,13 @@
                                 Normal
                             </th>
                             <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
-                                OT
+                                OT Hours
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                OT Rate
+                            </th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                OT Amount
                             </th>
                             <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                                 Reason for Correction
@@ -497,6 +507,15 @@
                                         )
                                     ),
 
+                                    dailyRate: @js(
+                                        number_format(
+                                            (float) ($detail->labour?->current_daily_rate ?? 0),
+                                            2,
+                                            '.',
+                                            ''
+                                        )
+                                    ),
+
                                     otHours: @js(
                                         $oldRow['new_ot_hours']
                                         ?? number_format(
@@ -504,6 +523,20 @@
                                             2,
                                             '.',
                                             ''
+                                        )
+                                    ),
+
+                                    otAmount: @js(
+                                        $oldRow['new_ot_amount']
+                                        ?? (
+                                            $detail->ot_amount !== null
+                                                ? number_format(
+                                                    (float) $detail->ot_amount,
+                                                    2,
+                                                    '.',
+                                                    ''
+                                                )
+                                                : ''
                                         )
                                     ),
 
@@ -662,9 +695,32 @@
                                         type="number"
                                         name="details[{{ $rowIndex }}][new_ot_hours]"
                                         x-model="otHours"
+                                        x-on:input="syncOtAmountFromHours()"
                                         min="0"
                                         max="24"
-                                        step="0.25"
+                                        step="0.01"
+                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    >
+                                </td>
+
+                                <td class="px-3 py-4">
+                                    <input
+                                        type="number"
+                                        x-model="otRate"
+                                        readonly
+                                        tabindex="-1"
+                                        class="block w-full rounded-lg border border-gray-200 bg-gray-100 px-2 py-2 text-sm text-gray-700"
+                                    >
+                                </td>
+
+                                <td class="px-3 py-4">
+                                    <input
+                                        type="number"
+                                        name="details[{{ $rowIndex }}][new_ot_amount]"
+                                        x-model="otAmount"
+                                        x-on:input="syncOtHoursFromAmount()"
+                                        min="0"
+                                        step="0.01"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     >
                                 </td>
@@ -682,7 +738,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="px-4 py-12 text-center text-sm text-gray-600">
+                                <td colspan="12" class="px-4 py-12 text-center text-sm text-gray-600">
                                     No active attendance rows were found.
                                 </td>
                             </tr>
@@ -741,6 +797,8 @@
                         <col class="w-[130px]">
                         <col class="w-[105px]">
                         <col class="w-[95px]">
+                        <col class="w-[100px]">
+                        <col class="w-[110px]">
                         <col class="w-[280px]">
                         <col class="w-[90px]">
                     </colgroup>
@@ -758,7 +816,9 @@
                             <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Check Out</th>
                             <th class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">Logout</th>
                             <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Normal</th>
-                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">OT</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">OT Hours</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">OT Rate</th>
+                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">OT Amount</th>
                             <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">Reason for Addition</th>
                             <th class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">Remove</th>
                         </tr>
@@ -1006,10 +1066,33 @@
                                     <input
                                         type="number"
                                         x-model="row.ot_hours"
+                                        x-on:input="syncAddedOtAmountFromHours(row)"
                                         x-bind:name="`details[${row.key}][new_ot_hours]`"
                                         min="0"
                                         max="24"
-                                        step="0.25"
+                                        step="0.01"
+                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm"
+                                    >
+                                </td>
+
+                                <td class="px-3 py-4">
+                                    <input
+                                        type="number"
+                                        x-model="row.ot_rate"
+                                        readonly
+                                        tabindex="-1"
+                                        class="block w-full rounded-lg border border-gray-200 bg-gray-100 px-2 py-2 text-sm text-gray-700"
+                                    >
+                                </td>
+
+                                <td class="px-3 py-4">
+                                    <input
+                                        type="number"
+                                        x-model="row.ot_amount"
+                                        x-on:input="syncAddedOtHoursFromAmount(row)"
+                                        x-bind:name="`details[${row.key}][new_ot_amount]`"
+                                        min="0"
+                                        step="0.01"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm"
                                     >
                                 </td>
@@ -1093,8 +1176,29 @@
                 config.normalHours ?? '0.00'
             ),
 
+            dailyRate: Number(
+                config.dailyRate ?? 0
+            ),
+
+            otRate: (
+                Number(config.dailyRate ?? 0) / 8
+            ).toFixed(2),
+
             otHours: String(
                 config.otHours ?? '0.00'
+            ),
+
+            otAmount: String(
+                config.otAmount
+                ?? (
+                    Number(config.otHours ?? 0) > 0
+                    && Number(config.dailyRate ?? 0) > 0
+                        ? (
+                            Number(config.otHours)
+                            * (Number(config.dailyRate) / 8)
+                        ).toFixed(2)
+                        : ''
+                )
             ),
 
             lineReason: String(
@@ -1132,6 +1236,27 @@
                 this.checkOut = '';
                 this.normalHours = '0.00';
                 this.otHours = '0.00';
+                this.otAmount = '';
+            },
+
+            syncOtAmountFromHours() {
+                const rate = Number(this.otRate || 0);
+                const hours = Number(this.otHours || 0);
+
+                this.otAmount =
+                    rate > 0 && hours > 0
+                        ? (hours * rate).toFixed(2)
+                        : '';
+            },
+
+            syncOtHoursFromAmount() {
+                const rate = Number(this.otRate || 0);
+                const amount = Number(this.otAmount || 0);
+
+                this.otHours =
+                    rate > 0 && amount > 0
+                        ? (amount / rate).toFixed(2)
+                        : '0.00';
             },
 
             applyMoreStatus() {
@@ -1162,6 +1287,8 @@
 
                 this.otHours =
                     result.otHours.toFixed(2);
+
+                this.syncOtAmountFromHours();
 
                 if (!this.lineReason.trim()) {
                     this.lineReason =
@@ -1334,7 +1461,10 @@
                         check_in_time: row.new_check_in_time ?? '',
                         check_out_time: row.new_check_out_time ?? '',
                         normal_hours: row.new_normal_hours ?? '0.00',
+                        daily_rate: Number(labour?.daily_rate ?? 0),
+                        ot_rate: Number(labour?.ot_rate ?? 0).toFixed(2),
                         ot_hours: row.new_ot_hours ?? '0.00',
+                        ot_amount: row.new_ot_amount ?? '',
                         line_reason: row.line_reason ?? '',
                     };
                 });
@@ -1355,7 +1485,10 @@
                     check_in_time: '',
                     check_out_time: '',
                     normal_hours: '0.00',
+                    daily_rate: 0,
+                    ot_rate: '0.00',
                     ot_hours: '0.00',
+                    ot_amount: '',
                     line_reason: '',
                 };
             },
@@ -1393,6 +1526,27 @@
                 row.check_out_time = '';
                 row.normal_hours = '0.00';
                 row.ot_hours = '0.00';
+                row.ot_amount = '';
+            },
+
+            syncAddedOtAmountFromHours(row) {
+                const rate = Number(row.ot_rate || 0);
+                const hours = Number(row.ot_hours || 0);
+
+                row.ot_amount =
+                    rate > 0 && hours > 0
+                        ? (hours * rate).toFixed(2)
+                        : '';
+            },
+
+            syncAddedOtHoursFromAmount(row) {
+                const rate = Number(row.ot_rate || 0);
+                const amount = Number(row.ot_amount || 0);
+
+                row.ot_hours =
+                    rate > 0 && amount > 0
+                        ? (amount / rate).toFixed(2)
+                        : '0.00';
             },
 
             logoutAddedLabour(row) {
@@ -1428,6 +1582,8 @@
 
                 row.ot_hours =
                     result.otHours.toFixed(2);
+
+                this.syncAddedOtAmountFromHours(row);
             },
 
             calculateAddedLabourHours(
@@ -1646,6 +1802,16 @@
                 row.selected_group = labour.group_name ?? 'Un-grouped Labour';
                 row.selected_designation = labour.designation ?? '';
                 row.selected_assignment = labour.assignment ?? '';
+                row.daily_rate = Number(labour.daily_rate ?? 0);
+                row.ot_rate = Number(
+                    labour.ot_rate
+                    ?? (
+                        row.daily_rate > 0
+                            ? row.daily_rate / 8
+                            : 0
+                    )
+                ).toFixed(2);
+                row.ot_amount = '';
                 row.search = '';
                 row.status_id = '';
                 row.more_status_id = '';
@@ -1654,6 +1820,7 @@
                 row.check_out_time = '';
                 row.normal_hours = '0.00';
                 row.ot_hours = '0.00';
+                row.ot_amount = '';
             },
 
             clearSelectedLabour(row) {

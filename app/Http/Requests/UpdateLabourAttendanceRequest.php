@@ -96,6 +96,13 @@ class UpdateLabourAttendanceRequest extends FormRequest
                 'max:24',
             ],
 
+            'details.*.ot_amount' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'max:99999999.99',
+            ],
+
             'details.*.attendance_source' => [
                 'nullable',
                 Rule::in([
@@ -162,6 +169,11 @@ class UpdateLabourAttendanceRequest extends FormRequest
                     'ot_hours' =>
                         $this->normalizeDecimal(
                             $detail['ot_hours'] ?? 0
+                        ),
+
+                    'ot_amount' =>
+                        $this->normalizeNullableDecimal(
+                            $detail['ot_amount'] ?? null
                         ),
 
                     'check_in_time' =>
@@ -468,6 +480,11 @@ class UpdateLabourAttendanceRequest extends FormRequest
                 $detail['ot_hours'] ?? 0
             );
 
+        $otAmount =
+            $detail['ot_amount'] !== null
+                ? (float) $detail['ot_amount']
+                : 0.0;
+
         if (
             ! $attendanceStatus->allows_normal_hours
             && $normalHours > 0
@@ -480,7 +497,7 @@ class UpdateLabourAttendanceRequest extends FormRequest
 
         if (
             ! $attendanceStatus->allows_ot_hours
-            && $otHours > 0
+            && ($otHours > 0 || $otAmount > 0)
         ) {
             $validator->errors()->add(
                 "details.{$index}.ot_hours",
@@ -493,6 +510,7 @@ class UpdateLabourAttendanceRequest extends FormRequest
             && (
                 $normalHours > 0
                 || $otHours > 0
+                || $otAmount > 0
             )
         ) {
             $validator->errors()->add(
@@ -602,6 +620,17 @@ class UpdateLabourAttendanceRequest extends FormRequest
             || $value === ''
         ) {
             return 0;
+        }
+
+        return $value;
+    }
+
+
+    private function normalizeNullableDecimal(
+        mixed $value
+    ): mixed {
+        if ($value === null || $value === '') {
+            return null;
         }
 
         return $value;

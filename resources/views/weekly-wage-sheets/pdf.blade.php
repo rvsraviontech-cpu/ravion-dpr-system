@@ -146,7 +146,7 @@ Labour Wage Calculations
 
 <th width="8%">OT Rate</th>
 
-<th width="10%">OT Wage</th>
+<th width="10%">OT Amount</th>
 
 <th width="8%">Additions</th>
 

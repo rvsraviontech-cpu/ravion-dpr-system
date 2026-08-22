@@ -431,6 +431,10 @@
                             OT Hours
                         </th>
 
+                        <th class="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            OT Amount
+                        </th>
+
                         <th class="min-w-52 px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                             Remarks
                         </th>
@@ -509,13 +513,17 @@
                                 {{ number_format((float) $detail->ot_hours, 2) }}
                             </td>
 
+                            <td class="whitespace-nowrap px-4 py-4 text-right text-sm font-semibold text-gray-900">
+                                ₹{{ number_format((float) ($detail->ot_amount ?? 0), 2) }}
+                            </td>
+
                             <td class="px-4 py-4 text-sm text-gray-600">
                                 {{ $detail->remarks ?: '—' }}
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="px-6 py-12 text-center">
+                            <td colspan="11" class="px-6 py-12 text-center">
                                 <p class="text-sm font-semibold text-gray-900">
                                     No labour attendance details found.
                                 </p>
@@ -528,7 +536,7 @@
                     <tfoot class="border-t border-gray-200 bg-gray-50">
                         <tr>
                             <td colspan="7" class="px-4 py-3 text-right text-sm font-semibold text-gray-700">
-                                Total Hours
+                                Totals
                             </td>
 
                             <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-bold text-gray-900">
@@ -537,6 +545,10 @@
 
                             <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-bold text-gray-900">
                                 {{ number_format((float) $labourAttendance->total_ot_hours, 2) }}
+                            </td>
+
+                            <td class="whitespace-nowrap px-4 py-3 text-right text-sm font-bold text-gray-900">
+                                ₹{{ number_format((float) $labourAttendance->details->sum('ot_amount'), 2) }}
                             </td>
 
                             <td></td>

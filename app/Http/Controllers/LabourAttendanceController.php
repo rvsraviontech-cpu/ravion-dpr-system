@@ -918,6 +918,8 @@ public function reopen(
                         'default_shift_id' => $labour->default_shift_id,
                         'default_shift_name' => $labour->defaultShift?->name,
                         'normal_shift_hours' => (float) ($labour->normal_shift_hours ?? 0),
+                        'current_daily_rate' => (float) ($labour->current_daily_rate ?? 0),
+                        'ot_rate' => round(((float) ($labour->current_daily_rate ?? 0)) / 8, 2),
                         'attendance_status_id' => $detail?->attendance_status_id,
                         'attendance_status_name' => $detail?->attendanceStatus?->name,
                         'working_status_id' => $detail?->working_status_id,
@@ -926,6 +928,9 @@ public function reopen(
                         'check_out_time' => $this->formatAttendanceTime($detail?->check_out_time),
                         'normal_hours' => (float) ($detail?->normal_hours ?? 0),
                         'ot_hours' => (float) ($detail?->ot_hours ?? 0),
+                        'ot_amount' => $detail?->ot_amount !== null
+                            ? (float) $detail->ot_amount
+                            : null,
                         'attendance_source' => $detail?->attendance_source ?? 'manual',
                         'remarks' => $detail?->remarks,
                         'has_saved_attendance' => (bool) $detail,
@@ -1066,6 +1071,17 @@ public function reopen(
                             $labour->normal_shift_hours
                             ?? 0
                         ),
+
+                    'current_daily_rate' =>
+                        (float) (
+                            $labour->current_daily_rate
+                            ?? 0
+                        ),
+
+                    'ot_rate' => round(
+                        ((float) ($labour->current_daily_rate ?? 0)) / 8,
+                        2
+                    ),
 
                     'assignment_group' => $assignmentGroup,
 
@@ -1257,6 +1273,11 @@ public function reopen(
                 ]);
             }
 
+            $otValues = $this->resolveAttendanceOtValues(
+                $existingDetail->labour ?? Labour::findOrFail($labourId),
+                $detail
+            );
+
             $existingDetail->update([
                 'attendance_status_id' =>
                     (int) $detail['attendance_status_id'],
@@ -1281,10 +1302,8 @@ public function reopen(
                         $detail['normal_hours'] ?? 0
                     ),
 
-                'ot_hours' =>
-                    (float) (
-                        $detail['ot_hours'] ?? 0
-                    ),
+                'ot_hours' => $otValues['ot_hours'],
+                'ot_amount' => $otValues['ot_amount'],
 
                 'attendance_source' =>
                     $detail['attendance_source']
@@ -1336,6 +1355,11 @@ public function reopen(
                 continue;
             }
 
+            $otValues = $this->resolveAttendanceOtValues(
+                $labour,
+                $detail
+            );
+
             $snapshot =
                 LabourAttendanceDetail::snapshotFromLabour(
                     $labour
@@ -1370,10 +1394,8 @@ public function reopen(
                         $detail['normal_hours'] ?? 0
                     ),
 
-                'ot_hours' =>
-                    (float) (
-                        $detail['ot_hours'] ?? 0
-                    ),
+                'ot_hours' => $otValues['ot_hours'],
+                'ot_amount' => $otValues['ot_amount'],
 
                 'attendance_source' =>
                     $detail['attendance_source']
@@ -1751,6 +1773,63 @@ private function getFormOptions(): array
         ];
     }
 
+
+    /**
+     * OT business rule:
+     * OT Rate = Daily Wage Rate / 8.
+     *
+     * OT Amount is authoritative when supplied. Otherwise OT Amount is
+     * calculated from OT Hours. Both values are persisted.
+     */
+    private function resolveAttendanceOtValues(
+        Labour $labour,
+        array $detail
+    ): array {
+        $dailyRate = (float) ($labour->current_daily_rate ?? 0);
+        $otRate = $dailyRate > 0
+            ? $dailyRate / 8
+            : 0.0;
+
+        $submittedHours = max(
+            0,
+            (float) ($detail['ot_hours'] ?? 0)
+        );
+
+        $hasAmount = array_key_exists('ot_amount', $detail)
+            && $detail['ot_amount'] !== null
+            && $detail['ot_amount'] !== '';
+
+        if ($hasAmount) {
+            $otAmount = max(
+                0,
+                (float) $detail['ot_amount']
+            );
+
+            $otHours = $otRate > 0
+                ? round($otAmount / $otRate, 2)
+                : $submittedHours;
+        } else {
+            $otHours = round($submittedHours, 2);
+            $otAmount = $otRate > 0 && $otHours > 0
+                ? round($otHours * $otRate, 2)
+                : 0.0;
+        }
+
+        if ($otHours > 24) {
+            throw ValidationException::withMessages([
+                'details' => [
+                    "Calculated OT hours for {$labour->full_name} exceed 24 hours.",
+                ],
+            ]);
+        }
+
+        return [
+            'ot_rate' => round($otRate, 2),
+            'ot_hours' => round($otHours, 2),
+            'ot_amount' => round($otAmount, 2),
+        ];
+    }
+
     /**
      * Trim nullable text and convert empty strings to null.
      */
@@ -1888,6 +1967,11 @@ private function getFormOptions(): array
             }
         }
 
+        $otValues = $this->resolveAttendanceOtValues(
+            $labour,
+            $detailData
+        );
+
         $attendanceDetail->attendance_status_id =
             (int) $detailData['attendance_status_id'];
 
@@ -1913,10 +1997,10 @@ private function getFormOptions(): array
             );
 
         $attendanceDetail->ot_hours =
-            (float) (
-                $detailData['ot_hours']
-                ?? 0
-            );
+            $otValues['ot_hours'];
+
+        $attendanceDetail->ot_amount =
+            $otValues['ot_amount'];
 
         $attendanceDetail->attendance_source =
             $detailData['attendance_source']
