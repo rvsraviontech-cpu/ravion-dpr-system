@@ -232,6 +232,21 @@ return [
 
     ],
 ],
+// REPORTS
+[
+    'title' => 'Reports',
+    'icon' => 'chart',
+    'items' => [
+        [
+            'title' => 'Labour Wage Reports',
+            'route' => 'reports.labour-wages.index',
+            'permission' => 'reports.labour',
+            'icon' => 'currency',
+        ],
+    ],
+],
+
+// ADMINISTRATION
     [
     'title' => 'Administration',
     'icon' => 'cog',

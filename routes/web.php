@@ -75,6 +75,7 @@ use App\Http\Controllers\LabourGroupController;
 use App\Http\Controllers\WeeklyAttendanceController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EmployeeDesignationController;
+use App\Http\Controllers\Reports\LabourWageReportController;
 
 
 Route::get('/', function () {
@@ -112,6 +113,21 @@ Route::resource('activity-divisions', ActivityDivisionController::class)
 
 Route::resource('work-stages', WorkStageController::class)
     ->middleware('permission:activities.manage');
+
+
+    Route::get(
+    '/reports/labour-wages',
+    [LabourWageReportController::class, 'index']
+)
+    ->name('reports.labour-wages.index')
+    ->middleware('permission:reports.labour');
+
+Route::get(
+    '/reports/labour-wages/pdf',
+    [LabourWageReportController::class, 'pdf']
+)
+    ->name('reports.labour-wages.pdf')
+    ->middleware('permission:reports.labour');
 
     /*
     |--------------------------------------------------------------------------
