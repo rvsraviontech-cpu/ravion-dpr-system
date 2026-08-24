@@ -284,7 +284,7 @@
 
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        Attendance Type
+                        Original Attendance Type
                     </div>
                     <div class="mt-1 text-sm font-semibold text-gray-900">
                         {{ $selectedAttendance->display_attendance_type }}
@@ -354,12 +354,69 @@
                 </p>
             </div>
 
-            @if($selectedAttendance->isAdditionalWork())
-                <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                    <strong>Additional Work:</strong> {{ $selectedAttendance->work_session_name ?: 'Additional Work Session' }}.
-                    Normal Hours will remain 0.00 and all corrected working hours will be treated as OT.
+            <div
+                class="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2"
+                x-data="{
+                    correctedType: @js(
+                        old(
+                            'new_attendance_type',
+                            $selectedAttendance->attendance_type ?? 'regular'
+                        )
+                    )
+                }"
+            >
+                <div>
+                    <label for="new_attendance_type" class="mb-1 block text-sm font-medium text-gray-700">
+                        Correct Attendance Type <span class="text-red-600">*</span>
+                    </label>
+
+                    <select
+                        id="new_attendance_type"
+                        name="new_attendance_type"
+                        x-model="correctedType"
+                        required
+                        class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+                        <option value="regular">Regular Attendance</option>
+                        <option value="additional_work">Additional Work</option>
+                    </select>
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Use Additional Work when this sheet was actually night slab, late concrete pour, emergency work, or another OT-only session.
+                    </p>
                 </div>
-            @endif
+
+                <div x-show="correctedType === 'additional_work'" x-cloak>
+                    <label for="new_work_session_name" class="mb-1 block text-sm font-medium text-gray-700">
+                        Work Session <span class="text-red-600">*</span>
+                    </label>
+
+                    <input
+                        type="text"
+                        id="new_work_session_name"
+                        name="new_work_session_name"
+                        maxlength="150"
+                        x-bind:required="correctedType === 'additional_work'"
+                        value="{{ old('new_work_session_name', $selectedAttendance->work_session_name) }}"
+                        placeholder="Example: Night Slab Work"
+                        class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Required for Additional Work.
+                    </p>
+                </div>
+
+                <div
+                    x-show="correctedType === 'additional_work'"
+                    x-cloak
+                    class="md:col-span-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800"
+                >
+                    <strong>Additional Work conversion:</strong>
+                    when this correction is applied, Normal Hours will be forced to 0.00.
+                    Existing worked Normal Hours will be moved into OT Hours and OT Amount will be recalculated using Daily Rate ÷ 8.
+                </div>
+            </div>
 
             <label
                 for="correction_reason"

@@ -39,6 +39,10 @@ class AttendanceCorrection extends Model
         'attendance_date',
         'old_attendance_date',
         'new_attendance_date',
+        'old_attendance_type',
+        'new_attendance_type',
+        'old_work_session_name',
+        'new_work_session_name',
         'correction_reason',
         'status',
 
@@ -302,19 +306,50 @@ class AttendanceCorrection extends Model
         );
     }
 
+    public function hasDateChange(): bool
+    {
+        return (bool) (
+            $this->new_attendance_date
+            && $this->old_attendance_date
+            && ! $this->new_attendance_date->isSameDay(
+                $this->old_attendance_date
+            )
+        );
+    }
+
+    public function hasAttendanceTypeChange(): bool
+    {
+        return (
+            ($this->old_attendance_type ?: 'regular')
+            !==
+            ($this->new_attendance_type ?: $this->old_attendance_type ?: 'regular')
+        );
+    }
+
+    public function hasWorkSessionChange(): bool
+    {
+        return (
+            ($this->old_work_session_name ?: null)
+            !==
+            ($this->new_work_session_name ?: null)
+        );
+    }
+
+    public function hasHeaderChanges(): bool
+    {
+        return $this->hasDateChange()
+            || $this->hasAttendanceTypeChange()
+            || $this->hasWorkSessionChange();
+    }
+
     public function canBeSubmitted(): bool
     {
         if ($this->status !== self::STATUS_DRAFT) {
             return false;
         }
 
-        $dateChanged = $this->new_attendance_date
-            && $this->old_attendance_date
-            && ! $this->new_attendance_date->isSameDay(
-                $this->old_attendance_date
-            );
-
-        return $dateChanged || $this->details()->exists();
+        return $this->hasHeaderChanges()
+            || $this->details()->exists();
     }
 
     public function canBeApproved(): bool
@@ -371,11 +406,14 @@ class AttendanceCorrection extends Model
 
     public function getTotalChangesAttribute(): int
     {
-        if ($this->relationLoaded('details')) {
-            return $this->details->count();
-        }
+        $detailChanges = $this->relationLoaded('details')
+            ? $this->details->count()
+            : $this->details()->count();
 
-        return $this->details()->count();
+        return $detailChanges
+            + ($this->hasDateChange() ? 1 : 0)
+            + ($this->hasAttendanceTypeChange() ? 1 : 0)
+            + ($this->hasWorkSessionChange() ? 1 : 0);
     }
 
     /*

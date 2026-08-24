@@ -38,11 +38,30 @@
             $attendanceCorrection->old_attendance_date
         );
 
+    $hasTypeChange =
+        ($attendanceCorrection->old_attendance_type ?: 'regular')
+        !==
+        ($attendanceCorrection->new_attendance_type
+            ?: $attendanceCorrection->old_attendance_type
+            ?: 'regular');
+
+    $hasSessionChange =
+        ($attendanceCorrection->old_work_session_name ?: null)
+        !==
+        ($attendanceCorrection->new_work_session_name ?: null);
+
     $labourChangeCount = $attendanceCorrection->details->count();
 
     $totalChangeCount =
         $labourChangeCount
-        + ($hasDateChange ? 1 : 0);
+        + ($hasDateChange ? 1 : 0)
+        + ($hasTypeChange ? 1 : 0)
+        + ($hasSessionChange ? 1 : 0);
+
+    $attendanceTypeLabel = fn (?string $type): string =>
+        ($type ?: 'regular') === 'additional_work'
+            ? 'Additional Work'
+            : 'Regular Attendance';
 @endphp
 
 @if($errors->any())
@@ -133,10 +152,28 @@
                 </div>
 
                 <div class="mt-1 text-sm font-semibold text-gray-900">
-                    {{ $attendanceCorrection->labourAttendance?->display_attendance_type ?? 'Regular Attendance' }}
-                    @if($attendanceCorrection->labourAttendance?->isAdditionalWork() && $attendanceCorrection->labourAttendance?->work_session_name)
+                    @if($hasTypeChange)
+                        <span class="text-gray-500 line-through">
+                            {{ $attendanceTypeLabel($attendanceCorrection->old_attendance_type) }}
+                        </span>
+                        <span class="mx-1 text-gray-400">→</span>
+                        <span class="text-blue-700">
+                            {{ $attendanceTypeLabel($attendanceCorrection->new_attendance_type) }}
+                        </span>
+                    @else
+                        {{ $attendanceTypeLabel(
+                            $attendanceCorrection->new_attendance_type
+                            ?: $attendanceCorrection->old_attendance_type
+                            ?: $attendanceCorrection->labourAttendance?->attendance_type
+                        ) }}
+                    @endif
+
+                    @if(
+                        ($attendanceCorrection->new_attendance_type ?: $attendanceCorrection->old_attendance_type) === 'additional_work'
+                        && $attendanceCorrection->new_work_session_name
+                    )
                         <span class="block text-xs font-medium text-blue-700">
-                            {{ $attendanceCorrection->labourAttendance->work_session_name }}
+                            {{ $attendanceCorrection->new_work_session_name }}
                         </span>
                     @endif
                 </div>
@@ -152,19 +189,32 @@
                 </div>
 
                 <div class="mt-1 text-xs text-gray-500">
-                    @if($hasDateChange)
-                        1 Date Change
-                        @if($labourChangeCount > 0)
-                            ·
-                        @endif
-                    @endif
+                    @php
+                        $summaryParts = [];
 
-                    @if($labourChangeCount > 0)
-                        {{ $labourChangeCount }}
-                        Labour {{ $labourChangeCount === 1 ? 'Change' : 'Changes' }}
-                    @elseif(!$hasDateChange)
-                        No changes
-                    @endif
+                        if ($hasDateChange) {
+                            $summaryParts[] = '1 Date Change';
+                        }
+
+                        if ($hasTypeChange) {
+                            $summaryParts[] = '1 Type Change';
+                        }
+
+                        if ($hasSessionChange) {
+                            $summaryParts[] = '1 Session Change';
+                        }
+
+                        if ($labourChangeCount > 0) {
+                            $summaryParts[] =
+                                $labourChangeCount
+                                . ' Labour '
+                                . ($labourChangeCount === 1 ? 'Change' : 'Changes');
+                        }
+                    @endphp
+
+                    {{ ! empty($summaryParts)
+                        ? implode(' · ', $summaryParts)
+                        : 'No changes' }}
                 </div>
             </div>
 
@@ -204,6 +254,65 @@
                     <span class="text-blue-700">
                         {{ $attendanceCorrection->new_attendance_date->format('d M Y') }}
                     </span>
+                </div>
+            </div>
+        </x-rds.card>
+    @endif
+
+    @if($hasTypeChange || $hasSessionChange)
+        <x-rds.card>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-base font-semibold text-gray-900">
+                        Attendance Type / Work Session Change
+                    </h2>
+
+                    <p class="mt-1 text-sm text-gray-500">
+                        Header-level reclassification of the approved attendance sheet.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Attendance Type
+                        </div>
+
+                        <div class="mt-1 font-semibold">
+                            <span class="{{ $hasTypeChange ? 'text-gray-500 line-through' : 'text-gray-900' }}">
+                                {{ $attendanceTypeLabel($attendanceCorrection->old_attendance_type) }}
+                            </span>
+
+                            @if($hasTypeChange)
+                                <span class="mx-2 text-gray-400">→</span>
+                                <span class="text-blue-700">
+                                    {{ $attendanceTypeLabel($attendanceCorrection->new_attendance_type) }}
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                            Work Session
+                        </div>
+
+                        <div class="mt-1 font-semibold">
+                            @if($hasSessionChange)
+                                <span class="text-gray-500 line-through">
+                                    {{ $attendanceCorrection->old_work_session_name ?: '—' }}
+                                </span>
+                                <span class="mx-2 text-gray-400">→</span>
+                                <span class="text-blue-700">
+                                    {{ $attendanceCorrection->new_work_session_name ?: '—' }}
+                                </span>
+                            @else
+                                {{ $attendanceCorrection->new_work_session_name
+                                    ?: $attendanceCorrection->old_work_session_name
+                                    ?: '—' }}
+                            @endif
+                        </div>
+                    </div>
                 </div>
             </div>
         </x-rds.card>
@@ -338,8 +447,8 @@
                                 colspan="10"
                                 class="px-4 py-10 text-center text-sm text-gray-500"
                             >
-                                {{ $hasDateChange
-                                    ? 'No labour-row changes were included in this correction.'
+                                {{ ($hasDateChange || $hasTypeChange || $hasSessionChange)
+                                    ? 'No separate labour-row changes were included beyond the header-level correction.'
                                     : 'No correction details were found.' }}
                             </td>
                         </tr>
