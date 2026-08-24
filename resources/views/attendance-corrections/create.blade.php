@@ -445,7 +445,7 @@
                 </h2>
 
                 <p class="mt-1 text-sm text-gray-500">
-                    Every row is editable. Rows that remain unchanged are ignored automatically.
+                    Every row is editable. Use “Remove from Attendance” when a labour was wrongly included in this sheet, even if their current status is Absent. Unchanged rows are ignored automatically.
                 </p>
             </div>
 
@@ -574,6 +574,10 @@
                             <tr
                                 x-data="attendanceExistingRow({
                                     initialStatusId: @js($initialStatusId),
+                                    initialActionType: @js(
+                                        $oldRow['action_type']
+                                        ?? 'modify'
+                                    ),
                                     presentStatusId: @js((string) $presentStatus?->id),
                                     absentStatusId: @js((string) $absentStatus?->id),
 
@@ -649,7 +653,10 @@
                                         $event.detail.logoutTime
                                     )
                                 "
-                                class="align-top hover:bg-gray-50"
+                                x-bind:class="actionType === 'remove'
+                                    ? 'bg-red-50/70'
+                                    : 'hover:bg-gray-50'"
+                                class="align-top"
                             >
                                 <td class="px-3 py-4">
                                     <div class="text-sm font-semibold text-gray-900">
@@ -665,8 +672,33 @@
                                     <input
                                         type="hidden"
                                         name="details[{{ $rowIndex }}][action_type]"
-                                        value="modify"
+                                        x-model="actionType"
                                     >
+
+                                    <div class="mt-2">
+                                        <button
+                                            type="button"
+                                            x-on:click="toggleRemove"
+                                            x-bind:class="actionType === 'remove'
+                                                ? 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                                : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'"
+                                            class="inline-flex items-center rounded-md border px-2.5 py-1.5 text-xs font-semibold transition"
+                                        >
+                                            <span
+                                                x-text="actionType === 'remove'
+                                                    ? 'Cancel Removal'
+                                                    : 'Remove from Attendance'"
+                                            ></span>
+                                        </button>
+
+                                        <div
+                                            x-show="actionType === 'remove'"
+                                            x-cloak
+                                            class="mt-2 rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-xs font-semibold text-red-700"
+                                        >
+                                            This labour will be removed from the attendance sheet after this correction is approved and applied.
+                                        </div>
+                                    </div>
 
                                     <input
                                         type="hidden"
@@ -697,6 +729,7 @@
                                     <button
                                         type="button"
                                         x-on:click="setPresent"
+                                        x-bind:disabled="actionType === 'remove'"
                                         x-bind:class="isPresent
                                             ? 'border-green-600 bg-green-600 text-white'
                                             : 'border-green-300 bg-white text-green-700 hover:bg-green-50'"
@@ -710,6 +743,7 @@
                                     <button
                                         type="button"
                                         x-on:click="setAbsent"
+                                        x-bind:disabled="actionType === 'remove'"
                                         x-bind:class="isAbsent
                                             ? 'border-red-600 bg-red-600 text-white'
                                             : 'border-red-300 bg-white text-red-700 hover:bg-red-50'"
@@ -723,7 +757,8 @@
                                     <select
                                         x-model="moreStatusId"
                                         x-on:change="applyMoreStatus"
-                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        x-bind:disabled="actionType === 'remove'"
+                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                                     >
                                         <option value="">Select</option>
 
@@ -738,7 +773,8 @@
                                 <td class="px-3 py-4">
                                     <select
                                         name="details[{{ $rowIndex }}][new_working_status_id]"
-                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        x-bind:disabled="actionType === 'remove'"
+                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                                     >
                                         <option value="">Select Status</option>
 
@@ -764,6 +800,7 @@
                                         type="time"
                                         name="details[{{ $rowIndex }}][new_check_in_time]"
                                         x-model="checkIn"
+                                        x-bind:disabled="actionType === 'remove'"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     >
                                 </td>
@@ -773,6 +810,7 @@
                                         type="time"
                                         name="details[{{ $rowIndex }}][new_check_out_time]"
                                         x-model="checkOut"
+                                        x-bind:disabled="actionType === 'remove'"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     >
                                 </td>
@@ -782,6 +820,7 @@
                                         type="number"
                                         name="details[{{ $rowIndex }}][new_normal_hours]"
                                         x-model="normalHours"
+                                        x-bind:disabled="actionType === 'remove'"
                                         min="0"
                                         max="24"
                                         step="0.25"
@@ -795,6 +834,7 @@
                                         type="number"
                                         name="details[{{ $rowIndex }}][new_ot_hours]"
                                         x-model="otHours"
+                                        x-bind:disabled="actionType === 'remove'"
                                         x-on:input="syncOtAmountFromHours()"
                                         min="0"
                                         max="24"
@@ -818,6 +858,7 @@
                                         type="number"
                                         name="details[{{ $rowIndex }}][new_ot_amount]"
                                         x-model="otAmount"
+                                        x-bind:disabled="actionType === 'remove'"
                                         x-on:input="syncOtHoursFromAmount()"
                                         min="0"
                                         step="0.01"
@@ -1260,6 +1301,10 @@
 <script>
     function attendanceExistingRow(config) {
         return {
+            actionType: String(
+                config.initialActionType ?? 'modify'
+            ),
+
             statusId: String(
                 config.initialStatusId ?? ''
             ),
@@ -1321,7 +1366,26 @@
                     );
             },
 
+            toggleRemove() {
+                this.actionType =
+                    this.actionType === 'remove'
+                        ? 'modify'
+                        : 'remove';
+
+                if (
+                    this.actionType === 'remove'
+                    && !this.lineReason.trim()
+                ) {
+                    this.lineReason =
+                        'Labour was incorrectly included in this attendance sheet.';
+                }
+            },
+
             setPresent() {
+                if (this.actionType === 'remove') {
+                    return;
+                }
+
                 this.statusId = String(
                     config.presentStatusId ?? ''
                 );
@@ -1330,6 +1394,10 @@
             },
 
             setAbsent() {
+                if (this.actionType === 'remove') {
+                    return;
+                }
+
                 this.statusId = String(
                     config.absentStatusId ?? ''
                 );
@@ -1362,6 +1430,10 @@
             },
 
             applyMoreStatus() {
+                if (this.actionType === 'remove') {
+                    return;
+                }
+
                 if (this.moreStatusId !== '') {
                     this.statusId =
                         this.moreStatusId;
@@ -1369,7 +1441,11 @@
             },
 
             logoutAllPresent(logoutTime) {
-                if (!this.isPresent || !this.checkIn) {
+                if (
+                    this.actionType === 'remove'
+                    || !this.isPresent
+                    || !this.checkIn
+                ) {
                     return;
                 }
 
