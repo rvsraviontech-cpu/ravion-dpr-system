@@ -2,6 +2,17 @@
     $editingAttendance = isset($labourAttendance);
     $selectedProjectId = old('project_id', $labourAttendance->project_id ?? '');
     $selectedShiftId = old('shift_id', $labourAttendance->shift_id ?? '');
+
+    $selectedAttendanceType = old(
+        'attendance_type',
+        $labourAttendance->attendance_type ?? 'regular'
+    );
+
+    $workSessionName = old(
+        'work_session_name',
+        $labourAttendance->work_session_name ?? ''
+    );
+
     $attendanceDate = old(
         'attendance_date',
         $editingAttendance && $labourAttendance->attendance_date
@@ -228,6 +239,7 @@
     id="labour-attendance-form"
     data-editing="{{ $editingAttendance ? '1' : '0' }}"
     data-attendance-id="{{ $labourAttendance->id ?? '' }}"
+    data-attendance-type="{{ $selectedAttendanceType }}"
     data-existing-details='@json($existingDetailPayload)'
     data-attendance-statuses='@json($attendanceStatusPayload)'
     data-working-statuses='@json($workingStatusPayload)'
@@ -248,42 +260,123 @@
     <x-rds.section
         title="Project Details"
         description="{{ $editingAttendance
-            ? 'Project, attendance date and shift are locked. Draft/Rejected attendance may still add missed labour before submission.'
-            : 'Select the project, attendance date and shift.' }}"
+    ? 'Project and shift are locked. Attendance date can be corrected while the sheet remains Draft/Rejected.'
+    : 'Select the project, attendance date and shift.' }}"
     >
         @if($editingAttendance)
-            <input type="hidden" name="project_id" id="project_id" value="{{ $labourAttendance->project_id }}">
-            <input type="hidden" name="attendance_date" id="attendance_date" value="{{ $labourAttendance->attendance_date->format('Y-m-d') }}">
-            <input
-                type="hidden"
-                name="shift_id"
-                id="shift_id"
-                value="{{ $labourAttendance->shift_id ?? '' }}"
-                data-start-time="{{ $lockedShift?->start_time ? substr((string) $lockedShift->start_time, 0, 5) : '09:00' }}"
-                data-end-time="{{ $lockedShift?->end_time ? substr((string) $lockedShift->end_time, 0, 5) : '18:00' }}"
-                data-normal-hours="{{ $lockedShift?->normal_hours ?: 8 }}"
-            >
+    <input
+        type="hidden"
+        name="project_id"
+        id="project_id"
+        value="{{ $labourAttendance->project_id }}"
+    >
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Project</p>
-                    <p class="mt-2 text-sm font-semibold text-gray-900">{{ $labourAttendance->project?->project_name ?? '—' }}</p>
-                </div>
-                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Attendance Date</p>
-                    <p class="mt-2 text-sm font-semibold text-gray-900">{{ $labourAttendance->attendance_date->format('d M Y') }}</p>
-                </div>
-                <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
-                    <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Shift</p>
-                    <p class="mt-2 text-sm font-semibold text-gray-900">{{ $labourAttendance->shift?->name ?? 'No Common Shift' }}</p>
-                </div>
-            </div>
+    <input
+        type="hidden"
+        name="shift_id"
+        id="shift_id"
+        value="{{ $labourAttendance->shift_id ?? '' }}"
+        data-start-time="{{ $lockedShift?->start_time ? substr((string) $lockedShift->start_time, 0, 5) : '09:00' }}"
+        data-end-time="{{ $lockedShift?->end_time ? substr((string) $lockedShift->end_time, 0, 5) : '18:00' }}"
+        data-normal-hours="{{ $lockedShift?->normal_hours ?: 8 }}"
+    >
 
-            <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-                Draft/Rejected attendance can still add missed labour or remove an incorrectly added labour before submission. Submitted/Approved attendance remains locked.
-            </div>
+    <input
+        type="hidden"
+        name="attendance_type"
+        id="attendance_type"
+        value="{{ $selectedAttendanceType }}"
+    >
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Project
+            </p>
+
+            <p class="mt-2 text-sm font-semibold text-gray-900">
+                {{ $labourAttendance->project?->project_name ?? '—' }}
+            </p>
+
+            <p class="mt-1 text-xs text-gray-500">
+                Project is locked
+            </p>
+        </div>
+
+        <div>
+            <x-rds.input
+                name="attendance_date"
+                label="Attendance Date"
+                id="attendance_date"
+                type="date"
+                value="{{ $attendanceDate }}"
+                max="{{ now()->format('Y-m-d') }}"
+                required
+            />
+
+            <p class="mt-1 text-xs text-amber-700">
+                Change this only when attendance was recorded against the wrong date.
+            </p>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Shift
+            </p>
+
+            <p class="mt-2 text-sm font-semibold text-gray-900">
+                {{ $labourAttendance->shift?->name ?? 'No Common Shift' }}
+            </p>
+
+            <p class="mt-1 text-xs text-gray-500">
+                Shift is locked
+            </p>
+        </div>
+
+        <div class="rounded-xl border {{ $selectedAttendanceType === 'additional_work' ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-gray-50' }} p-4">
+            <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Attendance Type
+            </p>
+
+            <p class="mt-2 text-sm font-semibold {{ $selectedAttendanceType === 'additional_work' ? 'text-amber-900' : 'text-gray-900' }}">
+                {{ $selectedAttendanceType === 'additional_work' ? 'Additional Work' : 'Regular Attendance' }}
+            </p>
+
+            <p class="mt-1 text-xs text-gray-500">
+                Attendance Type is locked after creation
+            </p>
+        </div>
+
+    </div>
+
+    @if($selectedAttendanceType === 'additional_work')
+        <div class="mt-4">
+            <x-rds.input
+                name="work_session_name"
+                label="Work Session"
+                id="work_session_name"
+                type="text"
+                value="{{ $workSessionName }}"
+                maxlength="150"
+                placeholder="Example: Night Slab Work"
+                required
+            />
+
+            <p class="mt-1 text-xs text-amber-700">
+                Additional Work is OT-only. Normal Hours remain zero and no second payable day is created.
+            </p>
+        </div>
+    @endif
+
+    <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+        Draft/Rejected attendance can change the attendance date, add missed labour,
+        or remove incorrectly added labour before submission.
+        Submitted/Approved attendance remains locked and must be changed through Attendance Corrections.
+    </div>
+
         @else
-            <div class="grid grid-cols-1 gap-5 md:grid-cols-3">
+            <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
                 <x-rds.select name="project_id" label="Project" id="project_id" required>
                     <option value="">Select Project</option>
                     @foreach($projects as $project)
@@ -322,6 +415,35 @@
                         </option>
                     @endforeach
                 </x-rds.select>
+
+                <x-rds.select name="attendance_type" label="Attendance Type" id="attendance_type" required>
+                    <option value="regular" @selected($selectedAttendanceType === 'regular')>
+                        Regular Attendance
+                    </option>
+                    <option value="additional_work" @selected($selectedAttendanceType === 'additional_work')>
+                        Additional Work
+                    </option>
+                </x-rds.select>
+            </div>
+
+            <div
+                id="work-session-wrapper"
+                class="mt-4 {{ $selectedAttendanceType === 'additional_work' ? '' : 'hidden' }}"
+            >
+                <x-rds.input
+                    name="work_session_name"
+                    label="Work Session"
+                    id="work_session_name"
+                    type="text"
+                    value="{{ $workSessionName }}"
+                    maxlength="150"
+                    placeholder="Example: Night Slab Work"
+                />
+
+                <div class="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                    Additional Work is for slab nights, late concrete pours, emergency work and similar sessions.
+                    It creates OT only — Normal Hours and the additional payable day remain zero.
+                </div>
             </div>
         @endif
 
@@ -338,9 +460,11 @@
 
     <x-rds.section
         title="Labour Attendance"
-        description="{{ $editingAttendance
-            ? 'Previously saved attendance is retained. Assigned, unassigned and eligible other-project labour are shown.'
-            : 'Assigned labour is shown first. Unassigned and other-project labour can be opened when needed.' }}"
+        description="{{ $selectedAttendanceType === 'additional_work'
+            ? 'Additional Work is OT-only. Labour already marked in Regular Attendance for this date can also be selected.'
+            : ($editingAttendance
+                ? 'Previously saved attendance is retained. Assigned, unassigned and eligible other-project labour are shown.'
+                : 'Assigned labour is shown first. Unassigned and other-project labour can be opened when needed.') }}"
     >
         <div id="labour-pool-summary" class="mb-5 hidden grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-xl border border-green-200 bg-green-50 p-4">
@@ -566,7 +690,7 @@
         </div>
 
         <div class="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-            P = Present, A = Absent. Status and Working Status are independent. Leave, Weekly Off, Holiday and Absent clear Working Status and hours.
+            P = Present, A = Absent. In Additional Work mode, selected labour is OT-only: Normal Hours remain zero and the session does not create another payable day.
         </div>
 
         @error('details')
@@ -587,6 +711,9 @@
         const project = $('project_id');
         const date = $('attendance_date');
         const shift = $('shift_id');
+        const attendanceType = $('attendance_type');
+        const workSession = $('work_session_name');
+        const workSessionWrapper = $('work-session-wrapper');
         const assignedRows = $('assigned-rows');
         const unassignedRows = $('unassigned-rows');
         const otherProjectRows = $('other-project-rows');
@@ -605,6 +732,7 @@
             || null;
 
         let rows = [];
+        const removedLabourIds = new Set();
         let requestNo = 0;
 
         const esc = (value) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -622,6 +750,25 @@
         const isLeave = (status) => Boolean(status && ['L', 'LEAVE'].includes(code(status.code)));
         const isNonWorking = (status) => !status || isAbsent(status) || ['L', 'LEAVE', 'WO', 'WEEKLY_OFF', 'WEEKLY-OFF', 'H', 'HOLIDAY', 'TR', 'TRANSFERRED'].includes(code(status.code));
         const saved = (labourId) => existing.find((detail) => String(detail.labour_id) === String(labourId)) || null;
+        const isAdditionalWorkMode = () =>
+            String(attendanceType?.value || root.dataset.attendanceType || 'regular') === 'additional_work';
+
+        function toggleAttendanceTypeUi() {
+            const additional = isAdditionalWorkMode();
+
+            workSessionWrapper?.classList.toggle(
+                'hidden',
+                !additional
+            );
+
+            if (workSession) {
+                workSession.required = additional;
+            }
+
+            rows.forEach((row) => {
+                applyRules(row, false);
+            });
+        }
 
         function shiftData() {
     const option = shift?.options
@@ -724,13 +871,26 @@
                     ? 'other-project'
                     : (editing ? 'existing' : 'assigned'));
 
-            return `<tr class="attendance-row" data-existing="${old || labour.has_saved_attendance ? '1' : '0'}" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name, labour.labour_group_name, labour.home_project_name].filter(Boolean).join(' ').toLowerCase())}">
-                <td class="px-3 py-3"><input type="hidden" name="details[${index}][labour_id]" value="${esc(id)}"><input class="status-id" type="hidden" name="details[${index}][attendance_status_id]" value="${esc(statusId)}"><input type="hidden" name="details[${index}][attendance_source]" value="${esc(source)}"><p class="truncate text-sm font-semibold text-gray-900">${esc(labour.full_name || 'Unavailable Labour')}</p><p class="mt-0.5 truncate text-[11px] text-gray-500 lg:hidden">${esc(labour.designation_role_name || '—')}</p><button type="button" class="mobile-details-toggle lg:hidden">Details</button></td>
+            return `<tr class="attendance-row" data-labour-id="${esc(id)}" data-existing="${old || labour.has_saved_attendance ? '1' : '0'}" data-group="${esc(group)}" data-search="${esc([labour.full_name, labour.designation_role_name, labour.labour_group_name, labour.home_project_name].filter(Boolean).join(' ').toLowerCase())}">
+                <td class="px-3 py-3">
+                    <input type="hidden" name="details[${index}][labour_id]" value="${esc(id)}">
+                    <input class="status-id" type="hidden" name="details[${index}][attendance_status_id]" value="${esc(statusId)}">
+                    <input type="hidden" name="details[${index}][attendance_source]" value="${esc(source)}">
+                    <p class="truncate text-sm font-semibold text-gray-900">${esc(labour.full_name || 'Unavailable Labour')}</p>
+                    <p class="mt-0.5 truncate text-[11px] text-gray-500 lg:hidden">${esc(labour.designation_role_name || '—')}</p>
+                    <button type="button" class="mobile-details-toggle lg:hidden">Details</button>
+                    ${editing && (old || labour.has_saved_attendance)
+                        ? `<button type="button" class="remove-attendance-row mt-1 block text-[11px] font-semibold text-red-600 hover:text-red-800">Remove from Attendance</button>`
+                        : ''}
+                </td>
                 <td class="px-3 py-3">
                     <p class="truncate text-sm text-gray-700">${esc(labour.designation_role_name || '—')}</p>
                     <p class="mt-0.5 truncate text-[11px] font-medium text-gray-500">${esc(labour.labour_group_name || 'Un-grouped')}</p>
                     ${labour.assignment_group === 'other_project' && labour.home_project_name
                         ? `<p class="mt-0.5 truncate text-[10px] font-semibold text-amber-700">Home: ${esc(labour.home_project_name)}</p>`
+                        : ''}
+                    ${labour.day_attendance_project_name
+                        ? `<p class="mt-0.5 truncate text-[10px] font-semibold text-blue-700">Day Attendance: ${esc(labour.day_attendance_project_name)}</p>`
                         : ''}
                 </td>
                 <td class="px-2 py-3 text-center"><button type="button" class="present-btn inline-flex h-10 w-11 items-center justify-center rounded-lg border text-sm font-bold transition lg:h-9 lg:w-10 lg:rounded-md">P</button></td>
@@ -778,13 +938,29 @@
             const workingSelect = row.querySelector('.working-status');
             const hasAttendance = Boolean(status);
             const allocatesLabour = hasAttendance && !isNonWorking(status);
+            const additionalWork = isAdditionalWorkMode();
 
             checkIn.disabled = !allocatesLabour;
             checkOut.disabled = !allocatesLabour;
-            normal.disabled = !allocatesLabour || !status?.allows_normal_hours;
-            ot.disabled = !allocatesLabour || !status?.allows_ot_hours;
-            otAmount.disabled = !allocatesLabour || !status?.allows_ot_hours;
+
+            normal.disabled =
+                additionalWork
+                || !allocatesLabour
+                || !status?.allows_normal_hours;
+
+            ot.disabled =
+                !allocatesLabour
+                || !status?.allows_ot_hours;
+
+            otAmount.disabled =
+                !allocatesLabour
+                || !status?.allows_ot_hours;
+
             workingSelect.disabled = !allocatesLabour;
+
+            if (additionalWork) {
+                normal.value = '0.00';
+            }
 
             if (!hasAttendance) {
                 workingSelect.value = '';
@@ -808,7 +984,9 @@
                     workingSelect.value = partial ? String(partial.id) : '';
                     checkIn.value = data.start;
                     checkOut.value = '13:30';
-                    normal.value = '4.00';
+                    normal.value = additionalWork
+                        ? '0.00'
+                        : '4.00';
                     ot.value = '0.00';
                 } else if (isPresent(status)) {
                     const workingStatus = defaultWorking();
@@ -826,7 +1004,9 @@
                     if (!checkOut.value) {
                         checkOut.value = '';
                     }
-                    normal.value = data.normal.toFixed(2);
+                    normal.value = additionalWork
+                        ? '0.00'
+                        : data.normal.toFixed(2);
                     ot.value = '0.00';
                 } else {
                     const workingStatus = defaultWorking();
@@ -834,7 +1014,9 @@
                         workingSelect.value = String(workingStatus.id);
                     }
                     if (!checkIn.value) checkIn.value = data.start;
-                    if (!normal.value || Number(normal.value) === 0) {
+                    if (additionalWork) {
+                        normal.value = '0.00';
+                    } else if (!normal.value || Number(normal.value) === 0) {
                         normal.value = data.normal.toFixed(2);
                     }
                     if (!ot.value) ot.value = '0.00';
@@ -1006,6 +1188,15 @@
         checkOutMinutes - checkInMinutes
     );
 
+    if (isAdditionalWorkMode()) {
+        row.querySelector('.normal').value = '0.00';
+        row.querySelector('.ot').value =
+            (workedMinutes / 60).toFixed(2);
+
+        syncOtAmountFromHours(row);
+        return;
+    }
+
     /*
      * Normal hours are capped by Shift Master.
      */
@@ -1039,6 +1230,25 @@
             row.querySelector('.mobile-details-toggle')?.addEventListener('click', function () {
                 const open = row.classList.toggle('mobile-details-open');
                 this.textContent = open ? 'Hide Details' : 'Details';
+            });
+
+            row.querySelector('.remove-attendance-row')?.addEventListener('click', () => {
+                const labourId = String(row.dataset.labourId || '');
+                const labourName = row.querySelector('p')?.textContent?.trim() || 'this labour';
+
+                if (!window.confirm(`Remove ${labourName} from this attendance sheet?`)) {
+                    return;
+                }
+
+                if (labourId) {
+                    removedLabourIds.add(labourId);
+                }
+
+                row.remove();
+                rows = rows.filter((item) => item !== row);
+
+                filterRows();
+                updateSummary();
             });
 
             row.querySelector('.present-btn').addEventListener('click', () => setStatus(row, present()));
@@ -1195,6 +1405,20 @@
             otherProject = Array.isArray(otherProject)
                 ? otherProject
                 : [];
+
+            const isNotRemoved = (labour) => {
+                const labourId = String(
+                    labour.labour_id
+                    || labour.id
+                    || ''
+                );
+
+                return !removedLabourIds.has(labourId);
+            };
+
+            assigned = assigned.filter(isNotRemoved);
+            unassigned = unassigned.filter(isNotRemoved);
+            otherProject = otherProject.filter(isNotRemoved);
 
             if (editing) {
                 const allLabours = [
@@ -1589,11 +1813,56 @@
         function prepareAttendanceFormForSubmit() {
             const selectedRows = selectedAttendanceRows();
 
-            if (selectedRows.length === 0) {
+            if (
+                isAdditionalWorkMode()
+                && !String(workSession?.value || '').trim()
+            ) {
+                showClientError(
+                    'Enter a Work Session name for Additional Work, for example Night Slab Work.'
+                );
+                workSession?.focus();
+                return false;
+            }
+
+            if (selectedRows.length === 0 && !editing) {
                 showClientError(
                     'Mark at least one labour as Present, Absent, or choose an Attendance Status before saving.'
                 );
                 return false;
+            }
+
+            if (isAdditionalWorkMode()) {
+                const invalidAdditionalRow = selectedRows.find((row) => {
+                    const otHours = Number(
+                        row.querySelector('.ot')?.value
+                        || 0
+                    );
+
+                    const otAmount = Number(
+                        row.querySelector('.ot-amount')?.value
+                        || 0
+                    );
+
+                    return otHours <= 0 && otAmount <= 0;
+                });
+
+                if (invalidAdditionalRow) {
+                    const labourName =
+                        invalidAdditionalRow.querySelector('p')
+                            ?.textContent
+                            ?.trim()
+                        || 'Selected labour';
+
+                    showClientError(
+                        `${labourName}: enter OT Hours or OT Amount for Additional Work.`
+                    );
+
+                    invalidAdditionalRow
+                        .querySelector('.ot-amount')
+                        ?.focus();
+
+                    return false;
+                }
             }
 
             rows.forEach((row) => {
@@ -1668,8 +1937,17 @@
             const sequence = ++requestNo;
             $('labour-loading-message').classList.remove('hidden');
             $('labour-error-message').classList.add('hidden');
-            const params = new URLSearchParams({ attendance_date: date.value });
-            if (editing && attendanceId) params.set('attendance_id', attendanceId);
+            const params = new URLSearchParams({
+                attendance_date: date.value,
+                attendance_type:
+                    attendanceType?.value
+                    || root.dataset.attendanceType
+                    || 'regular',
+            });
+
+            if (editing && attendanceId) {
+                params.set('attendance_id', attendanceId);
+            }
 
             try {
                 const response = await fetch(`/ajax/projects/${encodeURIComponent(project.value)}/labours?${params}`, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
@@ -1771,9 +2049,23 @@
 
         if (!editing) {
             project?.addEventListener('change', load);
-            date?.addEventListener('change', load);
+
+            attendanceType?.addEventListener('change', () => {
+                toggleAttendanceTypeUi();
+                load();
+            });
         }
+
+        /*
+         * Attendance Date is editable for Draft/Rejected sheets.
+         * Reload the labour pool for the newly selected date in both
+         * create and edit modes.
+         */
+        date?.addEventListener('change', load);
+
         shift?.addEventListener('change', () => visibleRows().forEach((row) => applyRules(row, true)));
+
+        toggleAttendanceTypeUi();
         load();
     }
 

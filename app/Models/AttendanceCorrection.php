@@ -37,6 +37,8 @@ class AttendanceCorrection extends Model
         'labour_attendance_id',
         'project_id',
         'attendance_date',
+        'old_attendance_date',
+        'new_attendance_date',
         'correction_reason',
         'status',
 
@@ -65,6 +67,8 @@ class AttendanceCorrection extends Model
 
     protected $casts = [
         'attendance_date' => 'date',
+        'old_attendance_date' => 'date',
+        'new_attendance_date' => 'date',
         'submitted_at' => 'datetime',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
@@ -300,8 +304,17 @@ class AttendanceCorrection extends Model
 
     public function canBeSubmitted(): bool
     {
-        return $this->status === self::STATUS_DRAFT
-            && $this->details()->exists();
+        if ($this->status !== self::STATUS_DRAFT) {
+            return false;
+        }
+
+        $dateChanged = $this->new_attendance_date
+            && $this->old_attendance_date
+            && ! $this->new_attendance_date->isSameDay(
+                $this->old_attendance_date
+            );
+
+        return $dateChanged || $this->details()->exists();
     }
 
     public function canBeApproved(): bool

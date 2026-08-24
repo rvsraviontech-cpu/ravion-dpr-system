@@ -187,6 +187,16 @@ class LabourAttendanceController extends Controller
                                 ? (int) $validated['shift_id']
                                 : null,
 
+                        'attendance_type' =>
+                            $validated['attendance_type'],
+
+                        'work_session_name' =>
+                            $validated['attendance_type'] === 'additional_work'
+                                ? $this->nullableTrim(
+                                    $validated['work_session_name'] ?? null
+                                )
+                                : null,
+
                         'status' => 'draft',
 
                         'recorded_by' => auth()->id(),
@@ -396,6 +406,16 @@ class LabourAttendanceController extends Controller
                     'shift_id' =>
                         ! empty($validated['shift_id'])
                             ? (int) $validated['shift_id']
+                            : null,
+
+                    'attendance_type' =>
+                        $validated['attendance_type'],
+
+                    'work_session_name' =>
+                        $validated['attendance_type'] === 'additional_work'
+                            ? $this->nullableTrim(
+                                $validated['work_session_name'] ?? null
+                            )
                             : null,
 
                     'remarks' =>
@@ -835,6 +855,11 @@ public function reopen(
                 'integer',
                 'exists:labour_attendances,id',
             ],
+
+            'attendance_type' => [
+                'nullable',
+                'in:regular,additional_work',
+            ],
         ]);
 
         $attendanceDate = $validated['attendance_date'];
@@ -847,7 +872,6 @@ public function reopen(
             $attendance = LabourAttendance::query()
                 ->whereKey($attendanceId)
                 ->where('project_id', $project->id)
-                ->whereDate('attendance_date', $attendanceDate)
                 ->firstOrFail();
 
             ProjectAccess::authorize((int) $attendance->project_id);
@@ -870,6 +894,15 @@ public function reopen(
 
             $workingStatusIds = $this->workingAttendanceStatusIds();
 
+            $attendanceType = $validated['attendance_type']
+                ?? $attendance->attendance_type
+                ?? 'regular';
+
+            $dayAttendanceByLabour = $this->regularDayAttendanceByLabour(
+                attendanceDate: $attendanceDate,
+                excludeAttendanceId: $attendance->id
+            );
+
             $allocatedLabourIds = LabourAttendanceDetail::query()
                 ->select('labour_attendance_details.labour_id')
                 ->join('labour_attendances', 'labour_attendances.id', '=', 'labour_attendance_details.labour_attendance_id')
@@ -882,18 +915,27 @@ public function reopen(
                 ->whereNull('labour_attendances.deleted_at')
                 ->whereIn('labour_attendance_details.attendance_status_id', $workingStatusIds);
 
-            $pool = Labour::query()
+            $poolQuery = Labour::query()
                 ->active()
-                ->whereNotIn('employment_status', ['exited', 'suspended'])
-                ->where(function (Builder $query) use ($allocatedLabourIds, $existingByLabour): void {
+                ->whereNotIn('employment_status', ['exited', 'suspended']);
+
+            if ($attendanceType === 'regular') {
+                $poolQuery->where(function (Builder $query) use ($allocatedLabourIds, $existingByLabour): void {
                     $query
                         ->whereNotIn('id', $allocatedLabourIds)
                         ->orWhereIn('id', $existingByLabour->keys());
-                })
+                });
+            }
+
+            $pool = $poolQuery
                 ->with(['labourGroup', 'designationRole', 'defaultShift', 'currentProject'])
                 ->ordered()
                 ->get()
-                ->map(function (Labour $labour) use ($project, $existingByLabour): array {
+                ->map(function (Labour $labour) use (
+                    $project,
+                    $existingByLabour,
+                    $dayAttendanceByLabour
+                ): array {
                     $detail = $existingByLabour->get($labour->id);
 
                     $assignmentGroup = match (true) {
@@ -942,6 +984,12 @@ public function reopen(
                         },
                         'home_project_id' => $labour->current_project_id,
                         'home_project_name' => $labour->currentProject?->project_name,
+
+                        'day_attendance_project_id' =>
+                            $dayAttendanceByLabour->get($labour->id)?->project_id,
+
+                        'day_attendance_project_name' =>
+                            $dayAttendanceByLabour->get($labour->id)?->project_name,
                     ];
                 })
                 ->sortBy([
@@ -960,6 +1008,8 @@ public function reopen(
                 'project_id' => $project->id,
                 'attendance_date' => $attendanceDate,
                 'attendance_id' => $attendance->id,
+                'attendance_type' => $attendanceType,
+                'work_session_name' => $attendance->work_session_name,
                 'available_count' => $pool->count(),
                 'existing_count' => $existingByLabour->count(),
                 'assigned_count' => $assigned->count(),
@@ -975,6 +1025,13 @@ public function reopen(
 
         $workingStatusIds =
             $this->workingAttendanceStatusIds();
+
+        $attendanceType = $validated['attendance_type']
+            ?? 'regular';
+
+        $dayAttendanceByLabour = $this->regularDayAttendanceByLabour(
+            attendanceDate: $attendanceDate
+        );
 
         $allocatedLabourIds =
             LabourAttendanceDetail::query()
@@ -1015,7 +1072,7 @@ public function reopen(
                     $workingStatusIds
                 );
 
-        $labours = Labour::query()
+        $labourQuery = Labour::query()
             ->active()
             ->whereNotIn(
                 'employment_status',
@@ -1023,8 +1080,16 @@ public function reopen(
                     'exited',
                     'suspended',
                 ]
-            )
-            ->whereNotIn('id', $allocatedLabourIds)
+            );
+
+        if ($attendanceType === 'regular') {
+            $labourQuery->whereNotIn(
+                'id',
+                $allocatedLabourIds
+            );
+        }
+
+        $labours = $labourQuery
             ->with([
                 'labourGroup',
                 'designationRole',
@@ -1035,7 +1100,10 @@ public function reopen(
             ->get()
             ->map(function (
                 Labour $labour
-            ) use ($project): array {
+            ) use (
+                $project,
+                $dayAttendanceByLabour
+            ): array {
                 $assignmentGroup = match (true) {
                     (int) $labour->current_project_id === (int) $project->id
                         => 'selected_project',
@@ -1096,6 +1164,12 @@ public function reopen(
 
                     'home_project_name' =>
                         $labour->currentProject?->project_name,
+
+                    'day_attendance_project_id' =>
+                        $dayAttendanceByLabour->get($labour->id)?->project_id,
+
+                    'day_attendance_project_name' =>
+                        $dayAttendanceByLabour->get($labour->id)?->project_name,
                 ];
             })
             ->values();
@@ -1126,6 +1200,8 @@ public function reopen(
             'project_id' => $project->id,
             'attendance_date' => $attendanceDate,
             'attendance_id' => null,
+            'attendance_type' => $attendanceType,
+            'work_session_name' => null,
             'available_count' => $labours->count(),
             'assigned_count' => $assignedLabours->count(),
             'unassigned_count' => $unassignedLabours->count(),
@@ -1137,6 +1213,77 @@ public function reopen(
             'existing_labours' => [],
             'labours' => $labours,
         ]);
+    }
+
+    /**
+     * Return the regular daytime working attendance for each labour on a date.
+     *
+     * This is informational for Additional Work entry so the Engineer can see
+     * where the labourer worked during the normal day.
+     */
+    private function regularDayAttendanceByLabour(
+        string $attendanceDate,
+        ?int $excludeAttendanceId = null
+    ): \Illuminate\Support\Collection {
+        $workingStatusIds =
+            $this->workingAttendanceStatusIds();
+
+        $query = LabourAttendanceDetail::query()
+            ->select([
+                'labour_attendance_details.labour_id',
+                'labour_attendances.project_id',
+                'projects.project_name',
+            ])
+            ->join(
+                'labour_attendances',
+                'labour_attendances.id',
+                '=',
+                'labour_attendance_details.labour_attendance_id'
+            )
+            ->join(
+                'projects',
+                'projects.id',
+                '=',
+                'labour_attendances.project_id'
+            )
+            ->whereDate(
+                'labour_attendances.attendance_date',
+                $attendanceDate
+            )
+            ->where(
+                'labour_attendances.attendance_type',
+                'regular'
+            )
+            ->where(
+                'labour_attendances.is_active',
+                true
+            )
+            ->where(
+                'labour_attendance_details.is_active',
+                true
+            )
+            ->whereNull(
+                'labour_attendance_details.deleted_at'
+            )
+            ->whereNull(
+                'labour_attendances.deleted_at'
+            )
+            ->whereIn(
+                'labour_attendance_details.attendance_status_id',
+                $workingStatusIds
+            );
+
+        if ($excludeAttendanceId) {
+            $query->where(
+                'labour_attendances.id',
+                '!=',
+                $excludeAttendanceId
+            );
+        }
+
+        return $query
+            ->get()
+            ->keyBy('labour_id');
     }
 
     /**
@@ -1298,9 +1445,11 @@ public function reopen(
                     ),
 
                 'normal_hours' =>
-                    (float) (
-                        $detail['normal_hours'] ?? 0
-                    ),
+                    $attendance->isAdditionalWork()
+                        ? 0
+                        : (float) (
+                            $detail['normal_hours'] ?? 0
+                        ),
 
                 'ot_hours' => $otValues['ot_hours'],
                 'ot_amount' => $otValues['ot_amount'],
@@ -1423,6 +1572,10 @@ public function reopen(
         LabourAttendance $attendance,
         array $details
     ): void {
+        if ($attendance->isAdditionalWork()) {
+            return;
+        }
+
         $workingStatusIds =
             $this->workingAttendanceStatusIds();
 
@@ -1696,6 +1849,13 @@ private function getFormOptions(): array
 
             'shift' =>
                 $attendance->shift?->name,
+
+            'attendance_type' =>
+                $attendance->attendance_type
+                ?? 'regular',
+
+            'work_session_name' =>
+                $attendance->work_session_name,
 
             'total_labours' =>
                 $attendance->total_labours,
@@ -1991,10 +2151,12 @@ private function getFormOptions(): array
             );
 
         $attendanceDetail->normal_hours =
-            (float) (
-                $detailData['normal_hours']
-                ?? 0
-            );
+            $attendance->isAdditionalWork()
+                ? 0
+                : (float) (
+                    $detailData['normal_hours']
+                    ?? 0
+                );
 
         $attendanceDetail->ot_hours =
             $otValues['ot_hours'];

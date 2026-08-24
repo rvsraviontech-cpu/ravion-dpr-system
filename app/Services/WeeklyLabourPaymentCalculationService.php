@@ -229,20 +229,43 @@ class WeeklyLabourPaymentCalculationService
                 fn (Collection $details, string $date): bool =>
                     $date !== ''
             )
-            ->map(
+            ->flatMap(
                 function (
                     Collection $details,
                     string $date
-                ) use ($labour): LabourAttendanceDetail {
-                    $payable = $details
+                ) use ($labour): Collection {
+                    $regularDetails = $details
+                        ->reject(
+                            fn (LabourAttendanceDetail $detail): bool =>
+                                $this->isAdditionalWork($detail)
+                        )
+                        ->values();
+
+                    $additionalDetails = $details
+                        ->filter(
+                            fn (LabourAttendanceDetail $detail): bool =>
+                                $this->isAdditionalWork($detail)
+                        )
+                        ->sortBy(
+                            fn (LabourAttendanceDetail $detail): int =>
+                                (int) $detail->labour_attendance_id
+                        )
+                        ->values();
+
+                    /*
+                     * Keep the existing duplicate-pay protection for Regular
+                     * Attendance. A labourer may have only one positive-payable
+                     * Regular attendance for a calendar date.
+                     */
+                    $payableRegular = $regularDetails
                         ->filter(
                             fn (LabourAttendanceDetail $detail): bool =>
                                 $this->payableFactor($detail) > 0
                         )
                         ->values();
 
-                    if ($payable->count() > 1) {
-                        $projects = $payable
+                    if ($payableRegular->count() > 1) {
+                        $projects = $payableRegular
                             ->map(
                                 fn (LabourAttendanceDetail $detail): string =>
                                     $detail->attendance?->project?->project_name
@@ -253,21 +276,39 @@ class WeeklyLabourPaymentCalculationService
 
                         throw ValidationException::withMessages([
                             'attendance' => [
-                                "{$labour->full_name} has more than one payable attendance record on {$date}: {$projects}. Correct the attendance before generating the Labour Payment Register.",
+                                "{$labour->full_name} has more than one payable Regular Attendance record on {$date}: {$projects}. Correct the attendance before generating the Labour Payment Register.",
                             ],
                         ]);
                     }
 
-                    if ($payable->isNotEmpty()) {
-                        return $payable->first();
+                    $result = collect();
+
+                    /*
+                     * Select one authoritative Regular row for the date.
+                     * If there is no payable Regular row, retain the earliest
+                     * non-payable Regular row for absence/leave reporting.
+                     */
+                    $regular = $payableRegular->first()
+                        ?? $regularDetails
+                            ->sortBy(
+                                fn (LabourAttendanceDetail $detail): int =>
+                                    (int) $detail->labour_attendance_id
+                            )
+                            ->first();
+
+                    if ($regular) {
+                        $result->push($regular);
                     }
 
-                    return $details
-                        ->sortBy(
-                            fn (LabourAttendanceDetail $detail): int =>
-                                (int) $detail->labour_attendance_id
-                        )
-                        ->first();
+                    /*
+                     * Every Additional Work session is retained because each
+                     * session can carry OT for a different project.
+                     */
+                    foreach ($additionalDetails as $additionalDetail) {
+                        $result->push($additionalDetail);
+                    }
+
+                    return $result;
                 }
             )
             ->values();
@@ -324,7 +365,10 @@ class WeeklyLabourPaymentCalculationService
                 $holidayDays += 1;
             }
 
-            if ((bool) $status->allows_normal_hours) {
+            if (
+                ! $this->isAdditionalWork($detail)
+                && (bool) $status->allows_normal_hours
+            ) {
                 $normalHours += (float) $detail->normal_hours;
             }
 
@@ -405,6 +449,13 @@ class WeeklyLabourPaymentCalculationService
             ->filter(
                 fn (LabourAttendanceDetail $detail): bool =>
                     $this->payableFactor($detail) > 0
+                    || (
+                        $this->isAdditionalWork($detail)
+                        && (
+                            (float) $detail->ot_hours > 0
+                            || (float) ($detail->ot_amount ?? 0) > 0
+                        )
+                    )
             )
             ->groupBy(
                 fn (LabourAttendanceDetail $detail): int =>
@@ -438,7 +489,10 @@ class WeeklyLabourPaymentCalculationService
                     $halfDays += 1;
                 }
 
-                if ((bool) $detail->attendanceStatus?->allows_normal_hours) {
+                if (
+                    ! $this->isAdditionalWork($detail)
+                    && (bool) $detail->attendanceStatus?->allows_normal_hours
+                ) {
                     $normalHours += (float) $detail->normal_hours;
                 }
 
@@ -507,6 +561,8 @@ class WeeklyLabourPaymentCalculationService
                         'id',
                         'project_id',
                         'attendance_date',
+                        'attendance_type',
+                        'work_session_name',
                         'status',
                         'is_active',
                     ])->with([
@@ -523,9 +579,22 @@ class WeeklyLabourPaymentCalculationService
             ->get();
     }
 
+    private function isAdditionalWork(
+        LabourAttendanceDetail $detail
+    ): bool {
+        return (
+            $detail->attendance?->attendance_type
+            ?? 'regular'
+        ) === 'additional_work';
+    }
+
     private function payableFactor(
         LabourAttendanceDetail $detail
     ): float {
+        if ($this->isAdditionalWork($detail)) {
+            return 0.0;
+        }
+
         return round(
             (float) ($detail->attendanceStatus?->payable_factor ?? 0),
             2

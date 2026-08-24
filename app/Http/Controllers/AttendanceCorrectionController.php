@@ -182,7 +182,9 @@ class AttendanceCorrectionController extends Controller
              * Only another active attendance detail whose Attendance Status
              * has a positive payable factor is treated as a conflict.
              */
-            $conflictingLabourIds = LabourAttendanceDetail::query()
+            $conflictingLabourIds = $selectedAttendance->isAdditionalWork()
+                ? []
+                : LabourAttendanceDetail::query()
                 ->join(
                     'labour_attendances',
                     'labour_attendances.id',
@@ -330,6 +332,18 @@ class AttendanceCorrectionController extends Controller
             (int) $attendance->project_id
         );
 
+        /*
+         * Primary target-date validation.
+         *
+         * Stop an impossible correction before the Draft is created.
+         * The same validation is repeated in apply() as a race-condition
+         * safeguard in case another attendance is created after this point.
+         */
+        $this->validateTargetDateAvailability(
+            attendance: $attendance,
+            targetDate: $validated['new_attendance_date']
+        );
+
         try {
             $correction = DB::transaction(
                 function () use (
@@ -362,6 +376,12 @@ class AttendanceCorrectionController extends Controller
                         'attendance_date' =>
                             $attendance->attendance_date,
 
+                        'old_attendance_date' =>
+                            $attendance->attendance_date,
+
+                        'new_attendance_date' =>
+                            $validated['new_attendance_date'] ?? $attendance->attendance_date,
+
                         'correction_reason' =>
                             trim(
                                 $validated[
@@ -379,18 +399,24 @@ class AttendanceCorrectionController extends Controller
                     $this->persistCorrectionDetails(
                         correction: $correction,
                         attendance: $attendance,
-                        submittedDetails: $validated['details']
+                        submittedDetails: $validated['details'] ?? []
                     );
 
-                    if (
-                        ! $correction
-                            ->details()
-                            ->where('is_active', true)
-                            ->exists()
-                    ) {
+                    $dateChanged = $correction->new_attendance_date
+                        && $correction->old_attendance_date
+                        && ! $correction->new_attendance_date->isSameDay(
+                            $correction->old_attendance_date
+                        );
+
+                    $hasDetailChanges = $correction
+                        ->details()
+                        ->where('is_active', true)
+                        ->exists();
+
+                    if (! $dateChanged && ! $hasDetailChanges) {
                         throw ValidationException::withMessages([
                             'details' => [
-                                'At least one valid attendance change is required.',
+                                'Change the attendance date or make at least one valid labour attendance correction.',
                             ],
                         ]);
                     }
@@ -487,12 +513,18 @@ class AttendanceCorrectionController extends Controller
                 );
         }
 
-        if (
-            ! $attendanceCorrection
-                ->details()
-                ->where('is_active', true)
-                ->exists()
-        ) {
+        $dateChanged = $attendanceCorrection->new_attendance_date
+            && $attendanceCorrection->old_attendance_date
+            && ! $attendanceCorrection->new_attendance_date->isSameDay(
+                $attendanceCorrection->old_attendance_date
+            );
+
+        $hasDetailChanges = $attendanceCorrection
+            ->details()
+            ->where('is_active', true)
+            ->exists();
+
+        if (! $dateChanged && ! $hasDetailChanges) {
             return redirect()
                 ->route(
                     'attendance-corrections.show',
@@ -500,7 +532,7 @@ class AttendanceCorrectionController extends Controller
                 )
                 ->with(
                     'error',
-                    'This attendance correction has no active correction details to submit.'
+                    'This attendance correction has no date or labour changes to submit.'
                 );
         }
 
@@ -854,11 +886,45 @@ class AttendanceCorrectionController extends Controller
                         ->lockForUpdate()
                         ->get();
 
-                    if ($correctionDetails->isEmpty()) {
+                    $dateChanged = $correction->new_attendance_date
+                        && $correction->old_attendance_date
+                        && ! $correction->new_attendance_date->isSameDay(
+                            $correction->old_attendance_date
+                        );
+
+                    if ($correctionDetails->isEmpty() && ! $dateChanged) {
                         throw ValidationException::withMessages([
                             'details' => [
-                                'No active correction details are available to apply.',
+                                'No attendance changes are available to apply.',
                             ],
+                        ]);
+                    }
+
+                    $targetDate = $correction->new_attendance_date
+                        ? $correction->new_attendance_date->format('Y-m-d')
+                        : $attendance->attendance_date->format('Y-m-d');
+
+                    if (
+                        $targetDate
+                        !== $attendance->attendance_date->format('Y-m-d')
+                    ) {
+                        /*
+                         * Final race-condition safeguard.
+                         *
+                         * Normally this conflict is already blocked when the
+                         * correction Draft is saved. We validate again here
+                         * because another attendance could have been created
+                         * before this correction reached Apply.
+                         */
+                        $this->validateTargetDateAvailability(
+                            attendance: $attendance,
+                            targetDate: $targetDate,
+                            applying: true
+                        );
+
+                        $attendance->update([
+                            'attendance_date' => $targetDate,
+                            'updated_by' => auth()->id(),
                         ]);
                     }
 
@@ -909,15 +975,29 @@ class AttendanceCorrectionController extends Controller
                     'Attendance Correction applied successfully. Labour Attendance and DPR totals have been updated.'
                 );
         } catch (ValidationException $exception) {
-            throw $exception;
+            return redirect()
+                ->route(
+                    'attendance-corrections.show',
+                    $attendanceCorrection
+                )
+                ->withErrors(
+                    $exception->errors()
+                )
+                ->with(
+                    'error',
+                    'Attendance Correction could not be applied. Please review the validation message below.'
+                );
         } catch (Throwable $exception) {
             report($exception);
 
             return redirect()
-                ->route('attendance-corrections.index')
+                ->route(
+                    'attendance-corrections.show',
+                    $attendanceCorrection
+                )
                 ->with(
                     'error',
-                    'Unable to apply the Attendance Correction. Check the Laravel log for details.'
+                    'Unable to apply the Attendance Correction. Please try again or check the Laravel log for details.'
                 );
         }
     }
@@ -1238,6 +1318,11 @@ class AttendanceCorrectionController extends Controller
                 ),
             ],
 
+            'new_attendance_date' => [
+                'required',
+                'date',
+            ],
+
             'correction_reason' => [
                 'required',
                 'string',
@@ -1246,9 +1331,8 @@ class AttendanceCorrectionController extends Controller
             ],
 
             'details' => [
-                'required',
+                'nullable',
                 'array',
-                'min:1',
             ],
 
             'details.*.action_type' => [
@@ -1481,7 +1565,9 @@ class AttendanceCorrectionController extends Controller
                  * provided they do not already have payable attendance on
                  * another project for this date.
                  */
-                $hasConflictingAttendance = LabourAttendanceDetail::query()
+                $hasConflictingAttendance = $attendance->isAdditionalWork()
+                    ? false
+                    : LabourAttendanceDetail::query()
                     ->join(
                         'labour_attendances',
                         'labour_attendances.id',
@@ -1562,9 +1648,11 @@ class AttendanceCorrectionController extends Controller
                 ]);
             }
 
-            $normalHours = (float) (
-                $row['new_normal_hours'] ?? 0
-            );
+            $normalHours = $attendance->isAdditionalWork()
+                ? 0.0
+                : (float) (
+                    $row['new_normal_hours'] ?? 0
+                );
 
             $labourForOt = Labour::query()
                 ->whereKey($labourId)
@@ -1612,7 +1700,8 @@ class AttendanceCorrectionController extends Controller
                     : $this->buildAfterSnapshot(
                         row: $row,
                         labourId: $labourId,
-                        originalDetail: $originalDetail
+                        originalDetail: $originalDetail,
+                        attendance: $attendance
                     );
 
             /*
@@ -1793,7 +1882,8 @@ class AttendanceCorrectionController extends Controller
     private function buildAfterSnapshot(
         array $row,
         int $labourId,
-        ?LabourAttendanceDetail $originalDetail
+        ?LabourAttendanceDetail $originalDetail,
+        LabourAttendance $attendance
     ): array {
         $labour = Labour::query()
             ->whereKey($labourId)
@@ -1839,11 +1929,13 @@ class AttendanceCorrectionController extends Controller
                 ),
 
             'normal_hours' =>
-                (float) (
-                    $row[
-                        'new_normal_hours'
-                    ] ?? 0
-                ),
+                $attendance->isAdditionalWork()
+                    ? 0.0
+                    : (float) (
+                        $row[
+                            'new_normal_hours'
+                        ] ?? 0
+                    ),
 
             'ot_hours' =>
                 $otValues['ot_hours'],
@@ -2008,6 +2100,102 @@ class AttendanceCorrectionController extends Controller
             'ot_hours' => round($otHours, 2),
             'ot_amount' => round($otAmount, 2),
         ];
+    }
+
+    /**
+     * Validate the corrected attendance date at both Save and Apply stages.
+     *
+     * Regular Attendance:
+     * Only one Regular Attendance sheet may exist for a project/date.
+     *
+     * Additional Work:
+     * Multiple Additional Work sessions may exist on a project/date, but
+     * the same Work Session must not be duplicated.
+     *
+     * @throws ValidationException
+     */
+    private function validateTargetDateAvailability(
+        LabourAttendance $attendance,
+        mixed $targetDate,
+        bool $applying = false
+    ): void {
+        if (blank($targetDate)) {
+            return;
+        }
+
+        $targetDate = \Carbon\Carbon::parse(
+            $targetDate
+        )->format('Y-m-d');
+
+        $currentDate = $attendance
+            ->attendance_date
+            ?->format('Y-m-d');
+
+        if ($targetDate === $currentDate) {
+            return;
+        }
+
+        $conflictQuery = LabourAttendance::query()
+            ->where(
+                'id',
+                '!=',
+                $attendance->id
+            )
+            ->where(
+                'project_id',
+                $attendance->project_id
+            )
+            ->whereDate(
+                'attendance_date',
+                $targetDate
+            )
+            ->where(
+                'attendance_type',
+                $attendance->attendance_type
+                    ?? 'regular'
+            )
+            ->where('is_active', true)
+            ->whereNull('deleted_at');
+
+        if ($attendance->isAdditionalWork()) {
+            $conflictQuery->where(
+                'work_session_name',
+                $attendance->work_session_name
+            );
+        }
+
+        if (! $conflictQuery->exists()) {
+            return;
+        }
+
+        $projectName = $attendance->project?->project_name
+            ?? 'this project';
+
+        $formattedDate = \Carbon\Carbon::parse(
+            $targetDate
+        )->format('d M Y');
+
+        if ($attendance->isAdditionalWork()) {
+            $sessionName = filled(
+                $attendance->work_session_name
+            )
+                ? " '{$attendance->work_session_name}'"
+                : '';
+
+            $message = $applying
+                ? "Additional Work{$sessionName} now already exists for {$projectName} on {$formattedDate}. The correction cannot be applied because the target date became unavailable after this request was created."
+                : "Additional Work{$sessionName} already exists for {$projectName} on {$formattedDate}. This correction request cannot be created for that date.";
+        } else {
+            $message = $applying
+                ? "Regular Attendance now already exists for {$projectName} on {$formattedDate}. The correction cannot be applied because the target date became unavailable after this request was created."
+                : "Regular Attendance already exists for {$projectName} on {$formattedDate}. This correction request cannot be created for that date.";
+        }
+
+        throw ValidationException::withMessages([
+            'new_attendance_date' => [
+                $message,
+            ],
+        ]);
     }
 
     /*
@@ -2308,6 +2496,14 @@ class AttendanceCorrectionController extends Controller
 
             'attendance_date' =>
                 $correction->attendance_date
+                    ?->format('Y-m-d'),
+
+            'old_attendance_date' =>
+                $correction->old_attendance_date
+                    ?->format('Y-m-d'),
+
+            'new_attendance_date' =>
+                $correction->new_attendance_date
                     ?->format('Y-m-d'),
 
             'correction_reason' =>

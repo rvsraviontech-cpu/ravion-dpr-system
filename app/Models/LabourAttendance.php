@@ -20,6 +20,8 @@ class LabourAttendance extends Model
         'project_id',
         'attendance_date',
         'shift_id',
+        'attendance_type',
+        'work_session_name',
 
         'total_labours',
         'present_count',
@@ -348,6 +350,48 @@ public function linkedDprIds(): array
     {
         return $this->status === 'approved'
             && $this->is_active;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attendance Type Helpers
+    |--------------------------------------------------------------------------
+    */
+
+    public function isRegularAttendance(): bool
+    {
+        return ($this->attendance_type ?: 'regular') === 'regular';
+    }
+
+    public function isAdditionalWork(): bool
+    {
+        return $this->attendance_type === 'additional_work';
+    }
+
+    public function getDisplayAttendanceTypeAttribute(): string
+    {
+        return match ($this->attendance_type ?: 'regular') {
+            'regular' => 'Regular Attendance',
+            'additional_work' => 'Additional Work',
+            default => ucfirst(
+                str_replace(
+                    '_',
+                    ' ',
+                    (string) $this->attendance_type
+                )
+            ),
+        };
+    }
+
+    public function getDisplayWorkSessionAttribute(): ?string
+    {
+        if (! $this->isAdditionalWork()) {
+            return null;
+        }
+
+        return filled($this->work_session_name)
+            ? $this->work_session_name
+            : 'Additional Work';
     }
 
     /*

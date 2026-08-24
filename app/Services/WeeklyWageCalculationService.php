@@ -204,33 +204,50 @@ class WeeklyWageCalculationService
                 $status->short_name ?: $status->code ?: $status->name
             )));
 
-            $payableFactor = round((float) ($status->payable_factor ?? 0), 2);
+            $isAdditionalWork = $this->isAdditionalWork($detail);
+
+            /*
+             * Additional Work is OT-only.
+             *
+             * Even when the selected Attendance Status normally carries a
+             * payable factor (for example Present = 1.00), an Additional Work
+             * session must never create a second payable day or normal wage.
+             */
+            $payableFactor = $isAdditionalWork
+                ? 0.0
+                : round(
+                    (float) ($status->payable_factor ?? 0),
+                    2
+                );
+
             $payableDays += $payableFactor;
 
-            if ($payableFactor >= 1) {
-                $fullDays += 1;
-            } elseif ($payableFactor > 0) {
-                $halfDays += 1;
-            }
+            if (! $isAdditionalWork) {
+                if ($payableFactor >= 1) {
+                    $fullDays += 1;
+                } elseif ($payableFactor > 0) {
+                    $halfDays += 1;
+                }
 
-            if ((bool) $status->counts_as_absent) {
-                $absentDays += 1;
-            }
+                if ((bool) $status->counts_as_absent) {
+                    $absentDays += 1;
+                }
 
-            if ($this->isLeaveStatus($statusCode)) {
-                $leaveDays += 1;
-            }
+                if ($this->isLeaveStatus($statusCode)) {
+                    $leaveDays += 1;
+                }
 
-            if ($this->isWeeklyOffStatus($statusCode)) {
-                $weeklyOffDays += 1;
-            }
+                if ($this->isWeeklyOffStatus($statusCode)) {
+                    $weeklyOffDays += 1;
+                }
 
-            if ($this->isHolidayStatus($statusCode)) {
-                $holidayDays += 1;
-            }
+                if ($this->isHolidayStatus($statusCode)) {
+                    $holidayDays += 1;
+                }
 
-            if ((bool) $status->allows_normal_hours) {
-                $normalHours += (float) $detail->normal_hours;
+                if ((bool) $status->allows_normal_hours) {
+                    $normalHours += (float) $detail->normal_hours;
+                }
             }
 
             if ((bool) $status->allows_ot_hours) {
@@ -327,13 +344,22 @@ class WeeklyWageCalculationService
                 }
             )
             ->with([
-                'attendance:id,project_id,attendance_date,status,is_active',
+                'attendance:id,project_id,attendance_date,attendance_type,work_session_name,status,is_active',
                 'labour:id,labour_code,full_name,wage_basis,current_daily_rate,current_hourly_rate,current_monthly_rate,ot_calculation_type,current_ot_rate,ot_multiplier,normal_shift_hours,designation_role_id,labour_category_id,contractor_id',
                 'attendanceStatus:id,code,name,short_name,counts_as_present,counts_as_absent,payable_factor,allows_normal_hours,allows_ot_hours',
             ])
             ->orderBy('labour_id')
             ->orderBy('labour_attendance_id')
             ->get();
+    }
+
+    private function isAdditionalWork(
+        LabourAttendanceDetail $detail
+    ): bool {
+        return (
+            $detail->attendance?->attendance_type
+            ?? 'regular'
+        ) === 'additional_work';
     }
 
     private function resolveDailyRate(

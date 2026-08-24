@@ -195,6 +195,9 @@
             defaultGraceIn: @js($defaultGraceIn),
             defaultGraceOut: @js($defaultGraceOut),
             defaultCrossesMidnight: @js($defaultCrossesMidnight),
+            isAdditionalWork: @js($selectedAttendance->isAdditionalWork()),
+            attendanceTypeLabel: @js($selectedAttendance->display_attendance_type),
+            workSessionName: @js($selectedAttendance->work_session_name),
             availableLabours: @js(
                 $availableLabours->map(
                     fn ($labour) => [
@@ -251,7 +254,7 @@
                 </x-rds.badge>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
                         Attendance Number
@@ -276,6 +279,20 @@
                     </div>
                     <div class="mt-1 text-sm font-semibold text-gray-900">
                         {{ $selectedAttendance->attendance_date?->format('d M Y') ?? '—' }}
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                    <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Attendance Type
+                    </div>
+                    <div class="mt-1 text-sm font-semibold text-gray-900">
+                        {{ $selectedAttendance->display_attendance_type }}
+                        @if($selectedAttendance->isAdditionalWork() && $selectedAttendance->work_session_name)
+                            <span class="block text-xs font-medium text-blue-700">
+                                {{ $selectedAttendance->work_session_name }}
+                            </span>
+                        @endif
                     </div>
                 </div>
 
@@ -319,6 +336,30 @@
                     Explain why this attendance correction request is required.
                 </p>
             </div>
+
+            <div class="mb-4 max-w-sm">
+                <label for="new_attendance_date" class="mb-1 block text-sm font-medium text-gray-700">
+                    Correct Attendance Date <span class="text-red-600">*</span>
+                </label>
+                <input
+                    type="date"
+                    id="new_attendance_date"
+                    name="new_attendance_date"
+                    required
+                    value="{{ old('new_attendance_date', $selectedAttendance->attendance_date?->format('Y-m-d')) }}"
+                    class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                >
+                <p class="mt-1 text-xs text-gray-500">
+                    Leave this unchanged unless the approved attendance was recorded against the wrong date.
+                </p>
+            </div>
+
+            @if($selectedAttendance->isAdditionalWork())
+                <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+                    <strong>Additional Work:</strong> {{ $selectedAttendance->work_session_name ?: 'Additional Work Session' }}.
+                    Normal Hours will remain 0.00 and all corrected working hours will be treated as OT.
+                </div>
+            @endif
 
             <label
                 for="correction_reason"
@@ -486,6 +527,7 @@
                                     graceInMinutes: @js($defaultGraceIn),
                                     graceOutMinutes: @js($defaultGraceOut),
                                     crossesMidnight: @js($defaultCrossesMidnight),
+                                    isAdditionalWork: @js($selectedAttendance->isAdditionalWork()),
 
                                     checkIn: @js(
                                         $oldRow['new_check_in_time']
@@ -686,7 +728,8 @@
                                         min="0"
                                         max="24"
                                         step="0.25"
-                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                        @readonly($selectedAttendance->isAdditionalWork())
+                                        class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 {{ $selectedAttendance->isAdditionalWork() ? 'bg-gray-100 text-gray-600' : '' }}"
                                     >
                                 </td>
 
@@ -1058,6 +1101,8 @@
                                         min="0"
                                         max="24"
                                         step="0.25"
+                                        x-bind:readonly="config.isAdditionalWork"
+                                        x-bind:class="config.isAdditionalWork ? 'bg-gray-100 text-gray-600' : ''"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm"
                                     >
                                 </td>
@@ -1172,9 +1217,9 @@
                 config.checkOut ?? ''
             ),
 
-            normalHours: String(
-                config.normalHours ?? '0.00'
-            ),
+            normalHours: config.isAdditionalWork
+                ? '0.00'
+                : String(config.normalHours ?? '0.00'),
 
             dailyRate: Number(
                 config.dailyRate ?? 0
@@ -1363,8 +1408,9 @@
                         || 0
                     );
 
-                const normalHours =
-                    Math.min(
+                const normalHours = config.isAdditionalWork
+                    ? 0
+                    : Math.min(
                         workedMinutes / 60,
                         normalLimit
                     );
@@ -1379,8 +1425,9 @@
                         || 0
                     );
 
-                const overtimeMinutes =
-                    Math.max(
+                const overtimeMinutes = config.isAdditionalWork
+                    ? workedMinutes
+                    : Math.max(
                         0,
                         checkOutMinutes
                         - effectiveOtStart
@@ -1665,8 +1712,9 @@
                         || 0
                     );
 
-                const normalHours =
-                    Math.min(
+                const normalHours = config.isAdditionalWork
+                    ? 0
+                    : Math.min(
                         workedMinutes / 60,
                         normalLimit
                     );
@@ -1681,8 +1729,9 @@
                         || 0
                     );
 
-                const overtimeMinutes =
-                    Math.max(
+                const overtimeMinutes = config.isAdditionalWork
+                    ? workedMinutes
+                    : Math.max(
                         0,
                         checkOutMinutes
                         - effectiveOtStart

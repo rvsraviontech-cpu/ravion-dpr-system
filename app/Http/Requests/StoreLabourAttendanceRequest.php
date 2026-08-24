@@ -72,6 +72,24 @@ class StoreLabourAttendanceRequest extends FormRequest
                 'exists:shifts,id',
             ],
 
+            'attendance_type' => [
+                'required',
+                Rule::in([
+                    'regular',
+                    'additional_work',
+                ]),
+            ],
+
+            'work_session_name' => [
+                Rule::requiredIf(
+                    fn (): bool =>
+                        $this->input('attendance_type') === 'additional_work'
+                ),
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
             'remarks' => [
                 'nullable',
                 'string',
@@ -147,6 +165,7 @@ class StoreLabourAttendanceRequest extends FormRequest
                     'biometric',
                     'import',
                     'system',
+                    'attendance_correction',
                 ]),
             ],
 
@@ -173,6 +192,7 @@ class StoreLabourAttendanceRequest extends FormRequest
                 $this->validateActiveShift($validator);
                 $this->validateDuplicateAttendanceSheet($validator);
                 $this->validateAttendanceRows($validator);
+                $this->validateAdditionalWorkRows($validator);
                 $this->validateDailyLabourAvailability($validator);
             },
         ];
@@ -187,6 +207,8 @@ class StoreLabourAttendanceRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $attendanceType = $this->input('attendance_type', 'regular');
+
         $details = collect($this->input('details', []))
             ->filter(function (mixed $detail): bool {
                 if (! is_array($detail)) {
@@ -198,7 +220,7 @@ class StoreLabourAttendanceRequest extends FormRequest
                         $detail['attendance_status_id'] ?? null
                     );
             })
-            ->map(function (array $detail): array {
+            ->map(function (array $detail) use ($attendanceType): array {
                 return [
                     ...$detail,
 
@@ -207,9 +229,11 @@ class StoreLabourAttendanceRequest extends FormRequest
                         ?? 'manual',
 
                     'normal_hours' =>
-                        $this->normalizeDecimal(
-                            $detail['normal_hours'] ?? 0
-                        ),
+                        $attendanceType === 'additional_work'
+                            ? 0
+                            : $this->normalizeDecimal(
+                                $detail['normal_hours'] ?? 0
+                            ),
 
                     'ot_hours' =>
                         $this->normalizeDecimal(
@@ -244,6 +268,15 @@ class StoreLabourAttendanceRequest extends FormRequest
             'shift_id' => $this->filled('shift_id')
                 ? $this->input('shift_id')
                 : null,
+
+            'attendance_type' => $attendanceType,
+
+            'work_session_name' =>
+                $attendanceType === 'additional_work'
+                    ? $this->normalizeText(
+                        $this->input('work_session_name')
+                    )
+                    : null,
 
             'remarks' => $this->normalizeText(
                 $this->input('remarks')
@@ -315,6 +348,11 @@ class StoreLabourAttendanceRequest extends FormRequest
             return;
         }
 
+        $attendanceType = $this->input(
+            'attendance_type',
+            'regular'
+        );
+
         $query = DB::table('labour_attendances')
             ->whereNull('deleted_at')
             ->where(
@@ -324,6 +362,10 @@ class StoreLabourAttendanceRequest extends FormRequest
             ->whereDate(
                 'attendance_date',
                 $this->input('attendance_date')
+            )
+            ->where(
+                'attendance_type',
+                $attendanceType
             );
 
         if ($this->filled('shift_id')) {
@@ -335,10 +377,19 @@ class StoreLabourAttendanceRequest extends FormRequest
             $query->whereNull('shift_id');
         }
 
+        if ($attendanceType === 'additional_work') {
+            $query->where(
+                'work_session_name',
+                $this->input('work_session_name')
+            );
+        }
+
         if ($query->exists()) {
             $validator->errors()->add(
                 'attendance_date',
-                'A Labour Attendance sheet already exists for the selected project, date, and shift.'
+                $attendanceType === 'additional_work'
+                    ? 'An Additional Work attendance sheet already exists for the selected project, date, shift, and work session.'
+                    : 'A Regular Attendance sheet already exists for the selected project, date, and shift.'
             );
         }
     }
@@ -607,6 +658,58 @@ class StoreLabourAttendanceRequest extends FormRequest
     }
 
     /**
+     * Additional Work is an OT-only attendance session.
+     *
+     * It never carries normal hours or an additional payable day.
+     * Every retained labour row must therefore contain positive OT.
+     */
+    private function validateAdditionalWorkRows(
+        Validator $validator
+    ): void {
+        if ($this->input('attendance_type') !== 'additional_work') {
+            return;
+        }
+
+        $details = $this->input('details', []);
+
+        if (! is_array($details)) {
+            return;
+        }
+
+        foreach ($details as $index => $detail) {
+            if (! is_array($detail)) {
+                continue;
+            }
+
+            $normalHours = (float) (
+                $detail['normal_hours'] ?? 0
+            );
+
+            $otHours = (float) (
+                $detail['ot_hours'] ?? 0
+            );
+
+            $otAmount = (float) (
+                $detail['ot_amount'] ?? 0
+            );
+
+            if ($normalHours > 0) {
+                $validator->errors()->add(
+                    "details.{$index}.normal_hours",
+                    'Normal Hours must be zero for Additional Work attendance.'
+                );
+            }
+
+            if ($otHours <= 0 && $otAmount <= 0) {
+                $validator->errors()->add(
+                    "details.{$index}.ot_hours",
+                    'Enter OT Hours or OT Amount for every labour included in Additional Work.'
+                );
+            }
+        }
+    }
+
+    /**
      * Prevent a working labourer from being allocated to
      * another project on the same attendance date.
      *
@@ -616,6 +719,10 @@ class StoreLabourAttendanceRequest extends FormRequest
     private function validateDailyLabourAvailability(
         Validator $validator
     ): void {
+        if ($this->input('attendance_type') === 'additional_work') {
+            return;
+        }
+
         if (
             ! $this->filled('project_id')
             || ! $this->filled('attendance_date')
@@ -858,6 +965,15 @@ class StoreLabourAttendanceRequest extends FormRequest
 
             'attendance_date.before_or_equal' =>
                 'Attendance cannot be recorded for a future date.',
+
+            'attendance_type.required' =>
+                'Attendance Type is required.',
+
+            'attendance_type.in' =>
+                'Select either Regular Attendance or Additional Work.',
+
+            'work_session_name.required' =>
+                'Work Session is required for Additional Work attendance.',
 
             'details.required' =>
                 'Mark attendance for at least one labourer.',
