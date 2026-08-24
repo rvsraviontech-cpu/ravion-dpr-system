@@ -47,8 +47,6 @@ class AttendanceCorrectionController extends Controller
                         'project_id',
                         'attendance_date',
                         'shift_id',
-                        'attendance_type',
-                        'work_session_name',
                         'status',
                     ]);
                 },
@@ -176,14 +174,67 @@ class AttendanceCorrectionController extends Controller
                 ->all();
 
             /*
-             * All active labour not already on this sheet are available in
-             * the correction picker. Final cross-project eligibility is
-             * validated at Save using the PROPOSED attendance type.
+             * Cross-project correction rule:
+             * A labour may be added to this project when their attendance
+             * elsewhere on the same date is non-working/non-payable
+             * (Absent, Leave, Weekly Off, Holiday, etc.).
              *
-             * This is important when correcting historical Regular
-             * Attendance into Additional Work / Night Slab Work.
+             * Only another active attendance detail whose Attendance Status
+             * has a positive payable factor is treated as a conflict.
              */
-            $conflictingLabourIds = [];
+            $conflictingLabourIds = $selectedAttendance->isAdditionalWork()
+                ? []
+                : LabourAttendanceDetail::query()
+                ->join(
+                    'labour_attendances',
+                    'labour_attendances.id',
+                    '=',
+                    'labour_attendance_details.labour_attendance_id'
+                )
+                ->join(
+                    'attendance_statuses',
+                    'attendance_statuses.id',
+                    '=',
+                    'labour_attendance_details.attendance_status_id'
+                )
+                ->whereDate(
+                    'labour_attendances.attendance_date',
+                    $selectedAttendance->attendance_date
+                )
+                ->where(
+                    'labour_attendances.id',
+                    '!=',
+                    $selectedAttendance->id
+                )
+                ->where(
+                    'labour_attendances.project_id',
+                    '!=',
+                    $selectedAttendance->project_id
+                )
+                ->where(
+                    'labour_attendances.is_active',
+                    true
+                )
+                ->whereNull('labour_attendances.deleted_at')
+                ->where(
+                    'labour_attendance_details.is_active',
+                    true
+                )
+                ->whereNull('labour_attendance_details.deleted_at')
+                ->where(
+                    'attendance_statuses.is_active',
+                    true
+                )
+                ->where(
+                    'attendance_statuses.payable_factor',
+                    '>',
+                    0
+                )
+                ->pluck('labour_attendance_details.labour_id')
+                ->map(fn ($id): int => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
 
             $availableLabours = Labour::query()
                 ->active()
@@ -281,40 +332,11 @@ class AttendanceCorrectionController extends Controller
             (int) $attendance->project_id
         );
 
-        $proposedAttendanceType =
-            $validated['new_attendance_type']
-            ?? $attendance->attendance_type
-            ?? 'regular';
-
-        $proposedWorkSessionName =
-            $proposedAttendanceType === 'additional_work'
-                ? $this->nullableTrim(
-                    $validated['new_work_session_name'] ?? null
-                )
-                : null;
-
-        /*
-         * Primary target header validation.
-         *
-         * Stop an impossible correction before the Draft is created.
-         * Validation uses the PROPOSED date/type/session, not the old
-         * attendance header. The same check is repeated during Apply as a
-         * final race-condition safeguard.
-         */
-        $this->validateTargetAttendanceAvailability(
-            attendance: $attendance,
-            targetDate: $validated['new_attendance_date'],
-            targetAttendanceType: $proposedAttendanceType,
-            targetWorkSessionName: $proposedWorkSessionName
-        );
-
         try {
             $correction = DB::transaction(
                 function () use (
                     $validated,
-                    $attendance,
-                    $proposedAttendanceType,
-                    $proposedWorkSessionName
+                    $attendance
                 ): AttendanceCorrection {
                     $attendance->refresh();
 
@@ -348,19 +370,6 @@ class AttendanceCorrectionController extends Controller
                         'new_attendance_date' =>
                             $validated['new_attendance_date'] ?? $attendance->attendance_date,
 
-                        'old_attendance_type' =>
-                            $attendance->attendance_type
-                            ?? 'regular',
-
-                        'new_attendance_type' =>
-                            $proposedAttendanceType,
-
-                        'old_work_session_name' =>
-                            $attendance->work_session_name,
-
-                        'new_work_session_name' =>
-                            $proposedWorkSessionName,
-
                         'correction_reason' =>
                             trim(
                                 $validated[
@@ -378,9 +387,7 @@ class AttendanceCorrectionController extends Controller
                     $this->persistCorrectionDetails(
                         correction: $correction,
                         attendance: $attendance,
-                        submittedDetails: $validated['details'] ?? [],
-                        proposedAttendanceType:
-                            $proposedAttendanceType
+                        submittedDetails: $validated['details'] ?? []
                     );
 
                     $dateChanged = $correction->new_attendance_date
@@ -389,30 +396,15 @@ class AttendanceCorrectionController extends Controller
                             $correction->old_attendance_date
                         );
 
-                    $typeChanged =
-                        ($correction->old_attendance_type ?: 'regular')
-                        !==
-                        ($correction->new_attendance_type ?: 'regular');
-
-                    $sessionChanged =
-                        ($correction->old_work_session_name ?: null)
-                        !==
-                        ($correction->new_work_session_name ?: null);
-
                     $hasDetailChanges = $correction
                         ->details()
                         ->where('is_active', true)
                         ->exists();
 
-                    if (
-                        ! $dateChanged
-                        && ! $typeChanged
-                        && ! $sessionChanged
-                        && ! $hasDetailChanges
-                    ) {
+                    if (! $dateChanged && ! $hasDetailChanges) {
                         throw ValidationException::withMessages([
                             'details' => [
-                                'Change the attendance date, attendance type/work session, or make at least one valid labour attendance correction.',
+                                'Change the attendance date or make at least one valid labour attendance correction.',
                             ],
                         ]);
                     }
@@ -515,27 +507,12 @@ class AttendanceCorrectionController extends Controller
                 $attendanceCorrection->old_attendance_date
             );
 
-        $typeChanged =
-            ($attendanceCorrection->old_attendance_type ?: 'regular')
-            !==
-            ($attendanceCorrection->new_attendance_type ?: 'regular');
-
-        $sessionChanged =
-            ($attendanceCorrection->old_work_session_name ?: null)
-            !==
-            ($attendanceCorrection->new_work_session_name ?: null);
-
         $hasDetailChanges = $attendanceCorrection
             ->details()
             ->where('is_active', true)
             ->exists();
 
-        if (
-            ! $dateChanged
-            && ! $typeChanged
-            && ! $sessionChanged
-            && ! $hasDetailChanges
-        ) {
+        if (! $dateChanged && ! $hasDetailChanges) {
             return redirect()
                 ->route(
                     'attendance-corrections.show',
@@ -543,7 +520,7 @@ class AttendanceCorrectionController extends Controller
                 )
                 ->with(
                     'error',
-                    'This attendance correction has no date, attendance type/work session, or labour changes to submit.'
+                    'This attendance correction has no date or labour changes to submit.'
                 );
         }
 
@@ -903,34 +880,7 @@ class AttendanceCorrectionController extends Controller
                             $correction->old_attendance_date
                         );
 
-                    $targetAttendanceType =
-                        $correction->new_attendance_type
-                        ?: $attendance->attendance_type
-                        ?: 'regular';
-
-                    $targetWorkSessionName =
-                        $targetAttendanceType === 'additional_work'
-                            ? $this->nullableTrim(
-                                $correction->new_work_session_name
-                            )
-                            : null;
-
-                    $typeChanged =
-                        ($correction->old_attendance_type ?: 'regular')
-                        !==
-                        $targetAttendanceType;
-
-                    $sessionChanged =
-                        ($correction->old_work_session_name ?: null)
-                        !==
-                        ($targetWorkSessionName ?: null);
-
-                    if (
-                        $correctionDetails->isEmpty()
-                        && ! $dateChanged
-                        && ! $typeChanged
-                        && ! $sessionChanged
-                    ) {
+                    if ($correctionDetails->isEmpty() && ! $dateChanged) {
                         throw ValidationException::withMessages([
                             'details' => [
                                 'No attendance changes are available to apply.',
@@ -942,35 +892,41 @@ class AttendanceCorrectionController extends Controller
                         ? $correction->new_attendance_date->format('Y-m-d')
                         : $attendance->attendance_date->format('Y-m-d');
 
-                    /*
-                     * Final race-condition safeguard using the PROPOSED
-                     * date/type/session.
-                     */
-                    $this->validateTargetAttendanceAvailability(
-                        attendance: $attendance,
-                        targetDate: $targetDate,
-                        targetAttendanceType: $targetAttendanceType,
-                        targetWorkSessionName: $targetWorkSessionName,
-                        applying: true
-                    );
+                    if ($targetDate !== $attendance->attendance_date->format('Y-m-d')) {
+                        $duplicateSheet = LabourAttendance::query()
+                            ->where('id', '!=', $attendance->id)
+                            ->where('project_id', $attendance->project_id)
+                            ->whereDate('attendance_date', $targetDate)
+                            ->where('attendance_type', $attendance->attendance_type)
+                            ->when(
+                                $attendance->isAdditionalWork(),
+                                fn (Builder $query): Builder => $query->where(
+                                    'work_session_name',
+                                    $attendance->work_session_name
+                                )
+                            )
+                            ->where('is_active', true)
+                            ->whereNull('deleted_at')
+                            ->exists();
 
-                    $attendance->update([
-                        'attendance_date' => $targetDate,
-                        'attendance_type' => $targetAttendanceType,
-                        'work_session_name' => $targetWorkSessionName,
-                        'updated_by' => auth()->id(),
-                    ]);
+                        if ($duplicateSheet) {
+                            throw ValidationException::withMessages([
+                                'new_attendance_date' => [
+                                    'An attendance sheet of the same type already exists for this project on the corrected date.',
+                                ],
+                            ]);
+                        }
+
+                        $attendance->update([
+                            'attendance_date' => $targetDate,
+                            'updated_by' => auth()->id(),
+                        ]);
+                    }
 
                     foreach ($correctionDetails as $correctionDetail) {
                         $this->applyCorrectionDetail(
                             attendance: $attendance,
                             correctionDetail: $correctionDetail
-                        );
-                    }
-
-                    if ($attendance->isAdditionalWork()) {
-                        $this->enforceAdditionalWorkHours(
-                            $attendance
                         );
                     }
 
@@ -1014,29 +970,15 @@ class AttendanceCorrectionController extends Controller
                     'Attendance Correction applied successfully. Labour Attendance and DPR totals have been updated.'
                 );
         } catch (ValidationException $exception) {
-            return redirect()
-                ->route(
-                    'attendance-corrections.show',
-                    $attendanceCorrection
-                )
-                ->withErrors(
-                    $exception->errors()
-                )
-                ->with(
-                    'error',
-                    'Attendance Correction could not be applied. Please review the validation message below.'
-                );
+            throw $exception;
         } catch (Throwable $exception) {
             report($exception);
 
             return redirect()
-                ->route(
-                    'attendance-corrections.show',
-                    $attendanceCorrection
-                )
+                ->route('attendance-corrections.index')
                 ->with(
                     'error',
-                    'Unable to apply the Attendance Correction. Please try again or check the Laravel log for details.'
+                    'Unable to apply the Attendance Correction. Check the Laravel log for details.'
                 );
         }
     }
@@ -1362,25 +1304,6 @@ class AttendanceCorrectionController extends Controller
                 'date',
             ],
 
-            'new_attendance_type' => [
-                'required',
-                Rule::in([
-                    'regular',
-                    'additional_work',
-                ]),
-            ],
-
-            'new_work_session_name' => [
-                Rule::requiredIf(
-                    fn (): bool =>
-                        $request->input('new_attendance_type')
-                        === 'additional_work'
-                ),
-                'nullable',
-                'string',
-                'max:150',
-            ],
-
             'correction_reason' => [
                 'required',
                 'string',
@@ -1488,8 +1411,7 @@ class AttendanceCorrectionController extends Controller
     private function persistCorrectionDetails(
         AttendanceCorrection $correction,
         LabourAttendance $attendance,
-        array $submittedDetails,
-        string $proposedAttendanceType
+        array $submittedDetails
     ): void {
         $existingAttendanceDetails = $attendance
             ->details()
@@ -1624,9 +1546,8 @@ class AttendanceCorrectionController extends Controller
                  * provided they do not already have payable attendance on
                  * another project for this date.
                  */
-                $hasConflictingAttendance =
-                    $proposedAttendanceType === 'additional_work'
-                        ? false
+                $hasConflictingAttendance = $attendance->isAdditionalWork()
+                    ? false
                     : LabourAttendanceDetail::query()
                     ->join(
                         'labour_attendances',
@@ -1708,37 +1629,11 @@ class AttendanceCorrectionController extends Controller
                 ]);
             }
 
-            $submittedNormalHours = (float) (
-                $row['new_normal_hours'] ?? 0
-            );
-
-            $rowForOt = $row;
-
-            /*
-             * Historical Regular -> Additional Work conversion:
-             * move all worked Normal Hours into OT before forcing Normal=0.
-             *
-             * Example: 8 Normal + 0 OT becomes 0 Normal + 8 OT.
-             */
-            if ($proposedAttendanceType === 'additional_work') {
-                $rowForOt['new_ot_hours'] =
-                    $submittedNormalHours
-                    + (float) (
-                        $row['new_ot_hours'] ?? 0
-                    );
-
-                /*
-                 * Hours are authoritative during reclassification. Clearing
-                 * submitted amount lets the standard OT rule recalculate the
-                 * amount using Daily Rate / 8.
-                 */
-                $rowForOt['new_ot_amount'] = null;
-            }
-
-            $normalHours =
-                $proposedAttendanceType === 'additional_work'
-                    ? 0.0
-                    : $submittedNormalHours;
+            $normalHours = $attendance->isAdditionalWork()
+                ? 0.0
+                : (float) (
+                    $row['new_normal_hours'] ?? 0
+                );
 
             $labourForOt = Labour::query()
                 ->whereKey($labourId)
@@ -1746,7 +1641,7 @@ class AttendanceCorrectionController extends Controller
 
             $otValues = $this->resolveCorrectionOtValues(
                 $labourForOt,
-                $rowForOt
+                $row
             );
 
             $otHours = $otValues['ot_hours'];
@@ -1784,11 +1679,10 @@ class AttendanceCorrectionController extends Controller
                 === AttendanceCorrectionDetail::ACTION_REMOVE
                     ? null
                     : $this->buildAfterSnapshot(
-                        row: $rowForOt,
+                        row: $row,
                         labourId: $labourId,
                         originalDetail: $originalDetail,
-                        proposedAttendanceType:
-                            $proposedAttendanceType
+                        attendance: $attendance
                     );
 
             /*
@@ -1814,16 +1708,6 @@ class AttendanceCorrectionController extends Controller
             $lineReason = $this->nullableTrim(
                 $row['line_reason'] ?? null
             );
-
-            if (
-                ($lineReason === null || strlen($lineReason) < 3)
-                && ($correction->old_attendance_type ?: 'regular')
-                    !== $proposedAttendanceType
-            ) {
-                $lineReason =
-                    'Attendance type reclassification: '
-                    . $correction->correction_reason;
-            }
 
             if ($lineReason === null || strlen($lineReason) < 3) {
                 throw ValidationException::withMessages([
@@ -1980,7 +1864,7 @@ class AttendanceCorrectionController extends Controller
         array $row,
         int $labourId,
         ?LabourAttendanceDetail $originalDetail,
-        string $proposedAttendanceType
+        LabourAttendance $attendance
     ): array {
         $labour = Labour::query()
             ->whereKey($labourId)
@@ -2026,7 +1910,7 @@ class AttendanceCorrectionController extends Controller
                 ),
 
             'normal_hours' =>
-                $proposedAttendanceType === 'additional_work'
+                $attendance->isAdditionalWork()
                     ? 0.0
                     : (float) (
                         $row[
@@ -2197,175 +2081,6 @@ class AttendanceCorrectionController extends Controller
             'ot_hours' => round($otHours, 2),
             'ot_amount' => round($otAmount, 2),
         ];
-    }
-
-    /**
-     * Validate the proposed attendance header at both Save and Apply stages.
-     *
-     * Regular Attendance:
-     * Only one Regular Attendance sheet may exist for a project/date.
-     *
-     * Additional Work:
-     * Multiple Additional Work sessions may exist on a project/date, but
-     * the same Work Session must not be duplicated.
-     *
-     * Validation always uses the PROPOSED date/type/session.
-     *
-     * @throws ValidationException
-     */
-    private function validateTargetAttendanceAvailability(
-        LabourAttendance $attendance,
-        mixed $targetDate,
-        string $targetAttendanceType,
-        ?string $targetWorkSessionName = null,
-        bool $applying = false
-    ): void {
-        if (blank($targetDate)) {
-            return;
-        }
-
-        $targetDate = \Carbon\Carbon::parse(
-            $targetDate
-        )->format('Y-m-d');
-
-        $targetAttendanceType =
-            $targetAttendanceType ?: 'regular';
-
-        $targetWorkSessionName =
-            $targetAttendanceType === 'additional_work'
-                ? $this->nullableTrim(
-                    $targetWorkSessionName
-                )
-                : null;
-
-        if (
-            $targetAttendanceType === 'additional_work'
-            && blank($targetWorkSessionName)
-        ) {
-            throw ValidationException::withMessages([
-                'new_work_session_name' => [
-                    'Work Session is required when the corrected Attendance Type is Additional Work.',
-                ],
-            ]);
-        }
-
-        $conflictQuery = LabourAttendance::query()
-            ->where(
-                'id',
-                '!=',
-                $attendance->id
-            )
-            ->where(
-                'project_id',
-                $attendance->project_id
-            )
-            ->whereDate(
-                'attendance_date',
-                $targetDate
-            )
-            ->where(
-                'attendance_type',
-                $targetAttendanceType
-            )
-            ->where('is_active', true)
-            ->whereNull('deleted_at');
-
-        if ($targetAttendanceType === 'additional_work') {
-            $conflictQuery->where(
-                'work_session_name',
-                $targetWorkSessionName
-            );
-        }
-
-        if (! $conflictQuery->exists()) {
-            return;
-        }
-
-        $projectName = $attendance->project?->project_name
-            ?? 'this project';
-
-        $formattedDate = \Carbon\Carbon::parse(
-            $targetDate
-        )->format('d M Y');
-
-        if ($targetAttendanceType === 'additional_work') {
-            $sessionName = filled(
-                $targetWorkSessionName
-            )
-                ? " '{$targetWorkSessionName}'"
-                : '';
-
-            $message = $applying
-                ? "Additional Work{$sessionName} now already exists for {$projectName} on {$formattedDate}. The correction cannot be applied because the proposed target became unavailable after this request was created."
-                : "Additional Work{$sessionName} already exists for {$projectName} on {$formattedDate}. This correction request cannot be created.";
-        } else {
-            $message = $applying
-                ? "Regular Attendance now already exists for {$projectName} on {$formattedDate}. The correction cannot be applied because the proposed target became unavailable after this request was created."
-                : "Regular Attendance already exists for {$projectName} on {$formattedDate}. This correction request cannot be created.";
-        }
-
-        throw ValidationException::withMessages([
-            'new_attendance_date' => [
-                $message,
-            ],
-        ]);
-    }
-
-    /**
-     * Defensive enforcement for Additional Work.
-     *
-     * Any Normal Hours left on the sheet are moved to OT, Normal is forced
-     * to zero, and OT Amount is recalculated using Daily Rate / 8.
-     */
-    private function enforceAdditionalWorkHours(
-        LabourAttendance $attendance
-    ): void {
-        $details = $attendance
-            ->details()
-            ->where('is_active', true)
-            ->with('labour:id,current_daily_rate')
-            ->get();
-
-        foreach ($details as $detail) {
-            $normalHours = max(
-                0,
-                (float) $detail->normal_hours
-            );
-
-            if ($normalHours <= 0) {
-                continue;
-            }
-
-            $otHours = round(
-                $normalHours
-                + max(0, (float) $detail->ot_hours),
-                2
-            );
-
-            $dailyRate = (float) (
-                $detail->labour?->current_daily_rate
-                ?? 0
-            );
-
-            $otRate = $dailyRate > 0
-                ? $dailyRate / 8
-                : 0.0;
-
-            $detail->update([
-                'normal_hours' => 0,
-                'ot_hours' => $otHours,
-                'ot_amount' =>
-                    $otRate > 0
-                        ? round(
-                            $otHours * $otRate,
-                            2
-                        )
-                        : (float) ($detail->ot_amount ?? 0),
-                'attendance_source' =>
-                    'attendance_correction',
-                'updated_by' => auth()->id(),
-            ]);
-        }
     }
 
     /*
@@ -2675,18 +2390,6 @@ class AttendanceCorrectionController extends Controller
             'new_attendance_date' =>
                 $correction->new_attendance_date
                     ?->format('Y-m-d'),
-
-            'old_attendance_type' =>
-                $correction->old_attendance_type,
-
-            'new_attendance_type' =>
-                $correction->new_attendance_type,
-
-            'old_work_session_name' =>
-                $correction->old_work_session_name,
-
-            'new_work_session_name' =>
-                $correction->new_work_session_name,
 
             'correction_reason' =>
                 $correction->correction_reason,
