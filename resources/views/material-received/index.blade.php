@@ -466,7 +466,9 @@
                     : null;
 
                 $primaryMaterialName = $hasNewItems
-                    ? ($primaryItem?->materialType?->material_type_name ?? '-')
+                    ? ($primaryItem?->materialType?->material_type_name
+                        ?? $primaryItem?->pendingClassification?->raw_material_name
+                        ?? '-')
                     : ($materialReceived->material_name
                         ?? $materialReceived->material?->material_name
                         ?? '-');
@@ -769,12 +771,20 @@
                                         @foreach($materialReceived->items as $item)
                                             <div class="min-h-[42px] py-1">
                                                 <div class="font-semibold text-gray-800">
-                                                    {{ $item->materialType?->material_type_name ?? '-' }}
+                                                    {{ $item->materialType?->material_type_name
+                                                        ?? $item->pendingClassification?->raw_material_name
+                                                        ?? '-' }}
                                                 </div>
 
-                                                @if($item->activity)
+                                                @if($item->work_package_display_name)
                                                     <div class="text-xs text-gray-500">
-                                                        {{ $item->activity->activity_name }}
+                                                        {{ $item->work_package_display_name }}
+                                                    </div>
+                                                @endif
+
+                                                @if($item->is_pending_classification)
+                                                    <div class="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                                                        Pending Classification
                                                     </div>
                                                 @endif
                                             </div>

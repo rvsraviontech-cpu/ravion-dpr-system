@@ -3,13 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\AuditHelper;
-use App\Models\Activity;
-use App\Models\ActivityDivision;
 use App\Models\BrandMaster;
 use App\Models\Contractor;
 use App\Models\MaterialGrade;
 use App\Models\MaterialReceived;
 use App\Models\MaterialReceivedPhoto;
+use App\Models\PendingMaterialClassification;
 use App\Models\MaterialSpecification;
 use App\Models\MaterialType;
 use App\Models\Project;
@@ -72,8 +71,7 @@ class MaterialReceivedController extends Controller
                 'approver',
                 'accountantVerifier',
 
-                'items.activityDivision',
-                'items.activity',
+                'items.pendingClassification.unit',
                 'items.materialType.unit',
                 'items.brand',
                 'items.specification',
@@ -165,6 +163,31 @@ class MaterialReceivedController extends Controller
                                 )
                                 ->orWhere(
                                     'project_code',
+                                    'like',
+                                    "%{$search}%"
+                                )
+                    )
+->orWhereHas(
+                        'items.pendingClassification',
+                        fn (Builder $pendingQuery) =>
+                            $pendingQuery
+                                ->where(
+                                    'raw_material_name',
+                                    'like',
+                                    "%{$search}%"
+                                )
+                                ->orWhere(
+                                    'raw_brand',
+                                    'like',
+                                    "%{$search}%"
+                                )
+                                ->orWhere(
+                                    'raw_specification',
+                                    'like',
+                                    "%{$search}%"
+                                )
+                                ->orWhere(
+                                    'raw_grade',
                                     'like',
                                     "%{$search}%"
                                 )
@@ -394,36 +417,115 @@ class MaterialReceivedController extends Controller
                         array_values($validated['items'])
                         as $index => $item
                     ) {
+                        $entryMode =
+                            $item['entry_mode'] ?? 'existing';
+
+                        $pendingClassification = null;
+
+                        if ($entryMode === 'temporary') {
+                            $pendingClassification =
+                                PendingMaterialClassification::create([
+                                    'material_received_id' =>
+                                        $materialReceived->id,
+
+                                    'project_id' =>
+                                        $materialReceived->project_id,
+
+                                    'raw_material_name' =>
+                                        trim(
+                                            (string) $item[
+                                                'temporary_material_name'
+                                            ]
+                                        ),
+
+                                    'raw_brand' =>
+                                        $this->nullableTrim(
+                                            $item['temporary_brand']
+                                            ?? null
+                                        ),
+
+                                    'raw_specification' =>
+                                        $this->nullableTrim(
+                                            $item[
+                                                'temporary_specification'
+                                            ]
+                                            ?? null
+                                        ),
+
+                                    'raw_grade' =>
+                                        $this->nullableTrim(
+                                            $item['temporary_grade']
+                                            ?? null
+                                        ),
+
+                                    'unit_master_id' =>
+                                        (int) $item['unit_master_id'],
+
+                                    'status' => 'Pending',
+
+                                    'requested_by' =>
+                                        auth()->id(),
+
+                                    'remarks' =>
+                                        $this->nullableTrim(
+                                            $item[
+                                                'temporary_classification_notes'
+                                            ]
+                                            ?? null
+                                        ),
+                                ]);
+                        }
+
                         $createdItems[$index] =
                             $materialReceived->items()->create([
-                                'activity_division_id' =>
-                                    $item['activity_division_id']
-                                    ?? null,
 
-                                'activity_id' =>
-                                    $item['activity_id']
-                                    ?? null,
+                                'pending_material_classification_id' =>
+                                    $pendingClassification?->id,
 
                                 'material_type_id' =>
-                                    (int) $item['material_type_id'],
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item['material_type_id']
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'brand_master_id' =>
-                                    $item['brand_master_id']
-                                    ?? null,
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item['brand_master_id']
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'material_specification_id' =>
-                                    $item['material_specification_id']
-                                    ?? null,
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item[
+                                                'material_specification_id'
+                                            ]
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'material_grade_id' =>
-                                    $item['material_grade_id']
-                                    ?? null,
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item['material_grade_id']
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'quantity_received' =>
                                     $item['quantity_received'],
 
                                 'unit_master_id' =>
                                     (int) $item['unit_master_id'],
+
+                                'purpose_used_for' =>
+                                    $this->nullableTrim(
+                                        $item['purpose_used_for'] ?? null
+                                    ),
 
                                 'accepted_quantity' => 0,
                                 'short_quantity' => 0,
@@ -693,42 +795,129 @@ class MaterialReceivedController extends Controller
 
                     $materialReceived->items()->delete();
 
+                    PendingMaterialClassification::query()
+                        ->where(
+                            'material_received_id',
+                            $materialReceived->id
+                        )
+                        ->where('status', 'Pending')
+                        ->delete();
+
                     $createdItems = [];
 
                     foreach (
                         array_values($validated['items'])
                         as $index => $item
                     ) {
+                        $entryMode =
+                            $item['entry_mode'] ?? 'existing';
+
+                        $pendingClassification = null;
+
+                        if ($entryMode === 'temporary') {
+                            $pendingClassification =
+                                PendingMaterialClassification::create([
+                                    'material_received_id' =>
+                                        $materialReceived->id,
+
+                                    'project_id' =>
+                                        $materialReceived->project_id,
+
+                                    'raw_material_name' =>
+                                        trim(
+                                            (string) $item[
+                                                'temporary_material_name'
+                                            ]
+                                        ),
+
+                                    'raw_brand' =>
+                                        $this->nullableTrim(
+                                            $item['temporary_brand']
+                                            ?? null
+                                        ),
+
+                                    'raw_specification' =>
+                                        $this->nullableTrim(
+                                            $item[
+                                                'temporary_specification'
+                                            ]
+                                            ?? null
+                                        ),
+
+                                    'raw_grade' =>
+                                        $this->nullableTrim(
+                                            $item['temporary_grade']
+                                            ?? null
+                                        ),
+
+                                    'unit_master_id' =>
+                                        (int) $item['unit_master_id'],
+
+                                    'status' => 'Pending',
+
+                                    'requested_by' =>
+                                        auth()->id(),
+
+                                    'remarks' =>
+                                        $this->nullableTrim(
+                                            $item[
+                                                'temporary_classification_notes'
+                                            ]
+                                            ?? null
+                                        ),
+                                ]);
+                        }
+
                         $createdItems[$index] =
                             $materialReceived->items()->create([
-                                'activity_division_id' =>
-                                    $item['activity_division_id']
-                                    ?? null,
 
-                                'activity_id' =>
-                                    $item['activity_id']
-                                    ?? null,
+                                'pending_material_classification_id' =>
+                                    $pendingClassification?->id,
 
                                 'material_type_id' =>
-                                    (int) $item['material_type_id'],
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item['material_type_id']
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'brand_master_id' =>
-                                    $item['brand_master_id']
-                                    ?? null,
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item['brand_master_id']
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'material_specification_id' =>
-                                    $item['material_specification_id']
-                                    ?? null,
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item[
+                                                'material_specification_id'
+                                            ]
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'material_grade_id' =>
-                                    $item['material_grade_id']
-                                    ?? null,
+                                    $entryMode === 'existing'
+                                        ? (
+                                            $item['material_grade_id']
+                                            ?? null
+                                        )
+                                        : null,
 
                                 'quantity_received' =>
                                     $item['quantity_received'],
 
                                 'unit_master_id' =>
                                     (int) $item['unit_master_id'],
+
+                                'purpose_used_for' =>
+                                    $this->nullableTrim(
+                                        $item['purpose_used_for'] ?? null
+                                    ),
 
                                 'accepted_quantity' => 0,
                                 'short_quantity' => 0,
@@ -1259,22 +1448,46 @@ class MaterialReceivedController extends Controller
                 'max:100',
             ],
 
-            'items.*.activity_division_id' => [
+            'items.*.entry_mode' => [
                 'nullable',
-                'integer',
-                'exists:activity_divisions,id',
-            ],
-
-            'items.*.activity_id' => [
-                'nullable',
-                'integer',
-                'exists:activities,id',
+                'string',
+                'in:existing,temporary',
             ],
 
             'items.*.material_type_id' => [
-                'required',
+                'nullable',
                 'integer',
                 'exists:material_types,id',
+            ],
+
+            'items.*.temporary_material_name' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'items.*.temporary_brand' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'items.*.temporary_specification' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'items.*.temporary_grade' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'items.*.temporary_classification_notes' => [
+                'nullable',
+                'string',
+                'max:1000',
             ],
 
             'items.*.brand_master_id' => [
@@ -1305,6 +1518,12 @@ class MaterialReceivedController extends Controller
                 'required',
                 'integer',
                 'exists:unit_masters,id',
+            ],
+
+            'items.*.purpose_used_for' => [
+                'nullable',
+                'string',
+                'max:255',
             ],
 
             'items.*.remarks' => [
@@ -1369,9 +1588,6 @@ class MaterialReceivedController extends Controller
             'items.min' =>
                 'Add at least one material item.',
 
-            'items.*.material_type_id.required' =>
-                'Select a Material Type for every row.',
-
             'items.*.quantity_received.gt' =>
                 'Quantity received must be greater than zero.',
 
@@ -1402,113 +1618,71 @@ class MaterialReceivedController extends Controller
 
         foreach (array_values($items) as $index => $item) {
             $rowNumber = $index + 1;
-            $materialTypeId = (int) $item['material_type_id'];
+            $entryMode = $item['entry_mode'] ?? 'existing';
 
-            $materialType = MaterialType::query()
-                ->find($materialTypeId);
+            if ($entryMode === 'temporary') {
+                if (trim((string) ($item['temporary_material_name'] ?? '')) === '') {
+                    $errors["items.{$index}.temporary_material_name"][] =
+                        "Row {$rowNumber}: enter the material name.";
+                }
 
-            if (! $materialType) {
                 continue;
             }
 
-            if (
-                (int) $item['unit_master_id']
-                !== (int) $materialType->unit_master_id
-            ) {
+            $materialTypeId = (int) ($item['material_type_id'] ?? 0);
+
+            if ($materialTypeId <= 0) {
+                $errors["items.{$index}.material_type_id"][] =
+                    "Row {$rowNumber}: select a Material.";
+                continue;
+            }
+
+            $materialType = MaterialType::query()
+                ->whereKey($materialTypeId)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $materialType) {
+                $errors["items.{$index}.material_type_id"][] =
+                    "Row {$rowNumber}: select an active Material.";
+                continue;
+            }
+
+            if ((int) $item['unit_master_id'] !== (int) $materialType->unit_master_id) {
                 $errors["items.{$index}.unit_master_id"][] =
-                    "Row {$rowNumber}: the unit does not match the selected Material Type.";
+                    "Row {$rowNumber}: the unit does not match the selected Material.";
             }
 
             if (! empty($item['brand_master_id'])) {
-                $brandValid = BrandMaster::query()
-                    ->whereKey($item['brand_master_id'])
-                    ->where(
-                        'material_type_id',
-                        $materialTypeId
-                    )
-                    ->where('is_active', true)
-                    ->exists();
-
-                if (! $brandValid) {
-                    $errors[
-                        "items.{$index}.brand_master_id"
-                    ][] =
-                        "Row {$rowNumber}: the selected Brand does not belong to the selected Material Type.";
+                $valid = BrandMaster::query()->whereKey($item['brand_master_id'])
+                    ->where('material_type_id', $materialTypeId)->where('is_active', true)->exists();
+                if (! $valid) {
+                    $errors["items.{$index}.brand_master_id"][] =
+                        "Row {$rowNumber}: the selected Brand does not belong to the selected Material.";
                 }
             }
 
-            if (
-                ! empty(
-                    $item['material_specification_id']
-                )
-            ) {
-                $specificationValid =
-                    MaterialSpecification::query()
-                        ->whereKey(
-                            $item[
-                                'material_specification_id'
-                            ]
-                        )
-                        ->where(
-                            'material_type_id',
-                            $materialTypeId
-                        )
-                        ->where('is_active', true)
-                        ->exists();
-
-                if (! $specificationValid) {
-                    $errors[
-                        "items.{$index}.material_specification_id"
-                    ][] =
-                        "Row {$rowNumber}: the selected Specification does not belong to the selected Material Type.";
+            if (! empty($item['material_specification_id'])) {
+                $valid = MaterialSpecification::query()->whereKey($item['material_specification_id'])
+                    ->where('material_type_id', $materialTypeId)->where('is_active', true)->exists();
+                if (! $valid) {
+                    $errors["items.{$index}.material_specification_id"][] =
+                        "Row {$rowNumber}: the selected Specification does not belong to the selected Material.";
                 }
             }
 
             if (! empty($item['material_grade_id'])) {
-                $gradeValid = MaterialGrade::query()
-                    ->whereKey($item['material_grade_id'])
-                    ->where(
-                        'material_type_id',
-                        $materialTypeId
-                    )
-                    ->where('is_active', true)
-                    ->exists();
-
-                if (! $gradeValid) {
-                    $errors[
-                        "items.{$index}.material_grade_id"
-                    ][] =
-                        "Row {$rowNumber}: the selected Grade/Rating does not belong to the selected Material Type.";
-                }
-            }
-
-            if (
-                ! empty($item['activity_id'])
-                && ! empty(
-                    $item['activity_division_id']
-                )
-            ) {
-                $activityValid = Activity::query()
-                    ->whereKey($item['activity_id'])
-                    ->where(
-                        'activity_division_id',
-                        $item['activity_division_id']
-                    )
-                    ->exists();
-
-                if (! $activityValid) {
-                    $errors[
-                        "items.{$index}.activity_id"
-                    ][] =
-                        "Row {$rowNumber}: the selected Activity does not belong to the selected Activity Division.";
+                $valid = MaterialGrade::query()->whereKey($item['material_grade_id'])
+                    ->where('material_type_id', $materialTypeId)->where('is_active', true)->exists();
+                if (! $valid) {
+                    $errors["items.{$index}.material_grade_id"][] =
+                        "Row {$rowNumber}: the selected Grade/Rating does not belong to the selected Material.";
                 }
             }
         }
 
         if ($errors !== []) {
-            throw ValidationException::withMessages(
-                $errors
-            );
+            throw ValidationException::withMessages($errors);
         }
     }
 
@@ -1528,83 +1702,27 @@ class MaterialReceivedController extends Controller
         return [
             'projects' => $this->availableProjects(),
 
-            'projectBlocks' => ProjectBlock::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-
-            'projectFloors' => ProjectFloor::query()
-                ->where('is_active', true)
-                ->orderBy('sequence')
-                ->orderBy('name')
-                ->get(),
-
-            'projectUnits' => ProjectUnit::query()
-                ->where('is_active', true)
-                ->orderBy('name')
-                ->get(),
-
-            'contractors' => Contractor::query()
-                ->where('status', 1)
-                ->orderBy('contractor_name')
-                ->get(),
-
-            'vendors' => Vendor::query()
-                ->where('is_active', true)
-                ->orderBy('vendor_name')
-                ->get(),
-
-            'activityDivisions' =>
-                ActivityDivision::query()
-                    ->where('is_active', true)
-                    ->orderBy('sequence')
-                    ->orderBy('name')
-                    ->get(),
-
-            'activities' => Activity::query()
-                ->where('is_active', true)
-                ->orderBy('activity_division_id')
-                ->orderBy('activity_name')
-                ->get(),
+            'projectBlocks' => ProjectBlock::query()->where('is_active', true)->orderBy('name')->get(),
+            'projectFloors' => ProjectFloor::query()->where('is_active', true)->orderBy('sequence')->orderBy('name')->get(),
+            'projectUnits' => ProjectUnit::query()->where('is_active', true)->orderBy('name')->get(),
+            'contractors' => Contractor::query()->where('status', 1)->orderBy('contractor_name')->get(),
+            'vendors' => Vendor::query()->where('is_active', true)->orderBy('vendor_name')->get(),
 
             'materialTypes' => $materialTypes,
-
-            'materialGroups' => $materialTypes
-                ->pluck('material_group')
-                ->filter()
-                ->unique()
-                ->sort()
-                ->values(),
+            'materialGroups' => $materialTypes->pluck('material_group')->filter()->unique()->sort()->values(),
 
             'brands' => BrandMaster::query()
-                ->where('is_active', true)
-                ->whereNotNull('material_type_id')
-                ->orderBy('material_type_id')
-                ->orderBy('sequence')
-                ->orderBy('brand_name')
-                ->get(),
+                ->where('is_active', true)->whereNotNull('material_type_id')
+                ->orderBy('material_type_id')->orderBy('sequence')->orderBy('brand_name')->get(),
 
-            'specifications' =>
-                MaterialSpecification::query()
-                    ->where('is_active', true)
-                    ->whereNotNull('material_type_id')
-                    ->orderBy('material_type_id')
-                    ->orderBy('sequence')
-                    ->orderBy('specification_name')
-                    ->get(),
+            'specifications' => MaterialSpecification::query()
+                ->where('is_active', true)->whereNotNull('material_type_id')
+                ->orderBy('material_type_id')->orderBy('sequence')->orderBy('specification_name')->get(),
 
             'grades' => MaterialGrade::query()
-                ->where('is_active', true)
-                ->orderBy('material_type_id')
-                ->orderBy('sequence')
-                ->orderBy('grade_name')
-                ->get(),
+                ->where('is_active', true)->orderBy('material_type_id')->orderBy('sequence')->orderBy('grade_name')->get(),
 
-            'units' => UnitMaster::query()
-                ->where('is_active', true)
-                ->orderBy('unit_name')
-                ->get(),
-
+            'units' => UnitMaster::query()->where('is_active', true)->orderBy('unit_name')->get(),
             'photoTypes' => self::PHOTO_TYPES,
         ];
     }
@@ -1651,8 +1769,7 @@ class MaterialReceivedController extends Controller
             'approver',
             'accountantVerifier',
 
-            'items.activityDivision',
-            'items.activity',
+            'items.pendingClassification.unit',
             'items.materialType.unit',
             'items.brand',
             'items.specification',
@@ -1737,9 +1854,19 @@ class MaterialReceivedController extends Controller
                 $materialItem->loadMissing('materialType');
             }
 
-            $materialName = $materialItem
-                ?->materialType
-                ?->material_type_name
+            if ($materialItem) {
+                $materialItem->loadMissing(
+                    'pendingClassification'
+                );
+            }
+
+            $materialName =
+                $materialItem
+                    ?->materialType
+                    ?->material_type_name
+                ?? $materialItem
+                    ?->pendingClassification
+                    ?->raw_material_name
                 ?? 'General';
 
             $extension = strtolower(
@@ -1999,12 +2126,38 @@ class MaterialReceivedController extends Controller
                         'activity_id' =>
                             $item->activity_id,
 
+                        'construction_work_package_id' =>
+                            $item->construction_work_package_id,
+
+                        'work_package_code' =>
+                            $item->workPackage?->code,
+
+                        'work_package_name' =>
+                            $item->workPackage?->name,
+
+                        'pending_material_classification_id' =>
+                            $item->pending_material_classification_id,
+
+                        'pending_material_name' =>
+                            $item->pendingClassification
+                                ?->raw_material_name,
+
+                        'pending_material_status' =>
+                            $item->pendingClassification
+                                ?->status,
+
+                        'suggested_work_package_id' =>
+                            $item->pendingClassification
+                                ?->suggested_work_package_id,
+
                         'material_type_id' =>
                             $item->material_type_id,
 
                         'material_type_name' =>
                             $item->materialType
-                                ?->material_type_name,
+                                ?->material_type_name
+                            ?? $item->pendingClassification
+                                ?->raw_material_name,
 
                         'brand_master_id' =>
                             $item->brand_master_id,
@@ -2033,6 +2186,9 @@ class MaterialReceivedController extends Controller
 
                         'unit_name' =>
                             $item->unit?->unit_name,
+
+                        'purpose_used_for' =>
+                            $item->purpose_used_for,
 
                         'sort_order' =>
                             $item->sort_order,

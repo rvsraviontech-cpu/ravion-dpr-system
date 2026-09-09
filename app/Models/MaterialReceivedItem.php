@@ -10,12 +10,22 @@ class MaterialReceivedItem extends Model
 {
     protected $fillable = [
         'material_received_id',
+
+        // Legacy / execution classification
         'activity_division_id',
         'activity_id',
+
+        // Material Received V3 classification
+        'construction_work_package_id',
+        'pending_material_classification_id',
+
+        // Material variant identity
         'material_type_id',
         'brand_master_id',
         'material_specification_id',
         'material_grade_id',
+
+        // Quantity / unit
         'quantity_received',
         'unit_master_id',
         'accepted_quantity',
@@ -23,75 +33,73 @@ class MaterialReceivedItem extends Model
         'damaged_quantity',
         'rejected_quantity',
         'material_condition',
-        'sort_order',
-        'remarks',
+
+        // Receipt usage / notes
+'purpose_used_for',
+'sort_order',
+'remarks',
     ];
 
     protected $casts = [
+        'material_received_id' => 'integer',
+        'activity_division_id' => 'integer',
+        'activity_id' => 'integer',
+        'construction_work_package_id' => 'integer',
+        'pending_material_classification_id' => 'integer',
+        'material_type_id' => 'integer',
+        'brand_master_id' => 'integer',
+        'material_specification_id' => 'integer',
+        'material_grade_id' => 'integer',
+        'unit_master_id' => 'integer',
+
         'quantity_received' => 'decimal:3',
         'accepted_quantity' => 'decimal:3',
         'short_quantity' => 'decimal:3',
         'damaged_quantity' => 'decimal:3',
         'rejected_quantity' => 'decimal:3',
+
         'sort_order' => 'integer',
     ];
 
-    /*
-    |--------------------------------------------------------------------------
-    | Parent Receipt
-    |--------------------------------------------------------------------------
-    */
-
     public function materialReceived(): BelongsTo
     {
+        return $this->belongsTo(MaterialReceived::class, 'material_received_id');
+    }
+
+    public function workPackage(): BelongsTo
+    {
         return $this->belongsTo(
-            MaterialReceived::class,
-            'material_received_id'
+            ConstructionWorkPackage::class,
+            'construction_work_package_id'
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Activity Relationships
-    |--------------------------------------------------------------------------
-    */
+    public function pendingClassification(): BelongsTo
+    {
+        return $this->belongsTo(
+            PendingMaterialClassification::class,
+            'pending_material_classification_id'
+        );
+    }
 
     public function activityDivision(): BelongsTo
     {
-        return $this->belongsTo(
-            ActivityDivision::class,
-            'activity_division_id'
-        );
+        return $this->belongsTo(ActivityDivision::class, 'activity_division_id');
     }
 
     public function activity(): BelongsTo
     {
-        return $this->belongsTo(
-            Activity::class,
-            'activity_id'
-        );
+        return $this->belongsTo(Activity::class, 'activity_id');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Material Variant Relationships
-    |--------------------------------------------------------------------------
-    */
 
     public function materialType(): BelongsTo
     {
-        return $this->belongsTo(
-            MaterialType::class,
-            'material_type_id'
-        );
+        return $this->belongsTo(MaterialType::class, 'material_type_id');
     }
 
     public function brand(): BelongsTo
     {
-        return $this->belongsTo(
-            BrandMaster::class,
-            'brand_master_id'
-        );
+        return $this->belongsTo(BrandMaster::class, 'brand_master_id');
     }
 
     public function specification(): BelongsTo
@@ -104,25 +112,13 @@ class MaterialReceivedItem extends Model
 
     public function grade(): BelongsTo
     {
-        return $this->belongsTo(
-            MaterialGrade::class,
-            'material_grade_id'
-        );
+        return $this->belongsTo(MaterialGrade::class, 'material_grade_id');
     }
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(
-            UnitMaster::class,
-            'unit_master_id'
-        );
+        return $this->belongsTo(UnitMaster::class, 'unit_master_id');
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Item-level Photos
-    |--------------------------------------------------------------------------
-    */
 
     public function photos(): HasMany
     {
@@ -134,22 +130,36 @@ class MaterialReceivedItem extends Model
             ->orderBy('id');
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Helpers
-    |--------------------------------------------------------------------------
-    */
-
     public function getDisplayNameAttribute(): string
     {
+        if ($this->pendingClassification) {
+            return $this->pendingClassification->display_name;
+        }
+
         return collect([
             $this->brand?->brand_name,
             $this->specification?->specification_name,
             $this->grade?->grade_name,
             $this->materialType?->material_type_name,
-        ])
-            ->filter()
-            ->implode(' ');
+        ])->filter()->implode(' ');
+    }
+
+    public function getWorkPackageDisplayNameAttribute(): ?string
+    {
+        $package = $this->workPackage
+            ?? $this->pendingClassification?->suggestedWorkPackage;
+
+        if (! $package) {
+            return null;
+        }
+
+        return trim($package->code . ' — ' . $package->name);
+    }
+
+    public function getIsPendingClassificationAttribute(): bool
+    {
+        return ! empty($this->pending_material_classification_id)
+            && $this->pendingClassification?->status === 'Pending';
     }
 
     public function getHasPhotosAttribute(): bool

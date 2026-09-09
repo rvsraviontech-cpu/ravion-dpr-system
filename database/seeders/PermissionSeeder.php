@@ -28,10 +28,13 @@ class PermissionSeeder extends Seeder
             ['module' => 'Activity Mapping', 'name' => 'activity_mappings.manage'],
 
             ['module' => 'Materials', 'name' => 'materials.view'],
-            ['module' => 'Materials', 'name' => 'materials.manage'],
+['module' => 'Materials', 'name' => 'materials.manage'],
 
-            ['module' => 'Material Categories', 'name' => 'material_categories.view'],
-            ['module' => 'Material Categories', 'name' => 'material_categories.manage'],
+['module' => 'Construction Work Packages', 'name' => 'construction_work_packages.view'],
+['module' => 'Construction Work Packages', 'name' => 'construction_work_packages.manage'],
+
+['module' => 'Material Categories', 'name' => 'material_categories.view'],
+['module' => 'Material Categories', 'name' => 'material_categories.manage'],
 
             ['module' => 'Contractors', 'name' => 'contractors.view'],
             ['module' => 'Contractors', 'name' => 'contractors.manage'],
@@ -249,6 +252,31 @@ class PermissionSeeder extends Seeder
             ['module' => 'Material Required', 'name' => 'material_required.create'],
             ['module' => 'Material Required', 'name' => 'material_required.edit'],
             ['module' => 'Material Required', 'name' => 'material_required.approve'],
+
+            // Purchase Orders
+            ['module' => 'Purchase Orders', 'name' => 'purchase_orders.view'],
+            ['module' => 'Purchase Orders', 'name' => 'purchase_orders.create'],
+            ['module' => 'Purchase Orders', 'name' => 'purchase_orders.edit'],
+            ['module' => 'Purchase Orders', 'name' => 'purchase_orders.place_order'],
+
+            // Material Dispatch
+            ['module' => 'Material Dispatch', 'name' => 'material_dispatches.view'],
+            ['module' => 'Material Dispatch', 'name' => 'material_dispatches.create'],
+            ['module' => 'Material Dispatch', 'name' => 'material_dispatches.edit'],
+            ['module' => 'Material Dispatch', 'name' => 'material_dispatches.dispatch'],
+
+            // Incoming Materials
+            ['module' => 'Incoming Materials', 'name' => 'incoming_materials.view'],
+            ['module' => 'Incoming Materials', 'name' => 'incoming_materials.receive'],
+            ['module' => 'Incoming Materials', 'name' => 'incoming_materials.confirm'],
+
+            // Product Usage Mapping
+            ['module' => 'Product Usage Mapping', 'name' => 'product_usage_mappings.view'],
+            ['module' => 'Product Usage Mapping', 'name' => 'product_usage_mappings.manage'],
+
+            // Pending Material Classification / Master Review
+            ['module' => 'Pending Master Review', 'name' => 'pending_material_classifications.view'],
+            ['module' => 'Pending Master Review', 'name' => 'pending_material_classifications.manage'],
 
             // Planning
             ['module' => 'Weekly Plans', 'name' => 'weekly_plans.view'],

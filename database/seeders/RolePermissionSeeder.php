@@ -41,6 +41,10 @@ class RolePermissionSeeder extends Seeder
                 'material_required.create',
                 'material_required.edit',
 
+                'incoming_materials.view',
+                'incoming_materials.receive',
+                'incoming_materials.confirm',
+
                 'site_issues.view',
                 'site_issues.create',
                 'site_issues.edit',
@@ -78,6 +82,26 @@ class RolePermissionSeeder extends Seeder
                 'material_consumed.view',
                 'material_required.view',
 
+                'purchase_orders.view',
+                'purchase_orders.create',
+                'purchase_orders.edit',
+                'purchase_orders.place_order',
+
+                'material_dispatches.view',
+                'material_dispatches.create',
+                'material_dispatches.edit',
+                'material_dispatches.dispatch',
+
+                'incoming_materials.view',
+                'incoming_materials.receive',
+                'incoming_materials.confirm',
+
+                'construction_work_packages.view',
+                'product_usage_mappings.view',
+                'product_usage_mappings.manage',
+                'pending_material_classifications.view',
+                'pending_material_classifications.manage',
+
                 'material_verification.view',
                 'material_verification.verify',
 
@@ -114,9 +138,10 @@ class RolePermissionSeeder extends Seeder
                 'pmo_exception_dashboard.view',
 
                 'projects.view',
-                'activities.view',
-                'activity_mappings.view',
-                'location_masters.view',
+'activities.view',
+'activity_mappings.view',
+'construction_work_packages.view',
+'location_masters.view',
 
                 'dpr.view',
                 'dpr_reviews.view',
@@ -129,6 +154,11 @@ class RolePermissionSeeder extends Seeder
                 'material_received.view',
                 'material_consumed.view',
                 'material_required.view',
+                'purchase_orders.view',
+                'material_dispatches.view',
+                'incoming_materials.view',
+                'product_usage_mappings.view',
+                'pending_material_classifications.view',
                 'material_verification.view',
                 'mapping_queue.view',
 
@@ -154,6 +184,8 @@ class RolePermissionSeeder extends Seeder
                 'material_received.view',
                 'material_consumed.view',
                 'material_required.view',
+                'purchase_orders.view',
+                'incoming_materials.view',
 
                 'material_verification.view',
                 'material_ledger.view',
@@ -174,6 +206,10 @@ class RolePermissionSeeder extends Seeder
                 'project_dashboard.view',
                 'project_health_dashboard.view',
                 'pmo_exception_dashboard.view',
+
+                'purchase_orders.view',
+                'material_dispatches.view',
+                'incoming_materials.view',
 
                 'reports.view',
                 'reports.dpr',

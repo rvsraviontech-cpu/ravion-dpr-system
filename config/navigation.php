@@ -44,9 +44,12 @@ return [
     'title' => 'Material Tracking',
     'icon' => 'cube',
     'items' => [
+        ['title' => 'Material Required', 'route' => 'material-requirements.index', 'permission' => 'material_required.view', 'icon' => 'document'],
+        ['title' => 'Purchase Orders', 'route' => 'purchase-orders.index', 'permission' => 'purchase_orders.view', 'icon' => 'clipboard'],
+        ['title' => 'Material Dispatch', 'route' => 'material-dispatches.index', 'permission' => 'material_dispatches.view', 'icon' => 'truck'],
+        ['title' => 'Incoming Materials', 'route' => 'incoming-materials.index', 'permission' => 'incoming_materials.view', 'icon' => 'truck'],
         ['title' => 'Material Received', 'route' => 'material-received.index', 'permission' => 'material_received.view', 'icon' => 'truck'],
         ['title' => 'Material Consumed', 'route' => 'material-consumed.index', 'permission' => 'material_consumed.view', 'icon' => 'cube'],
-        ['title' => 'Material Required', 'route' => 'material-requirements.index', 'permission' => 'material_required.view', 'icon' => 'document'],
         ['title' => 'Stock Register', 'route' => 'stock-register.index', 'permission' => 'material_ledger.view', 'icon' => 'layers'],
         ['title' => 'Material Ledger', 'route' => 'material-ledger.index', 'permission' => 'material_ledger.view', 'icon' => 'list'],
         ['title' => 'Shortage Report', 'route' => 'material-shortage-report.index', 'permission' => 'material_shortage_report.view', 'icon' => 'warning'],
@@ -83,6 +86,7 @@ return [
             ['title' => 'Work Stages', 'route' => 'work-stages.index', 'permission' => 'activities.view', 'icon' => 'list'],
             ['title' => 'Activities', 'route' => 'activities.index', 'permission' => 'activities.view', 'icon' => 'clipboard'],
             ['title' => 'Activity Mapping', 'route' => 'activity-mappings.index', 'permission' => 'activity_mappings.view', 'icon' => 'link'],
+            ['title' => 'Work Packages', 'route' => 'construction-work-packages.index', 'permission' => 'construction_work_packages.view', 'icon' => 'layers'],
         ],
     ],
 
@@ -98,7 +102,7 @@ return [
     
 
         [
-    'title' => 'Material Types',
+    'title' => 'Product Master',
     'route' => 'material-types.index',
     'permission' => 'material_types.view',
 ],

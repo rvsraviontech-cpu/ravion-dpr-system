@@ -76,6 +76,16 @@ use App\Http\Controllers\WeeklyAttendanceController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EmployeeDesignationController;
 use App\Http\Controllers\Reports\LabourWageReportController;
+use App\Http\Controllers\ConstructionWorkPackageController;
+use App\Http\Controllers\ConstructionWorkPackageMaterialController;
+use App\Http\Controllers\MaterialCatalogMappingController;
+use App\Http\Controllers\Materials\ProductSearchController;
+use App\Http\Controllers\Materials\ProductDependencyController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\MaterialDispatchController;
+use App\Http\Controllers\MaterialDispatchReceiptController;
+
+
 
 
 Route::get('/', function () {
@@ -102,6 +112,95 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
+
+        // IMPORTANT: put this route before Route::resource().
+Route::get(
+    '/purchase-orders/approved-requirement-items',
+    [PurchaseOrderController::class, 'approvedRequirementItems']
+)->name('purchase-orders.approved-requirement-items');
+
+// IMPORTANT: keep all three custom routes BEFORE Route::resource().
+Route::get(
+    '/purchase-orders/approved-requirement-items',
+    [PurchaseOrderController::class, 'approvedRequirementItems']
+)->name('purchase-orders.approved-requirement-items');
+
+Route::post(
+    '/purchase-orders/{purchaseOrder}/place-order',
+    [PurchaseOrderController::class, 'placeOrder']
+)->name('purchase-orders.place-order');
+
+Route::get(
+    '/purchase-orders/{purchaseOrder}/pdf',
+    [PurchaseOrderController::class, 'exportPdf']
+)->name('purchase-orders.pdf');
+
+Route::get(
+    '/material-dispatches/approved-requirement-items',
+    [MaterialDispatchController::class, 'approvedRequirementItems']
+)->name('material-dispatches.approved-requirement-items');
+
+Route::patch(
+    '/material-dispatches/{materialDispatch}/dispatch',
+    [MaterialDispatchController::class, 'dispatch']
+)->name('material-dispatches.dispatch');
+
+Route::resource(
+    'material-dispatches',
+    MaterialDispatchController::class
+)->parameters([
+    'material-dispatches' => 'materialDispatch',
+]);
+
+Route::get(
+    '/incoming-materials',
+    [MaterialDispatchReceiptController::class, 'index']
+)->name('incoming-materials.index');
+
+Route::get(
+    '/incoming-materials/{materialDispatch}/receive',
+    [MaterialDispatchReceiptController::class, 'create']
+)->name('incoming-materials.receive');
+
+Route::post(
+    '/incoming-materials/{materialDispatch}/receive',
+    [MaterialDispatchReceiptController::class, 'store']
+)->name('incoming-materials.store');
+
+Route::get(
+    '/dispatch-receipts/{materialDispatchReceipt}',
+    [MaterialDispatchReceiptController::class, 'show']
+)->name('dispatch-receipts.show');
+
+Route::get(
+    '/incoming-materials',
+    [MaterialDispatchReceiptController::class, 'index']
+)->name('incoming-materials.index');
+
+Route::get(
+    '/incoming-materials/{materialDispatch}/receive',
+    [MaterialDispatchReceiptController::class, 'create']
+)->name('incoming-materials.receive');
+
+Route::post(
+    '/incoming-materials/{materialDispatch}/receive',
+    [MaterialDispatchReceiptController::class, 'store']
+)->name('incoming-materials.store');
+
+Route::get(
+    '/dispatch-receipts/{materialDispatchReceipt}',
+    [MaterialDispatchReceiptController::class, 'show']
+)->name('dispatch-receipts.show');
+
+Route::patch(
+    '/dispatch-receipts/{materialDispatchReceipt}/confirm',
+    [MaterialDispatchReceiptController::class, 'confirm']
+)->name('dispatch-receipts.confirm');
+
+Route::resource('purchase-orders', PurchaseOrderController::class);
+
+
+Route::resource('purchase-orders', PurchaseOrderController::class);
 
         Route::get('/ajax/projects/{project}/blocks', [ProjectLocationController::class, 'ajaxBlocks'])->name('ajax.project.blocks');
 Route::get('/ajax/blocks/{block}/floors', [ProjectLocationController::class, 'ajaxFloors'])->name('ajax.block.floors');
@@ -207,6 +306,17 @@ Route::patch(
     ->middleware('permission:material_received.accountant_verify')
     ->name('material-received.accountant-verify');
 
+    Route::get('/materials/product-search', ProductSearchController::class)
+    ->name('materials.product-search');
+
+    Route::view('/product-search-test', 'product-search-test')
+    ->name('product-search-test');
+
+    Route::get(
+    '/materials/products/{materialType}/dependencies',
+    ProductDependencyController::class
+)->name('materials.product-dependencies');
+
   /*  Route::prefix('work-done')
     ->name('work-done.')
     ->group(function () {
@@ -236,7 +346,40 @@ Route::patch(
             [DprWorkItemController::class, 'destroyPhoto']
         )->name('photos.destroy');
 
-        
+        Route::get(
+    '/construction-work-package-materials',
+    [ConstructionWorkPackageMaterialController::class, 'index']
+)
+    ->middleware('permission:construction_work_packages.view')
+    ->name('construction-work-package-materials.index');
+
+Route::post(
+    '/construction-work-package-materials',
+    [ConstructionWorkPackageMaterialController::class, 'store']
+)
+    ->middleware('permission:construction_work_packages.manage')
+    ->name('construction-work-package-materials.store');
+
+Route::put(
+    '/construction-work-package-materials/{mapping}',
+    [ConstructionWorkPackageMaterialController::class, 'update']
+)
+    ->middleware('permission:construction_work_packages.manage')
+    ->name('construction-work-package-materials.update');
+
+Route::patch(
+    '/construction-work-package-materials/{mapping}/status',
+    [ConstructionWorkPackageMaterialController::class, 'toggleStatus']
+)
+    ->middleware('permission:construction_work_packages.manage')
+    ->name('construction-work-package-materials.toggle-status');
+
+Route::patch(
+    '/construction-work-package-materials/{mapping}/preferred',
+    [ConstructionWorkPackageMaterialController::class, 'makePreferred']
+)
+    ->middleware('permission:construction_work_packages.manage')
+    ->name('construction-work-package-materials.make-preferred');
     // Labour Group Master
 Route::get('/labour-groups', [LabourGroupController::class, 'index'])
     ->name('labour-groups.index');
@@ -256,6 +399,36 @@ Route::get('/weekly-attendance', [WeeklyAttendanceController::class, 'index'])
     ->name('weekly-attendance.index');
 Route::post('/weekly-attendance', [WeeklyAttendanceController::class, 'store'])
     ->name('weekly-attendance.store');
+
+    Route::get(
+    '/material-requirements/{materialRequirement}/pdf',
+    [MaterialRequirementController::class, 'exportPdf']
+)->name('material-requirements.pdf');
+
+    Route::prefix('material-catalog-mapping')
+    ->name('material-catalog-mapping.')
+    ->group(function () {
+        Route::get('/', [MaterialCatalogMappingController::class, 'index'])
+            ->name('index');
+
+        Route::get('/search-catalogue', [MaterialCatalogMappingController::class, 'searchCatalogue'])
+            ->name('search-catalogue');
+
+        Route::get('/search-material-types', [MaterialCatalogMappingController::class, 'searchMaterialTypes'])
+            ->name('search-material-types');
+
+        Route::get('/{materialCatalogItem}/form-data', [MaterialCatalogMappingController::class, 'formData'])
+            ->name('form-data');
+
+        Route::post('/{materialCatalogItem}/map-existing', [MaterialCatalogMappingController::class, 'mapExisting'])
+            ->name('map-existing');
+
+        Route::post('/{materialCatalogItem}/create-material', [MaterialCatalogMappingController::class, 'createMaterial'])
+            ->name('create-material');
+
+        Route::delete('/{materialCatalogItem}/unmap', [MaterialCatalogMappingController::class, 'unmap'])
+            ->name('unmap');
+    });
 
     /*
 |--------------------------------------------------------------------------
@@ -363,6 +536,57 @@ Route::middleware(['auth'])->group(function () {
 
     Route::resource('activities', ActivityController::class)
         ->middleware('permission:activities.view');
+        /*
+|--------------------------------------------------------------------------
+| Construction Work Package Master
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware([
+    'permission:construction_work_packages.manage',
+])->group(function (): void {
+
+    Route::get(
+        '/construction-work-packages/create',
+        [ConstructionWorkPackageController::class, 'create']
+    )->name('construction-work-packages.create');
+
+    Route::post(
+        '/construction-work-packages',
+        [ConstructionWorkPackageController::class, 'store']
+    )->name('construction-work-packages.store');
+
+    Route::get(
+        '/construction-work-packages/{constructionWorkPackage}/edit',
+        [ConstructionWorkPackageController::class, 'edit']
+    )->name('construction-work-packages.edit');
+
+    Route::match(
+        ['put', 'patch'],
+        '/construction-work-packages/{constructionWorkPackage}',
+        [ConstructionWorkPackageController::class, 'update']
+    )->name('construction-work-packages.update');
+
+    Route::delete(
+        '/construction-work-packages/{constructionWorkPackage}',
+        [ConstructionWorkPackageController::class, 'destroy']
+    )->name('construction-work-packages.destroy');
+});
+
+Route::middleware([
+    'permission:construction_work_packages.view',
+])->group(function (): void {
+
+    Route::get(
+        '/construction-work-packages',
+        [ConstructionWorkPackageController::class, 'index']
+    )->name('construction-work-packages.index');
+
+    Route::get(
+        '/construction-work-packages/{constructionWorkPackage}',
+        [ConstructionWorkPackageController::class, 'show']
+    )->name('construction-work-packages.show');
+});
 
     Route::resource('contractors', ContractorController::class)
         ->middleware('permission:contractors.view');

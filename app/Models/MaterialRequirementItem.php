@@ -14,6 +14,7 @@ class MaterialRequirementItem extends Model
         'material_type_id',
         'brand_master_id',
         'material_specification_id',
+        'specification_text',
         'material_grade_id',
         'required_quantity',
         'fulfilled_quantity',
@@ -30,75 +31,47 @@ class MaterialRequirementItem extends Model
 
     public function materialRequirement(): BelongsTo
     {
-        return $this->belongsTo(
-            MaterialRequirement::class,
-            'material_requirement_id'
-        );
+        return $this->belongsTo(MaterialRequirement::class, 'material_requirement_id');
     }
 
     public function activityDivision(): BelongsTo
     {
-        return $this->belongsTo(
-            ActivityDivision::class,
-            'activity_division_id'
-        );
+        return $this->belongsTo(ActivityDivision::class, 'activity_division_id');
     }
 
     public function activity(): BelongsTo
     {
-        return $this->belongsTo(
-            Activity::class,
-            'activity_id'
-        );
+        return $this->belongsTo(Activity::class, 'activity_id');
     }
 
     public function materialType(): BelongsTo
     {
-        return $this->belongsTo(
-            MaterialType::class,
-            'material_type_id'
-        );
+        return $this->belongsTo(MaterialType::class, 'material_type_id');
     }
 
     public function brand(): BelongsTo
     {
-        return $this->belongsTo(
-            BrandMaster::class,
-            'brand_master_id'
-        );
+        return $this->belongsTo(BrandMaster::class, 'brand_master_id');
     }
 
     public function specification(): BelongsTo
     {
-        return $this->belongsTo(
-            MaterialSpecification::class,
-            'material_specification_id'
-        );
+        return $this->belongsTo(MaterialSpecification::class, 'material_specification_id');
     }
 
     public function grade(): BelongsTo
     {
-        return $this->belongsTo(
-            MaterialGrade::class,
-            'material_grade_id'
-        );
+        return $this->belongsTo(MaterialGrade::class, 'material_grade_id');
     }
 
     public function unit(): BelongsTo
     {
-        return $this->belongsTo(
-            UnitMaster::class,
-            'unit_master_id'
-        );
+        return $this->belongsTo(UnitMaster::class, 'unit_master_id');
     }
 
     public function getPendingQuantityAttribute(): float
     {
-        return max(
-            0,
-            (float) $this->required_quantity
-                - (float) $this->fulfilled_quantity
-        );
+        return max(0, (float) $this->required_quantity - (float) $this->fulfilled_quantity);
     }
 
     public function getFulfilmentPercentageAttribute(): float
@@ -109,16 +82,7 @@ class MaterialRequirementItem extends Model
             return 0;
         }
 
-        return min(
-            100,
-            round(
-                (
-                    (float) $this->fulfilled_quantity
-                    / $requiredQuantity
-                ) * 100,
-                2
-            )
-        );
+        return min(100, round(((float) $this->fulfilled_quantity / $requiredQuantity) * 100, 2));
     }
 
     public function getIsFulfilledAttribute(): bool
@@ -131,10 +95,8 @@ class MaterialRequirementItem extends Model
         return collect([
             $this->materialType?->material_type_name,
             $this->brand?->brand_name,
-            $this->specification?->specification_name,
+            $this->specification_text ?: $this->specification?->specification_name,
             $this->grade?->grade_name,
-        ])
-            ->filter()
-            ->implode(' — ');
+        ])->filter()->implode(' — ');
     }
 }

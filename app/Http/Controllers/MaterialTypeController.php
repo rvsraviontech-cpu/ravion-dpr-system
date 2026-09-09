@@ -3,168 +3,256 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\AuditHelper;
+use App\Models\ActivityDivision;
+use App\Models\MaterialProductGroup;
+use App\Models\MaterialProductType;
 use App\Models\MaterialType;
 use App\Models\UnitMaster;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class MaterialTypeController extends Controller
 {
-    /**
-     * Display Material Types.
-     */
     public function index(Request $request): View
     {
         $query = MaterialType::query()
-            ->with([
-                'unit',
-                'creator',
-            ]);
+            ->with(['productGroup', 'productType', 'unit', 'creator']);
 
-        if ($request->filled('material_group')) {
+        if ($request->filled('activity_division_id')) {
+            $divisionId = $request->integer('activity_division_id');
+
+            $query->whereExists(function (QueryBuilder $subQuery) use ($divisionId) {
+                $subQuery
+                    ->selectRaw('1')
+                    ->from('material_product_usage_mappings as usage')
+                    ->whereColumn('usage.material_type_id', 'material_types.id')
+                    ->where('usage.activity_division_id', $divisionId)
+                    ->where('usage.is_active', 1);
+            });
+        }
+
+        if ($request->filled('material_product_group_id')) {
             $query->where(
-                'material_group',
-                $request->string('material_group')->toString()
+                'material_types.material_product_group_id',
+                $request->integer('material_product_group_id')
             );
         }
 
+        if ($request->filled('material_product_type_id')) {
+            $query->where(
+                'material_types.material_product_type_id',
+                $request->integer('material_product_type_id')
+            );
+        }
+
+        if ($request->filled('inventory_type')) {
+            $query->where(
+                'material_types.inventory_type',
+                trim((string) $request->input('inventory_type'))
+            );
+        }
+
+        if ($request->filled('master_status')) {
+            $query->where(
+                'material_types.master_status',
+                trim((string) $request->input('master_status'))
+            );
+        }
+
+        $scope = trim((string) $request->input('catalogue_scope', 'canonical'));
+
+        match ($scope) {
+            '', 'canonical' => $query->where('material_types.is_legacy', 0),
+            'catalogue' => $query->whereNotNull('material_types.catalogue_source_code'),
+            'manual' => $query
+                ->whereNull('material_types.catalogue_source_code')
+                ->where('material_types.is_legacy', 0),
+            'legacy' => $query->where('material_types.is_legacy', 1),
+            'all' => null,
+            default => $query->where('material_types.is_legacy', 0),
+        };
+
         if ($request->filled('unit_master_id')) {
             $query->where(
-                'unit_master_id',
+                'material_types.unit_master_id',
                 $request->integer('unit_master_id')
             );
         }
 
-        if ($request->filled('search')) {
-            $search = trim(
-                $request->string('search')->toString()
-            );
+        $search = trim((string) $request->input('search', ''));
 
-            $query->where(function (Builder $builder) use ($search) {
-                $builder
-                    ->where(
-                        'material_type_name',
-                        'like',
-                        "%{$search}%"
-                    )
-                    ->orWhere(
-                        'material_type_code',
-                        'like',
-                        "%{$search}%"
-                    )
-                    ->orWhere(
-                        'material_group',
-                        'like',
-                        "%{$search}%"
-                    )
-                    ->orWhere(
-                        'remarks',
-                        'like',
-                        "%{$search}%"
-                    );
+        if ($search !== '') {
+            $like = '%' . mb_strtolower($search) . '%';
+
+            $query->where(function ($searchQuery) use ($like) {
+                $searchQuery
+                    ->whereRaw('LOWER(material_types.material_type_name) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(COALESCE(material_types.material_type_code, "")) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(COALESCE(material_types.catalogue_source_code, "")) LIKE ?', [$like])
+                    ->orWhereRaw('LOWER(COALESCE(material_types.material_group, "")) LIKE ?', [$like])
+                    ->orWhereExists(function (QueryBuilder $subQuery) use ($like) {
+                        $subQuery
+                            ->selectRaw('1')
+                            ->from('material_product_groups as groups')
+                            ->whereColumn('groups.id', 'material_types.material_product_group_id')
+                            ->where(function (QueryBuilder $groupSearch) use ($like) {
+                                $groupSearch
+                                    ->whereRaw('LOWER(groups.group_name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(groups.group_code) LIKE ?', [$like]);
+                            });
+                    })
+                    ->orWhereExists(function (QueryBuilder $subQuery) use ($like) {
+                        $subQuery
+                            ->selectRaw('1')
+                            ->from('material_product_types as types')
+                            ->whereColumn('types.id', 'material_types.material_product_type_id')
+                            ->where(function (QueryBuilder $typeSearch) use ($like) {
+                                $typeSearch
+                                    ->whereRaw('LOWER(types.type_name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(types.type_code) LIKE ?', [$like]);
+                            });
+                    })
+                    ->orWhereExists(function (QueryBuilder $subQuery) use ($like) {
+                        $subQuery
+                            ->selectRaw('1')
+                            ->from('material_search_aliases as aliases')
+                            ->whereColumn('aliases.material_type_id', 'material_types.id')
+                            ->where('aliases.is_active', 1)
+                            ->where(function (QueryBuilder $aliasSearch) use ($like) {
+                                $aliasSearch
+                                    ->whereRaw('LOWER(aliases.alias) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(aliases.normalized_alias) LIKE ?', [$like]);
+                            });
+                    });
             });
         }
 
-        if (
-            $request->has('status')
-            && $request->status !== ''
-            && $request->status !== null
-        ) {
-            $query->where(
-                'is_active',
-                $request->boolean('status')
+        if ($request->filled('status')) {
+    $query->where(
+        'material_types.is_active',
+        $request->boolean('status')
+    );
+}
+
+        $filteredProducts = (clone $query)->count();
+
+        $filteredActiveProducts = (clone $query)
+            ->where('material_types.is_active', 1)
+            ->count();
+
+        $filteredGroups = (clone $query)
+            ->whereNotNull('material_types.material_product_group_id')
+            ->distinct()
+            ->count('material_types.material_product_group_id');
+
+        $totalCanonicalProducts = MaterialType::query()
+            ->where('is_legacy', 0)
+            ->count();
+
+        if ($search !== '') {
+            $query->orderByRaw(
+                'CASE
+                    WHEN LOWER(material_types.material_type_name) = LOWER(?) THEN 0
+                    WHEN LOWER(material_types.material_type_name) LIKE LOWER(?) THEN 1
+                    ELSE 2
+                 END',
+                [$search, $search . '%']
             );
         }
 
         $materialTypes = $query
-            ->orderByDesc('is_active')
-            ->orderBy('material_group')
-            ->orderBy('sequence')
-            ->orderBy('material_type_name')
+            ->orderByDesc('material_types.is_active')
+            ->orderBy('material_types.material_product_group_id')
+            ->orderBy('material_types.material_product_type_id')
+            ->orderBy('material_types.sequence')
+            ->orderBy('material_types.material_type_name')
             ->paginate(config('rds.pagination.per_page', 25))
             ->withQueryString();
 
         return view(
             'material-types.index',
             array_merge(
-                compact('materialTypes'),
+                compact(
+                    'materialTypes',
+                    'totalCanonicalProducts',
+                    'filteredProducts',
+                    'filteredActiveProducts',
+                    'filteredGroups'
+                ),
                 $this->formData()
             )
         );
     }
 
-    /**
-     * Show the create form.
-     */
     public function create(): View
     {
-        return view(
-            'material-types.create',
-            $this->formData()
-        );
+        return view('material-types.create', $this->formData());
     }
 
-    /**
-     * Store a Material Type.
-     */
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateMaterialType($request);
 
-        $validated['sequence'] =
-            $validated['sequence'] ?? 0;
+        $group = MaterialProductGroup::query()
+            ->where('is_active', true)
+            ->findOrFail($validated['material_product_group_id']);
 
+        MaterialProductType::query()
+            ->where('is_active', true)
+            ->whereKey($validated['material_product_type_id'])
+            ->where('material_product_group_id', $group->id)
+            ->firstOrFail();
+
+        $validated['material_group'] = $group->group_name;
+        $validated['sequence'] = $validated['sequence'] ?? 0;
         $validated['is_active'] = true;
+        $validated['is_legacy'] = false;
+        $validated['catalogue_source_code'] = null;
         $validated['created_by'] = auth()->id();
 
         $materialType = MaterialType::create($validated);
 
         AuditHelper::log(
-            'Material Types',
+            'Product Master',
             'Created',
             'MaterialType',
             $materialType->id,
-            'Material Type created: '
-                . $materialType->material_type_name,
+            'Product created: ' . $materialType->material_type_name,
             null,
             $this->auditValues(
-                $materialType->fresh('unit')
+                $materialType->fresh(['productGroup', 'productType', 'unit'])
             )
         );
 
         return redirect()
             ->route('material-types.index')
-            ->with(
-                'success',
-                'Material Type created successfully.'
-            );
+            ->with('success', 'Product created successfully.');
     }
 
-    /**
-     * Display Material Type details.
-     */
     public function show(MaterialType $materialType): View
     {
         $materialType->load([
+            'productGroup',
+            'productType',
             'unit',
             'creator',
+            'specifications',
+            'grades',
+            'variants',
+            'searchAliases',
+            'usageMappings',
         ]);
 
-        return view(
-            'material-types.show',
-            compact('materialType')
-        );
+        return view('material-types.show', compact('materialType'));
     }
 
-    /**
-     * Show the edit form.
-     */
     public function edit(MaterialType $materialType): View
     {
-        $materialType->load('unit');
+        $materialType->load(['productGroup', 'productType', 'unit']);
 
         return view(
             'material-types.edit',
@@ -175,59 +263,53 @@ class MaterialTypeController extends Controller
         );
     }
 
-    /**
-     * Update a Material Type.
-     */
-    public function update(
-        Request $request,
-        MaterialType $materialType
-    ): RedirectResponse {
-        $validated = $this->validateMaterialType(
-            $request,
-            $materialType
-        );
+    public function update(Request $request, MaterialType $materialType): RedirectResponse
+    {
+        $validated = $this->validateMaterialType($request, $materialType);
 
-        $validated['sequence'] =
-            $validated['sequence'] ?? 0;
+        $group = MaterialProductGroup::query()
+            ->where('is_active', true)
+            ->findOrFail($validated['material_product_group_id']);
 
-        $validated['is_active'] =
-            $request->boolean('is_active');
+        MaterialProductType::query()
+            ->where('is_active', true)
+            ->whereKey($validated['material_product_type_id'])
+            ->where('material_product_group_id', $group->id)
+            ->firstOrFail();
+
+        $validated['material_group'] = $group->group_name;
+        $validated['sequence'] = $validated['sequence'] ?? 0;
+        $validated['is_active'] = $request->boolean('is_active');
+
+        unset($validated['catalogue_source_code'], $validated['is_legacy']);
 
         $oldValues = $this->auditValues(
-            $materialType->load('unit')
+            $materialType->load(['productGroup', 'productType', 'unit'])
         );
 
         $materialType->update($validated);
 
         AuditHelper::log(
-            'Material Types',
+            'Product Master',
             'Updated',
             'MaterialType',
             $materialType->id,
-            'Material Type updated: '
-                . $materialType->material_type_name,
+            'Product updated: ' . $materialType->material_type_name,
             $oldValues,
             $this->auditValues(
-                $materialType->fresh('unit')
+                $materialType->fresh(['productGroup', 'productType', 'unit'])
             )
         );
 
         return redirect()
             ->route('material-types.index')
-            ->with(
-                'success',
-                'Material Type updated successfully.'
-            );
+            ->with('success', 'Product updated successfully.');
     }
 
-    /**
-     * Activate or deactivate a Material Type.
-     */
-    public function destroy(
-        MaterialType $materialType
-    ): RedirectResponse {
+    public function destroy(MaterialType $materialType): RedirectResponse
+    {
         $oldValues = $this->auditValues(
-            $materialType->load('unit')
+            $materialType->load(['productGroup', 'productType', 'unit'])
         );
 
         $materialType->update([
@@ -237,141 +319,161 @@ class MaterialTypeController extends Controller
         $materialType->refresh();
 
         AuditHelper::log(
-            'Material Types',
-            $materialType->is_active
-                ? 'Activated'
-                : 'Deactivated',
+            'Product Master',
+            $materialType->is_active ? 'Activated' : 'Deactivated',
             'MaterialType',
             $materialType->id,
             $materialType->is_active
-                ? 'Material Type activated: '
-                    . $materialType->material_type_name
-                : 'Material Type deactivated: '
-                    . $materialType->material_type_name,
+                ? 'Product activated: ' . $materialType->material_type_name
+                : 'Product deactivated: ' . $materialType->material_type_name,
             $oldValues,
             $this->auditValues(
-                $materialType->load('unit')
+                $materialType->load(['productGroup', 'productType', 'unit'])
             )
         );
 
-        return back()->with(
-            'success',
-            'Material Type status updated successfully.'
-        );
+        return back()->with('success', 'Product status updated successfully.');
     }
 
-    /**
-     * Shared view data.
-     */
     private function formData(): array
     {
-        $materialGroups = MaterialType::query()
-            ->whereNotNull('material_group')
-            ->where('material_group', '!=', '')
-            ->select('material_group')
-            ->distinct()
-            ->orderBy('material_group')
-            ->pluck('material_group');
+        $activityDivisions = ActivityDivision::query()
+            ->where('is_active', true)
+            ->orderBy('sequence')
+            ->orderBy('name')
+            ->get();
+
+        $productGroups = MaterialProductGroup::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('group_name')
+            ->get();
+
+        $productTypes = MaterialProductType::query()
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('type_name')
+            ->get();
 
         $units = UnitMaster::query()
             ->where('is_active', true)
             ->orderBy('unit_name')
             ->get();
 
+        $inventoryTypes = MaterialType::query()
+            ->whereNotNull('inventory_type')
+            ->where('inventory_type', '!=', '')
+            ->distinct()
+            ->orderBy('inventory_type')
+            ->pluck('inventory_type');
+
+        $masterStatuses = MaterialType::query()
+            ->whereNotNull('master_status')
+            ->where('master_status', '!=', '')
+            ->distinct()
+            ->orderBy('master_status')
+            ->pluck('master_status');
+
+        if (! $masterStatuses->contains('Approved')) {
+            $masterStatuses->push('Approved');
+        }
+
+        if (! $masterStatuses->contains('Review')) {
+            $masterStatuses->push('Review');
+        }
+
+        $divisionGroupMap = DB::table('material_product_usage_mappings as usage')
+            ->join('material_types as products', 'products.id', '=', 'usage.material_type_id')
+            ->where('usage.is_active', true)
+            ->where('products.is_active', true)
+            ->where('products.is_legacy', false)
+            ->whereNotNull('usage.activity_division_id')
+            ->whereNotNull('products.material_product_group_id')
+            ->select(
+                'usage.activity_division_id',
+                'products.material_product_group_id'
+            )
+            ->distinct()
+            ->get()
+            ->groupBy('activity_division_id')
+            ->map(fn ($rows) => $rows
+                ->pluck('material_product_group_id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all()
+            )
+            ->toArray();
+
         return compact(
-            'materialGroups',
-            'units'
+            'activityDivisions',
+            'productGroups',
+            'productTypes',
+            'units',
+            'inventoryTypes',
+            'masterStatuses',
+            'divisionGroupMap'
         );
     }
 
-    /**
-     * Validate Material Type data.
-     */
     private function validateMaterialType(
         Request $request,
         ?MaterialType $materialType = null
     ): array {
         return $request->validate([
-            'material_group' => [
+            'material_product_group_id' => [
                 'required',
-                'string',
-                'max:255',
+                'integer',
+                'exists:material_product_groups,id',
             ],
-
+            'material_product_type_id' => [
+                'required',
+                'integer',
+                Rule::exists('material_product_types', 'id')
+                    ->where(
+                        fn ($query) => $query->where(
+                            'material_product_group_id',
+                            $request->integer('material_product_group_id')
+                        )
+                    ),
+            ],
             'material_type_name' => [
                 'required',
                 'string',
                 'max:255',
-
-                Rule::unique(
-                    'material_types',
-                    'material_type_name'
-                )->ignore($materialType?->id),
+                Rule::unique('material_types', 'material_type_name')
+                    ->ignore($materialType?->id),
             ],
-
-            'material_type_code' => [
-                'nullable',
-                'string',
-                'max:100',
-            ],
-
-            'unit_master_id' => [
-                'required',
-                'integer',
-                'exists:unit_masters,id',
-            ],
-
-            'sequence' => [
-                'nullable',
-                'integer',
-                'min:0',
-            ],
-
-            'is_active' => [
-                'nullable',
-                'boolean',
-            ],
-
-            'remarks' => [
-                'nullable',
-                'string',
-                'max:2000',
-            ],
-        ], [
-            'material_type_name.unique' =>
-                'This Material Type already exists.',
-
-            'unit_master_id.required' =>
-                'Please select the default unit.',
+            'material_type_code' => ['nullable', 'string', 'max:100'],
+            'unit_master_id' => ['required', 'integer', 'exists:unit_masters,id'],
+            'inventory_type' => ['required', 'string', 'max:100'],
+            'master_status' => ['required', 'string', 'max:50'],
+            'sequence' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+            'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
     }
 
-    /**
-     * Audit values.
-     */
-    private function auditValues(
-        MaterialType $materialType
-    ): array {
+    private function auditValues(MaterialType $materialType): array
+    {
         return [
             'id' => $materialType->id,
-            'material_group' =>
-                $materialType->material_group,
-            'material_type_name' =>
-                $materialType->material_type_name,
-            'material_type_code' =>
-                $materialType->material_type_code,
-            'unit_master_id' =>
-                $materialType->unit_master_id,
-            'unit_name' =>
-                $materialType->unit?->unit_name,
-            'sequence' =>
-                $materialType->sequence,
-            'is_active' =>
-                $materialType->is_active,
-            'remarks' =>
-                $materialType->remarks,
-            'created_by' =>
-                $materialType->created_by,
+            'material_product_group_id' => $materialType->material_product_group_id,
+            'product_group' => $materialType->productGroup?->group_name,
+            'material_product_type_id' => $materialType->material_product_type_id,
+            'product_type' => $materialType->productType?->type_name,
+            'material_group' => $materialType->material_group,
+            'material_type_name' => $materialType->material_type_name,
+            'material_type_code' => $materialType->material_type_code,
+            'catalogue_source_code' => $materialType->catalogue_source_code,
+            'inventory_type' => $materialType->inventory_type,
+            'master_status' => $materialType->master_status,
+            'is_legacy' => $materialType->is_legacy,
+            'unit_master_id' => $materialType->unit_master_id,
+            'unit_name' => $materialType->unit?->unit_name,
+            'sequence' => $materialType->sequence,
+            'is_active' => $materialType->is_active,
+            'remarks' => $materialType->remarks,
+            'created_by' => $materialType->created_by,
         ];
     }
 }

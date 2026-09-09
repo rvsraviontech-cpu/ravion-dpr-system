@@ -1,6 +1,15 @@
 import Alpine from 'alpinejs';
+import registerProductSelector from './product-selector';
 
 window.Alpine = Alpine;
+
+/*
+|--------------------------------------------------------------------------
+| Ravion ERP Alpine Components
+|--------------------------------------------------------------------------
+*/
+
+registerProductSelector(Alpine);
 
 Alpine.start();
 

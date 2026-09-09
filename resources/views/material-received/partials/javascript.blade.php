@@ -2,766 +2,312 @@
 document.addEventListener('DOMContentLoaded', function () {
     const body = document.getElementById('material-items-body');
     const addRowButton = document.getElementById('add-item-row');
-
-    const photoRows = document.getElementById('photo-rows');
-    const addPhotoRowButton = document.getElementById('add-photo-row');
-
     const projectSelect = document.getElementById('project_id');
     const blockSelect = document.getElementById('project_block_id');
     const floorSelect = document.getElementById('project_floor_id');
     const unitSelect = document.getElementById('project_unit_id');
+    const photoRows = document.getElementById('photo-rows');
+    const addPhotoRowButton = document.getElementById('add-photo-row');
 
-    const contractorCheckbox =
-        document.getElementById('supplied_by_contractor');
-
-    const contractorWrapper =
-        document.getElementById('contractor-wrapper');
-
-    let rowIndex = body.querySelectorAll('.material-item-row').length;
-    let photoIndex = photoRows.querySelectorAll('.photo-row').length;
-
-    const activityOptions = @json($activityOptionsForJs);
     const materialTypeOptions = @json($materialTypeOptionsForJs);
     const brandOptions = @json($brandOptionsForJs);
     const specificationOptions = @json($specificationOptionsForJs);
     const gradeOptions = @json($gradeOptionsForJs);
-    const materialGroups = @json($materialGroupsForJs);
     const photoTypes = @json($photoTypes);
+
+    let rowIndex = body.querySelectorAll('.material-item-row').length;
+    let photoIndex = photoRows ? photoRows.querySelectorAll('.photo-row').length : 0;
 
     function option(value, label, selected = false) {
         return new Option(label, value, selected, selected);
     }
 
-    function rebuildSelect(
-        select,
-        placeholder,
-        values,
-        selectedValue = ''
-    ) {
+    function rebuildSelect(select, placeholder, values, selectedValue = '') {
         select.innerHTML = '';
         select.add(option('', placeholder));
+        values.forEach(item => select.add(option(String(item.id), item.name, String(item.id) === String(selectedValue))));
+    }
 
-        values.forEach(function (item) {
-            select.add(
-                option(
-                    String(item.id),
-                    item.name,
-                    String(item.id) === String(selectedValue)
-                )
-            );
-        });
+    function materialById(id) {
+        return materialTypeOptions.find(item => String(item.id) === String(id));
+    }
+
+    function setMode(row, mode, clearOther = false) {
+        const entry = row.querySelector('.entry-mode-input');
+        const existingPanel = row.querySelector('.existing-panel');
+        const temporaryPanel = row.querySelector('.temporary-panel');
+        const existingFields = row.querySelectorAll('.existing-field');
+        const temporaryFields = row.querySelectorAll('.temporary-field');
+        const tempName = row.querySelector('.temporary-material-name');
+        const tempUnit = row.querySelector('.temporary-unit-select');
+        const typeSelect = row.querySelector('.material-type-select');
+
+        entry.value = mode;
+        existingPanel.classList.toggle('hidden', mode !== 'existing');
+        temporaryPanel.classList.toggle('hidden', mode !== 'temporary');
+        existingFields.forEach(el => el.classList.toggle('hidden', mode !== 'existing'));
+        temporaryFields.forEach(el => el.classList.toggle('hidden', mode !== 'temporary'));
+
+        tempName.required = mode === 'temporary';
+        tempUnit.required = mode === 'temporary';
+        typeSelect.required = mode === 'existing';
+
+        if (clearOther && mode === 'temporary') {
+            typeSelect.value = '';
+            row.querySelector('.material-search-input').value = '';
+            row.querySelector('.category-display').value = 'Pending Classification';
+            row.querySelector('.brand-select').innerHTML = '<option value="">Brand</option>';
+            row.querySelector('.specification-select').innerHTML = '<option value="">Specification</option>';
+            row.querySelector('.grade-select').innerHTML = '<option value="">Grade / Rating</option>';
+            row.querySelector('.unit-id-input').value = '';
+            row.querySelector('.unit-name-input').value = '';
+        }
+
+        if (clearOther && mode === 'existing') {
+            tempName.value = '';
+            row.querySelector('[name$="[temporary_brand]"]').value = '';
+            row.querySelector('[name$="[temporary_specification]"]').value = '';
+            row.querySelector('[name$="[temporary_grade]"]').value = '';
+            row.querySelector('[name$="[temporary_classification_notes]"]').value = '';
+            tempUnit.value = '';
+            row.querySelector('.unit-id-input').value = '';
+            row.querySelector('.category-display').value = '';
+        }
+
+        refreshPhotoItemOptions();
     }
 
     function initializeRow(row) {
-        const divisionSelect =
-            row.querySelector('.activity-division-select');
+        const searchInput = row.querySelector('.material-search-input');
+        const searchResults = row.querySelector('.material-search-results');
+        const typeSelect = row.querySelector('.material-type-select');
+        const category = row.querySelector('.category-display');
+        const brand = row.querySelector('.brand-select');
+        const specification = row.querySelector('.specification-select');
+        const grade = row.querySelector('.grade-select');
+        const unitId = row.querySelector('.unit-id-input');
+        const unitName = row.querySelector('.unit-name-input');
+        const temporaryUnit = row.querySelector('.temporary-unit-select');
+        const quantity = row.querySelector('.quantity-input');
 
-        const activitySelect =
-            row.querySelector('.activity-select');
+        const initialMode = row.querySelector('.entry-mode-input').value || 'existing';
+        const initialTypeId = typeSelect.value;
+        const initialBrandId = @json(null);
+        const initialSpecId = @json(null);
+        const initialGradeId = @json(null);
 
-        const groupSelect =
-            row.querySelector('.material-group-select');
+        // Preserve server-rendered selected values before rebuilding filtered selects.
+        const serverBrand = row.querySelector('[name$="[brand_master_id]"] option:checked')?.value || '';
+        const serverSpec = row.querySelector('[name$="[material_specification_id]"] option:checked')?.value || '';
+        const serverGrade = row.querySelector('[name$="[material_grade_id]"] option:checked')?.value || '';
 
-        const typeSelect =
-            row.querySelector('.material-type-select');
+        function updateDependencies(preserve = {}) {
+            const selected = materialById(typeSelect.value);
+            category.value = selected?.group || '';
+            unitId.value = selected?.unit_id || '';
+            unitName.value = selected?.unit_name || '';
 
-        const brandSelect =
-            row.querySelector('.brand-select');
+            rebuildSelect(brand, 'Brand', brandOptions.filter(x => String(x.material_type_id) === String(typeSelect.value)), preserve.brandId || '');
+            rebuildSelect(specification, 'Specification', specificationOptions.filter(x => String(x.material_type_id) === String(typeSelect.value)), preserve.specificationId || '');
+            rebuildSelect(grade, 'Grade / Rating', gradeOptions.filter(x => String(x.material_type_id) === String(typeSelect.value)), preserve.gradeId || '');
 
-        const specificationSelect =
-            row.querySelector('.specification-select');
-
-        const gradeSelect =
-            row.querySelector('.grade-select');
-
-        const unitIdInput =
-            row.querySelector('.unit-id-input');
-
-        const unitNameInput =
-            row.querySelector('.unit-name-input');
-
-        const currentActivityId = activitySelect.value;
-        const currentTypeId = typeSelect.value;
-        const currentBrandId = brandSelect.value;
-        const currentSpecificationId = specificationSelect.value;
-        const currentGradeId = gradeSelect.value;
-
-        function filterActivities(preserve = false) {
-            const divisionId = divisionSelect.value;
-
-            const filtered = activityOptions.filter(function (activity) {
-                return divisionId === ''
-                    || String(activity.division_id) === String(divisionId);
-            });
-
-            rebuildSelect(
-                activitySelect,
-                'Select Activity',
-                filtered,
-                preserve ? currentActivityId : ''
-            );
+            if (selected) searchInput.value = selected.name;
+            refreshPhotoItemOptions();
         }
 
-        function filterMaterialTypes(preserve = false) {
-            const group = groupSelect.value;
-
-            const filtered = materialTypeOptions.filter(function (type) {
-                return group === ''
-                    || type.group === group;
-            });
-
-            rebuildSelect(
-                typeSelect,
-                'Select Material Type',
-                filtered,
-                preserve ? currentTypeId : ''
-            );
-
-            updateDependentMaterialFields(preserve);
+        function chooseMaterial(type) {
+            typeSelect.value = String(type.id);
+            updateDependencies();
+            searchInput.value = type.name;
+            searchResults.classList.add('hidden');
+            quantity.focus();
         }
 
-        function updateDependentMaterialFields(preserve = false) {
-            const materialTypeId = typeSelect.value;
+        function showSearchResults() {
+            const term = searchInput.value.trim().toLowerCase();
+            if (term.length < 1) {
+                searchResults.classList.add('hidden');
+                searchResults.innerHTML = '';
+                return;
+            }
 
-            const selectedType = materialTypeOptions.find(function (type) {
-                return String(type.id) === String(materialTypeId);
-            });
+            const matches = materialTypeOptions
+                .filter(type => (type.search || type.name.toLowerCase()).includes(term))
+                .slice(0, 20);
 
-            unitIdInput.value = selectedType?.unit_id || '';
-            unitNameInput.value = selectedType?.unit_name || '';
-
-            const filteredBrands = brandOptions.filter(function (brand) {
-                return String(brand.material_type_id)
-                    === String(materialTypeId);
-            });
-
-            const filteredSpecifications =
-                specificationOptions.filter(function (specification) {
-                    return String(specification.material_type_id)
-                        === String(materialTypeId);
+            searchResults.innerHTML = '';
+            if (!matches.length) {
+                const empty = document.createElement('div');
+                empty.className = 'px-4 py-3 text-sm text-gray-500';
+                empty.textContent = 'No material found. Use “Material Not Found”.';
+                searchResults.appendChild(empty);
+            } else {
+                matches.forEach(type => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'block w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-blue-50';
+                    button.innerHTML = `<div class="font-semibold text-gray-800">${type.name}</div><div class="text-xs text-gray-500">${type.group || 'Uncategorised'}${type.unit_name ? ' · ' + type.unit_name : ''}</div>`;
+                    button.addEventListener('click', () => chooseMaterial(type));
+                    searchResults.appendChild(button);
                 });
-
-            const filteredGrades = gradeOptions.filter(function (grade) {
-                return String(grade.material_type_id)
-                    === String(materialTypeId);
-            });
-
-            rebuildSelect(
-                brandSelect,
-                'Select Brand',
-                filteredBrands,
-                preserve ? currentBrandId : ''
-            );
-
-            rebuildSelect(
-                specificationSelect,
-                'Select Specification',
-                filteredSpecifications,
-                preserve ? currentSpecificationId : ''
-            );
-
-            rebuildSelect(
-                gradeSelect,
-                'Select Grade / Rating',
-                filteredGrades,
-                preserve ? currentGradeId : ''
-            );
-
-            refreshPhotoItemOptions();
+            }
+            searchResults.classList.remove('hidden');
         }
 
-        divisionSelect.addEventListener('change', function () {
-            filterActivities(false);
+        searchInput.addEventListener('input', showSearchResults);
+        searchInput.addEventListener('focus', showSearchResults);
+        typeSelect.addEventListener('change', () => updateDependencies());
+
+        row.querySelector('.enable-temporary-material').addEventListener('click', () => {
+            setMode(row, 'temporary', true);
+            row.querySelector('.temporary-material-name').focus();
         });
 
-        groupSelect.addEventListener('change', function () {
-            filterMaterialTypes(false);
+        row.querySelector('.use-existing-material').addEventListener('click', () => {
+            setMode(row, 'existing', true);
+            searchInput.focus();
+        });
+
+        temporaryUnit.addEventListener('change', () => unitId.value = temporaryUnit.value);
+
+        row.querySelector('.temporary-material-name').addEventListener('input', refreshPhotoItemOptions);
+
+        row.querySelector('.remove-item-row').addEventListener('click', function () {
+            if (body.querySelectorAll('.material-item-row').length <= 1) {
+                alert('At least one material row is required.');
+                return;
+            }
+            row.remove();
+            renumberMaterialRows();
             refreshPhotoItemOptions();
         });
 
-        typeSelect.addEventListener('change', function () {
-            updateDependentMaterialFields(false);
-            refreshPhotoItemOptions();
+        document.addEventListener('click', event => {
+            if (!row.contains(event.target)) searchResults.classList.add('hidden');
         });
 
-        row.querySelector('.remove-item-row')
-            .addEventListener('click', function () {
-                const rows = body.querySelectorAll('.material-item-row');
+        setMode(row, initialMode, false);
 
-                if (rows.length <= 1) {
-                    alert('At least one material row is required.');
-                    return;
-                }
-
-                row.remove();
-
-                /*
-                 * Keep item array indices aligned with the controller's
-                 * photos[*][item_index] mapping.
-                 */
-                renumberMaterialRows();
-                refreshPhotoItemOptions();
+        if (initialMode === 'temporary') {
+            temporaryUnit.value = unitId.value || '';
+            category.value = 'Pending Classification';
+        } else if (initialTypeId) {
+            updateDependencies({
+                brandId: serverBrand,
+                specificationId: serverSpec,
+                gradeId: serverGrade,
             });
-
-        const selectedType = materialTypeOptions.find(function (type) {
-            return String(type.id) === String(currentTypeId);
-        });
-
-        if (selectedType && !groupSelect.value) {
-            groupSelect.value = selectedType.group || '';
         }
-
-        filterActivities(true);
-        filterMaterialTypes(true);
     }
 
     function buildNewRow(index) {
-        const row = document.createElement('tr');
-
-        row.className = 'material-item-row block overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:table-row lg:rounded-none lg:border-0 lg:shadow-none';
+        const row = body.querySelector('.material-item-row').cloneNode(true);
         row.dataset.rowIndex = index;
 
-        row.innerHTML = `
-            <td class="block bg-slate-50 px-3 py-3 lg:table-cell lg:bg-transparent lg:text-center">
-                <div class="flex items-center justify-between lg:block">
-                    <span class="text-xs font-bold uppercase tracking-wide text-gray-500 lg:hidden">Material Item</span>
-                    <span class="row-number inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-bold text-blue-800 lg:bg-transparent lg:text-sm lg:text-inherit"></span>
-                </div>
-            </td>
+        row.querySelectorAll('input, select').forEach(field => {
+            if (field.classList.contains('entry-mode-input')) {
+                field.value = 'existing';
+            } else if (field.tagName === 'SELECT') {
+                field.selectedIndex = 0;
+            } else if (field.type !== 'button') {
+                field.value = '';
+            }
+            field.required = false;
+            field.disabled = false;
+        });
 
-            <td data-mobile-label="Activity Division" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][activity_division_id]"
-                        class="{{ $inputClass }} activity-division-select">
-                    <option value="">Select Division</option>
-
-                    @foreach($activityDivisions as $division)
-                        <option value="{{ $division->id }}">
-                            {{ $division->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </td>
-
-            <td data-mobile-label="Activity / Material" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][activity_id]"
-                        class="{{ $inputClass }} activity-select">
-                    <option value="">Select Activity</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Material Group" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select class="{{ $inputClass }} material-group-select">
-                    <option value="">Select Group</option>
-
-                    ${materialGroups.map(function (group) {
-                        return `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`;
-                    }).join('')}
-                </select>
-            </td>
-
-            <td data-mobile-label="Material Type" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][material_type_id]"
-                        class="{{ $inputClass }} material-type-select"
-                        required>
-                    <option value="">Select Material Type</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Brand" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][brand_master_id]"
-                        class="{{ $inputClass }} brand-select">
-                    <option value="">Select Brand</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Specification" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][material_specification_id]"
-                        class="{{ $inputClass }} specification-select">
-                    <option value="">Select Specification</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Grade / Rating" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][material_grade_id]"
-                        class="{{ $inputClass }} grade-select">
-                    <option value="">Select Grade / Rating</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Quantity" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="number"
-                       step="0.001"
-                       min="0.001"
-                       name="items[${index}][quantity_received]"
-                       class="{{ $inputClass }}"
-                       required>
-            </td>
-
-            <td data-mobile-label="Unit" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="hidden"
-                       name="items[${index}][unit_master_id]"
-                       class="unit-id-input">
-
-                <input type="text"
-                       class="{{ $inputClass }} unit-name-input bg-gray-100"
-                       readonly
-                       placeholder="Auto">
-            </td>
-
-            <td data-mobile-label="Remarks" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="text"
-                       name="items[${index}][remarks]"
-                       class="{{ $inputClass }}"
-                       placeholder="Optional">
-            </td>
-
-            <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-center lg:before:hidden">
-                <button type="button"
-                        class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:border-0 lg:bg-red-600 lg:text-white lg:hover:bg-red-700">
-                    Remove
-                </button>
-            </td>
-        `;
-
+        row.querySelector('.material-search-results').innerHTML = '';
+        row.querySelector('.material-search-results').classList.add('hidden');
         return row;
     }
 
     function renumberMaterialRows() {
-        body.querySelectorAll('.material-item-row')
-            .forEach(function (row, index) {
-                row.dataset.rowIndex = index;
-
-                row.querySelector('.row-number').textContent = index + 1;
-
-                row.querySelectorAll('[name^="items["]')
-                    .forEach(function (field) {
-                        field.name = field.name.replace(
-                            /^items\[\d+\]/,
-                            `items[${index}]`
-                        );
-                    });
+        body.querySelectorAll('.material-item-row').forEach((row, index) => {
+            row.dataset.rowIndex = index;
+            row.querySelector('.row-number').textContent = index + 1;
+            row.querySelectorAll('[name^="items["]').forEach(field => {
+                field.name = field.name.replace(/^items\[\d+\]/, `items[${index}]`);
             });
-
+        });
         rowIndex = body.querySelectorAll('.material-item-row').length;
     }
 
-    function refreshRowNumbers() {
-        body.querySelectorAll('.material-item-row')
-            .forEach(function (row, index) {
-                row.querySelector('.row-number').textContent = index + 1;
-            });
-    }
-
-    function escapeHtml(value) {
-        const div = document.createElement('div');
-        div.textContent = value ?? '';
-        return div.innerHTML;
-    }
-
     function materialItemOptions() {
-        return Array.from(
-            body.querySelectorAll('.material-item-row')
-        ).map(function (row, index) {
-            const typeSelect =
-                row.querySelector('.material-type-select');
-
-            const selectedOption =
-                typeSelect.options[typeSelect.selectedIndex];
-
-            const label = typeSelect.value
-                ? `Item ${index + 1} — ${selectedOption?.text || 'Material'}`
-                : `Item ${index + 1} — Material not selected`;
-
-            return {
-                value: String(index),
-                label: label,
-            };
+        return Array.from(body.querySelectorAll('.material-item-row')).map((row, index) => {
+            const mode = row.querySelector('.entry-mode-input').value;
+            let label = 'Material not selected';
+            if (mode === 'temporary') {
+                label = row.querySelector('.temporary-material-name').value.trim() || 'Temporary material';
+                label += ' — Pending Classification';
+            } else {
+                const type = materialById(row.querySelector('.material-type-select').value);
+                if (type) label = type.name;
+            }
+            return {value: String(index), label: `Item ${index + 1} — ${label}`};
         });
     }
 
     function refreshPhotoItemOptions() {
+        if (!photoRows) return;
         const options = materialItemOptions();
-
-        photoRows.querySelectorAll('.photo-item-select')
-            .forEach(function (select) {
-                const selected =
-                    select.value !== ''
-                        ? select.value
-                        : (select.dataset.selected || '');
-
-                select.innerHTML = '';
-                select.add(
-                    new Option(
-                        'General / Whole Receipt',
-                        ''
-                    )
-                );
-
-                options.forEach(function (item) {
-                    select.add(
-                        new Option(
-                            item.label,
-                            item.value,
-                            false,
-                            String(item.value) === String(selected)
-                        )
-                    );
-                });
-
-                select.dataset.selected = select.value;
-            });
-    }
-
-    function initializePhotoRow(row) {
-        const fileInput =
-            row.querySelector('.photo-file-input');
-
-        const previewWrapper =
-            row.querySelector('.photo-preview-wrapper');
-
-        const previewImage =
-            row.querySelector('.photo-preview');
-
-        const fileName =
-            row.querySelector('.photo-file-name');
-
-        const fileSize =
-            row.querySelector('.photo-file-size');
-
-        const itemSelect =
-            row.querySelector('.photo-item-select');
-
-        itemSelect.addEventListener('change', function () {
-            itemSelect.dataset.selected = itemSelect.value;
-        });
-
-        fileInput.addEventListener('change', function () {
-            const file = fileInput.files?.[0];
-
-            if (! file) {
-                previewWrapper.classList.add('hidden');
-                previewImage.removeAttribute('src');
-                fileName.textContent = '';
-                fileSize.textContent = '';
-                return;
-            }
-
-            if (file.size > 10 * 1024 * 1024) {
-                alert('Each photo must be 10 MB or smaller.');
-                fileInput.value = '';
-                previewWrapper.classList.add('hidden');
-                return;
-            }
-
-            const objectUrl = URL.createObjectURL(file);
-
-            previewImage.src = objectUrl;
-            fileName.textContent = file.name;
-            fileSize.textContent =
-                `${(file.size / 1024 / 1024).toFixed(2)} MB`;
-
-            previewWrapper.classList.remove('hidden');
-
-            previewImage.onload = function () {
-                URL.revokeObjectURL(objectUrl);
-            };
-        });
-
-        row.querySelector('.remove-photo-row')
-            .addEventListener('click', function () {
-                const rows =
-                    photoRows.querySelectorAll('.photo-row');
-
-                if (rows.length <= 1) {
-                    /*
-                     * Keep one empty upload row for convenience.
-                     */
-                    fileInput.value = '';
-                    row.querySelector('.photo-type-select').value =
-                        'Material Photo';
-
-                    row.querySelector('input[type="text"]').value = '';
-                    itemSelect.value = '';
-                    itemSelect.dataset.selected = '';
-
-                    previewWrapper.classList.add('hidden');
-                    return;
-                }
-
-                row.remove();
-                renumberPhotoRows();
-            });
-    }
-
-    function buildPhotoRow(index) {
-        const row = document.createElement('div');
-
-        row.className = 'photo-row p-3 sm:p-5';
-        row.dataset.photoIndex = index;
-
-        row.innerHTML = `
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-start">
-
-                <div class="lg:col-span-2">
-                    <label class="{{ $labelClass }}">Photo Type</label>
-
-                    <select name="photos[${index}][photo_type]"
-                            class="{{ $inputClass }} photo-type-select">
-                        ${photoTypes.map(function (type) {
-                            return `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`;
-                        }).join('')}
-                    </select>
-                </div>
-
-                <div class="lg:col-span-3">
-                    <label class="{{ $labelClass }}">Material Item</label>
-
-                    <select name="photos[${index}][item_index]"
-                            class="{{ $inputClass }} photo-item-select"
-                            data-selected="">
-                        <option value="">General / Whole Receipt</option>
-                    </select>
-
-                    <p class="mt-1 text-xs text-gray-500">
-                        Choose a material only when the photo relates specifically to that item.
-                    </p>
-                </div>
-
-                <div class="lg:col-span-3">
-                    <label class="{{ $labelClass }}">Caption</label>
-
-                    <input type="text"
-                           name="photos[${index}][caption]"
-                           class="{{ $inputClass }}"
-                           maxlength="500"
-                           placeholder="Optional photo description">
-                </div>
-
-                <div class="lg:col-span-3">
-                    <label class="{{ $labelClass }}">Image</label>
-
-                    <input type="file"
-                           name="photos[${index}][file]"
-                           class="{{ $inputClass }} photo-file-input"
-                           accept="image/jpeg,image/png,image/webp,image/*">
-
-                    <p class="mt-1 text-xs text-gray-500">
-                        JPG, PNG or WEBP. Maximum 10 MB.
-                    </p>
-                </div>
-
-                <div class="lg:col-span-1 lg:pt-6">
-                    <button type="button"
-                            class="remove-photo-row w-full rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
-                        Remove
-                    </button>
-                </div>
-
-            </div>
-
-            <div class="photo-preview-wrapper mt-4 hidden">
-                <div class="flex flex-wrap items-start gap-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-
-                    <img src=""
-                         alt="Photo preview"
-                         class="photo-preview h-28 w-36 rounded-lg border border-gray-200 bg-white object-cover">
-
-                    <div class="text-sm text-gray-600">
-                        <p class="font-semibold text-gray-800">Preview</p>
-                        <p class="photo-file-name mt-1"></p>
-                        <p class="photo-file-size mt-1 text-xs text-gray-500"></p>
-                    </div>
-
-                </div>
-            </div>
-        `;
-
-        return row;
-    }
-
-    function renumberPhotoRows() {
-        photoRows.querySelectorAll('.photo-row')
-            .forEach(function (row, index) {
-                row.dataset.photoIndex = index;
-
-                row.querySelectorAll('[name^="photos["]')
-                    .forEach(function (field) {
-                        field.name = field.name.replace(
-                            /^photos\[\d+\]/,
-                            `photos[${index}]`
-                        );
-                    });
-            });
-
-        photoIndex = photoRows.querySelectorAll('.photo-row').length;
-        refreshPhotoItemOptions();
-    }
-
-    function cloneSelectOptions(select) {
-        return Array.from(select.options)
-            .map(function (item) {
-                return item.cloneNode(true);
-            });
-    }
-
-    const originalBlockOptions = cloneSelectOptions(blockSelect);
-    const originalFloorOptions = cloneSelectOptions(floorSelect);
-    const originalUnitOptions = cloneSelectOptions(unitSelect);
-
-    function filterLocationSelect(
-        select,
-        predicate,
-        placeholder
-    ) {
-        const currentValue = select.value;
-
-        const source =
-            select === blockSelect
-                ? originalBlockOptions
-                : select === floorSelect
-                    ? originalFloorOptions
-                    : originalUnitOptions;
-
-        select.innerHTML = '';
-        select.add(new Option(placeholder, ''));
-
-        source.forEach(function (item) {
-            if (item.value !== '' && predicate(item)) {
-                const cloned = item.cloneNode(true);
-
-                if (cloned.value === currentValue) {
-                    cloned.selected = true;
-                }
-
-                select.add(cloned);
-            }
+        photoRows.querySelectorAll('.photo-item-select').forEach(select => {
+            const selected = select.value !== '' ? select.value : (select.dataset.selected || '');
+            select.innerHTML = '';
+            select.add(new Option('General / Whole Receipt', ''));
+            options.forEach(item => select.add(new Option(item.label, item.value, false, String(item.value) === String(selected))));
+            select.dataset.selected = select.value;
         });
     }
 
-    function filterProjectLocations() {
-        const projectId = projectSelect.value;
-
-        filterLocationSelect(
-            blockSelect,
-            function (option) {
-                return projectId === ''
-                    || option.dataset.project === projectId;
-            },
-            'Select Block'
-        );
-
-        filterFloors();
+    function filterLocationSelect(select, predicates) {
+        if (!select) return;
+        Array.from(select.options).forEach((opt, i) => {
+            if (i === 0) return;
+            opt.hidden = !predicates.every(([key, value]) => !value || String(opt.dataset[key] || '') === String(value));
+        });
+        if (select.selectedOptions[0]?.hidden) select.value = '';
     }
 
-    function filterFloors() {
-        const projectId = projectSelect.value;
-        const blockId = blockSelect.value;
-
-        filterLocationSelect(
-            floorSelect,
-            function (option) {
-                const projectMatch =
-                    projectId === ''
-                    || option.dataset.project === projectId;
-
-                const blockMatch =
-                    blockId === ''
-                    || option.dataset.block === blockId;
-
-                return projectMatch && blockMatch;
-            },
-            'Select Floor'
-        );
-
-        filterUnits();
+    function refreshLocations() {
+        const project = projectSelect?.value || '';
+        const block = blockSelect?.value || '';
+        const floor = floorSelect?.value || '';
+        filterLocationSelect(blockSelect, [['project', project]]);
+        filterLocationSelect(floorSelect, [['project', project], ['block', block]]);
+        filterLocationSelect(unitSelect, [['project', project], ['block', block], ['floor', floor]]);
     }
 
-    function filterUnits() {
-        const projectId = projectSelect.value;
-        const blockId = blockSelect.value;
-        const floorId = floorSelect.value;
+    [projectSelect, blockSelect, floorSelect].forEach(select => select?.addEventListener('change', refreshLocations));
 
-        filterLocationSelect(
-            unitSelect,
-            function (option) {
-                const projectMatch =
-                    projectId === ''
-                    || option.dataset.project === projectId;
-
-                const blockMatch =
-                    blockId === ''
-                    || option.dataset.block === blockId;
-
-                const floorMatch =
-                    floorId === ''
-                    || option.dataset.floor === floorId;
-
-                return projectMatch && blockMatch && floorMatch;
-            },
-            'Select Unit'
-        );
-    }
-
-    function toggleContractor() {
-        contractorWrapper.classList.toggle(
-            'hidden',
-            ! contractorCheckbox.checked
-        );
-
-        if (! contractorCheckbox.checked) {
-            document.getElementById('contractor_id').value = '';
-        }
-    }
+    body.querySelectorAll('.material-item-row').forEach(initializeRow);
 
     addRowButton.addEventListener('click', function () {
-        const newRow = buildNewRow(rowIndex++);
-        body.appendChild(newRow);
-        initializeRow(newRow);
+        const row = buildNewRow(rowIndex++);
+        body.appendChild(row);
         renumberMaterialRows();
+        initializeRow(row);
+        row.querySelector('.material-search-input').focus();
         refreshPhotoItemOptions();
     });
 
-    addPhotoRowButton.addEventListener('click', function () {
-        const newPhotoRow = buildPhotoRow(photoIndex++);
-        photoRows.appendChild(newPhotoRow);
-        initializePhotoRow(newPhotoRow);
-        renumberPhotoRows();
-    });
+    if (photoRows && addPhotoRowButton) {
+        addPhotoRowButton.addEventListener('click', function () {
+            const first = photoRows.querySelector('.photo-row');
+            if (!first) return;
+            const row = first.cloneNode(true);
+            row.querySelectorAll('input, select').forEach(field => {
+                if (field.type === 'file' || field.type === 'text') field.value = '';
+                if (field.tagName === 'SELECT') field.selectedIndex = 0;
+                if (field.name) field.name = field.name.replace(/^photos\[\d+\]/, `photos[${photoIndex}]`);
+            });
+            row.querySelector('.photo-row-number')?.replaceChildren(document.createTextNode(photoIndex + 1));
+            photoRows.appendChild(row);
+            photoIndex++;
+            refreshPhotoItemOptions();
+        });
+    }
 
-    projectSelect.addEventListener('change', function () {
-        blockSelect.value = '';
-        floorSelect.value = '';
-        unitSelect.value = '';
-        filterProjectLocations();
-    });
-
-    blockSelect.addEventListener('change', function () {
-        floorSelect.value = '';
-        unitSelect.value = '';
-        filterFloors();
-    });
-
-    floorSelect.addEventListener('change', function () {
-        unitSelect.value = '';
-        filterUnits();
-    });
-
-    contractorCheckbox.addEventListener(
-        'change',
-        toggleContractor
-    );
-
-    body.querySelectorAll('.material-item-row')
-        .forEach(initializeRow);
-
-    photoRows.querySelectorAll('.photo-row')
-        .forEach(initializePhotoRow);
-
-    renumberMaterialRows();
-    renumberPhotoRows();
-
-    filterProjectLocations();
-    toggleContractor();
+    refreshLocations();
     refreshPhotoItemOptions();
 });
 </script>

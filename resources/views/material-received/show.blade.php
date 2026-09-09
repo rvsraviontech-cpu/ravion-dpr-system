@@ -458,11 +458,19 @@
                                     Material {{ $index + 1 }}
                                 </div>
                                 <div class="mt-1 text-base font-bold text-gray-800">
-                                    {{ $item->materialType?->material_type_name ?? '-' }}
+                                    {{ $item->materialType?->material_type_name
+                                        ?? $item->pendingClassification?->raw_material_name
+                                        ?? '-' }}
                                 </div>
-                                @if($item->activity)
+                                @if($item->work_package_display_name)
                                     <div class="mt-1 text-xs text-gray-500">
-                                        {{ $item->activity->activity_name }}
+                                        {{ $item->work_package_display_name }}
+                                    </div>
+                                @endif
+
+                                @if($item->is_pending_classification)
+                                    <div class="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800">
+                                        Pending Classification
                                     </div>
                                 @endif
                             </div>
@@ -479,15 +487,15 @@
                         <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
                             <div class="rounded-lg bg-gray-50 px-3 py-2">
                                 <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Brand</div>
-                                <div class="mt-1 font-semibold text-gray-800">{{ $item->brand?->brand_name ?? '-' }}</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->brand?->brand_name ?? $item->pendingClassification?->raw_brand ?? '-' }}</div>
                             </div>
                             <div class="rounded-lg bg-gray-50 px-3 py-2">
                                 <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Specification</div>
-                                <div class="mt-1 font-semibold text-gray-800">{{ $item->specification?->specification_name ?? '-' }}</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->specification?->specification_name ?? $item->pendingClassification?->raw_specification ?? '-' }}</div>
                             </div>
                             <div class="rounded-lg bg-gray-50 px-3 py-2">
                                 <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Grade</div>
-                                <div class="mt-1 font-semibold text-gray-800">{{ $item->grade?->grade_name ?? '-' }}</div>
+                                <div class="mt-1 font-semibold text-gray-800">{{ $item->grade?->grade_name ?? $item->pendingClassification?->raw_grade ?? '-' }}</div>
                             </div>
                             <div class="rounded-lg bg-gray-50 px-3 py-2">
                                 <div class="text-[10px] font-bold uppercase tracking-wide text-gray-500">Condition</div>
@@ -553,8 +561,8 @@
                 <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
                     <tr>
                         <th class="px-4 py-3 text-center">#</th>
-                        <th class="px-4 py-3 text-left">Activity Division</th>
-                        <th class="px-4 py-3 text-left">Activity</th>
+                        <th class="px-4 py-3 text-left">Work Package</th>
+                        <th class="px-4 py-3 text-left">Classification</th>
                         <th class="px-4 py-3 text-left">Material Type</th>
                         <th class="px-4 py-3 text-left">Brand</th>
                         <th class="px-4 py-3 text-left">Specification</th>
@@ -583,27 +591,37 @@
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    {{ $item->activityDivision?->name ?? '-' }}
+                                    {{ $item->work_package_display_name ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    {{ $item->activity?->activity_name ?? '-' }}
+                                    @if($item->is_pending_classification)
+                                        <span class="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                                            Pending Classification
+                                        </span>
+                                    @else
+                                        <span class="inline-flex rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">
+                                            Mastered
+                                        </span>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-3 font-semibold text-gray-800">
-                                    {{ $item->materialType?->material_type_name ?? '-' }}
+                                    {{ $item->materialType?->material_type_name
+                                        ?? $item->pendingClassification?->raw_material_name
+                                        ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    {{ $item->brand?->brand_name ?? '-' }}
+                                    {{ $item->brand?->brand_name ?? $item->pendingClassification?->raw_brand ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    {{ $item->specification?->specification_name ?? '-' }}
+                                    {{ $item->specification?->specification_name ?? $item->pendingClassification?->raw_specification ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    {{ $item->grade?->grade_name ?? '-' }}
+                                    {{ $item->grade?->grade_name ?? $item->pendingClassification?->raw_grade ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-3 text-right font-semibold">
