@@ -2,16 +2,26 @@
 
 @section('content')
 
+@php
+    $isEdit = isset($attendanceCorrection) && $attendanceCorrection;
+@endphp
+
 <x-rds.page-header
-    title="New Attendance Correction"
-    subtitle="Correct existing attendance or add labour omitted from the approved attendance sheet."
+    :title="$isEdit
+        ? 'Edit Attendance Correction'
+        : 'New Attendance Correction'"
+    :subtitle="$isEdit
+        ? 'Update the Draft correction proposal. The approved attendance remains unchanged until this correction is approved and applied.'
+        : 'Correct existing attendance or add labour omitted from the approved attendance sheet.'"
 >
     <x-slot:actions>
         <x-rds.button
-            href="{{ route('attendance-corrections.index') }}"
+            href="{{ $isEdit
+                ? route('attendance-corrections.show', $attendanceCorrection)
+                : route('attendance-corrections.index') }}"
             variant="secondary"
         >
-            Back to Corrections
+            {{ $isEdit ? 'Back to Correction' : 'Back to Corrections' }}
         </x-rds.button>
     </x-slot:actions>
 </x-rds.page-header>
@@ -32,6 +42,7 @@
     </div>
 @endif
 
+@unless($isEdit)
 <x-rds.card class="mb-4">
     <div class="mb-4">
         <h2 class="text-base font-semibold text-gray-900">
@@ -85,6 +96,7 @@
         </div>
     </form>
 </x-rds.card>
+@endunless
 
 @if($selectedAttendance)
 
@@ -174,7 +186,44 @@
             ?? false
         );
 
-        $oldAddRows = collect(old('details', []))
+        $savedCorrectionRows = $isEdit
+            ? $attendanceCorrection->details
+                ->whereIn('action_type', ['modify', 'remove'])
+                ->filter(fn ($row) => filled($row->labour_attendance_detail_id))
+                ->keyBy(fn ($row) => (int) $row->labour_attendance_detail_id)
+            : collect();
+
+        $savedAddRows = $isEdit
+            ? $attendanceCorrection->details
+                ->where('action_type', 'add')
+                ->map(fn ($row) => [
+                    'action_type' => 'add',
+                    'labour_id' => $row->labour_id,
+                    'new_attendance_status_id' => $row->new_attendance_status_id,
+                    'new_working_status_id' => $row->new_working_status_id,
+                    'new_check_in_time' => $row->new_check_in_time
+                        ? substr((string) $row->new_check_in_time, 0, 5)
+                        : '',
+                    'new_check_out_time' => $row->new_check_out_time
+                        ? substr((string) $row->new_check_out_time, 0, 5)
+                        : '',
+                    'new_normal_hours' => $row->new_normal_hours !== null
+                        ? number_format((float) $row->new_normal_hours, 2, '.', '')
+                        : '0.00',
+                    'new_ot_hours' => $row->new_ot_hours !== null
+                        ? number_format((float) $row->new_ot_hours, 2, '.', '')
+                        : '0.00',
+                    'new_ot_amount' => $row->new_ot_amount !== null
+                        ? number_format((float) $row->new_ot_amount, 2, '.', '')
+                        : '',
+                    'new_remarks' => $row->new_remarks ?? '',
+                    'line_reason' => $row->line_reason ?? '',
+                ])
+                ->values()
+                ->all()
+            : [];
+
+        $oldAddRows = collect(old('details', $savedAddRows))
             ->filter(fn ($row) => ($row['action_type'] ?? null) === 'add')
             ->values()
             ->all();
@@ -182,7 +231,9 @@
 
     <form
         method="POST"
-        action="{{ route('attendance-corrections.store') }}"
+        action="{{ $isEdit
+            ? route('attendance-corrections.update', $attendanceCorrection)
+            : route('attendance-corrections.store') }}"
         x-data="attendanceCorrectionForm({
             initialAddRows: @js($oldAddRows),
             presentStatusId: @js($presentStatus?->id),
@@ -230,6 +281,9 @@
         x-on:submit="prepareSubmission"
     >
         @csrf
+        @if($isEdit)
+            @method('PUT')
+        @endif
 
         <input
             type="hidden"
@@ -346,7 +400,12 @@
                     id="new_attendance_date"
                     name="new_attendance_date"
                     required
-                    value="{{ old('new_attendance_date', $selectedAttendance->attendance_date?->format('Y-m-d')) }}"
+                    value="{{ old(
+                        'new_attendance_date',
+                        $isEdit
+                            ? $attendanceCorrection->new_attendance_date?->format('Y-m-d')
+                            : $selectedAttendance->attendance_date?->format('Y-m-d')
+                    ) }}"
                     class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                 >
                 <p class="mt-1 text-xs text-gray-500">
@@ -360,7 +419,9 @@
                     correctedType: @js(
                         old(
                             'new_attendance_type',
-                            $selectedAttendance->attendance_type ?? 'regular'
+                            $isEdit
+                                ? ($attendanceCorrection->new_attendance_type ?? $selectedAttendance->attendance_type ?? 'regular')
+                                : ($selectedAttendance->attendance_type ?? 'regular')
                         )
                     )
                 }"
@@ -397,7 +458,12 @@
                         name="new_work_session_name"
                         maxlength="150"
                         x-bind:required="correctedType === 'additional_work'"
-                        value="{{ old('new_work_session_name', $selectedAttendance->work_session_name) }}"
+                        value="{{ old(
+                            'new_work_session_name',
+                            $isEdit
+                                ? $attendanceCorrection->new_work_session_name
+                                : $selectedAttendance->work_session_name
+                        ) }}"
                         placeholder="Example: Night Slab Work"
                         class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
                     >
@@ -434,7 +500,10 @@
                 maxlength="3000"
                 placeholder="Enter the overall reason for this attendance correction..."
                 class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200"
-            >{{ old('correction_reason') }}</textarea>
+            >{{ old(
+                    'correction_reason',
+                    $isEdit ? $attendanceCorrection->correction_reason : ''
+                ) }}</textarea>
         </x-rds.card>
 
         {{-- Existing attendance rows --}}
@@ -555,9 +624,11 @@
                             @php
                                 $rowIndex = $loop->index;
                                 $oldRow = old("details.{$rowIndex}", []);
+                                $savedCorrectionRow = $savedCorrectionRows->get((int) $detail->id);
 
                                 $initialStatusId = (string) (
                                     $oldRow['new_attendance_status_id']
+                                    ?? $savedCorrectionRow?->new_attendance_status_id
                                     ?? $detail->attendance_status_id
                                     ?? ''
                                 );
@@ -576,6 +647,7 @@
                                     initialStatusId: @js($initialStatusId),
                                     initialActionType: @js(
                                         $oldRow['action_type']
+                                        ?? $savedCorrectionRow?->action_type
                                         ?? 'modify'
                                     ),
                                     presentStatusId: @js((string) $presentStatus?->id),
@@ -592,16 +664,25 @@
 
                                     checkIn: @js(
                                         $oldRow['new_check_in_time']
+                                        ?? ($savedCorrectionRow?->new_check_in_time
+                                            ? substr((string) $savedCorrectionRow->new_check_in_time, 0, 5)
+                                            : null)
                                         ?? $checkIn
                                     ),
 
                                     checkOut: @js(
                                         $oldRow['new_check_out_time']
+                                        ?? ($savedCorrectionRow?->new_check_out_time
+                                            ? substr((string) $savedCorrectionRow->new_check_out_time, 0, 5)
+                                            : null)
                                         ?? $checkOut
                                     ),
 
                                     normalHours: @js(
                                         $oldRow['new_normal_hours']
+                                        ?? ($savedCorrectionRow?->new_normal_hours !== null
+                                            ? number_format((float) $savedCorrectionRow->new_normal_hours, 2, '.', '')
+                                            : null)
                                         ?? number_format(
                                             (float) $detail->normal_hours,
                                             2,
@@ -621,6 +702,9 @@
 
                                     otHours: @js(
                                         $oldRow['new_ot_hours']
+                                        ?? ($savedCorrectionRow?->new_ot_hours !== null
+                                            ? number_format((float) $savedCorrectionRow->new_ot_hours, 2, '.', '')
+                                            : null)
                                         ?? number_format(
                                             (float) $detail->ot_hours,
                                             2,
@@ -631,6 +715,9 @@
 
                                     otAmount: @js(
                                         $oldRow['new_ot_amount']
+                                        ?? ($savedCorrectionRow?->new_ot_amount !== null
+                                            ? number_format((float) $savedCorrectionRow->new_ot_amount, 2, '.', '')
+                                            : null)
                                         ?? (
                                             $detail->ot_amount !== null
                                                 ? number_format(
@@ -645,6 +732,7 @@
 
                                     lineReason: @js(
                                         $oldRow['line_reason']
+                                        ?? $savedCorrectionRow?->line_reason
                                         ?? ''
                                     )
                                 })"
@@ -721,7 +809,9 @@
                                     <input
                                         type="hidden"
                                         name="details[{{ $rowIndex }}][new_remarks]"
-                                        value="{{ $oldRow['new_remarks'] ?? $detail->remarks }}"
+                                        value="{{ $oldRow['new_remarks']
+                                            ?? $savedCorrectionRow?->new_remarks
+                                            ?? $detail->remarks }}"
                                     >
                                 </td>
 
@@ -784,6 +874,7 @@
                                                 @selected(
                                                     (string) (
                                                         $oldRow['new_working_status_id']
+                                                        ?? $savedCorrectionRow?->new_working_status_id
                                                         ?? $detail->working_status_id
                                                     )
                                                     === (string) $status->id
@@ -1276,14 +1367,16 @@
 
         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <x-rds.button
-                href="{{ route('attendance-corrections.index') }}"
+                href="{{ $isEdit
+                    ? route('attendance-corrections.show', $attendanceCorrection)
+                    : route('attendance-corrections.index') }}"
                 variant="secondary"
             >
                 Cancel
             </x-rds.button>
 
             <x-rds.button type="submit" variant="primary">
-                Save as Draft
+                {{ $isEdit ? 'Save Changes' : 'Save as Draft' }}
             </x-rds.button>
         </div>
     </form>

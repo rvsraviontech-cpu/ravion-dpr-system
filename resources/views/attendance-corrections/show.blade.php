@@ -24,6 +24,14 @@
             >
                 Edit Correction
             </x-rds.button>
+
+            <button
+                type="button"
+                @click="$dispatch('open-delete-attendance-correction')"
+                class="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+            >
+                Delete Correction
+            </button>
         @endif
     </x-slot:actions>
 </x-rds.page-header>
@@ -318,6 +326,25 @@
         </x-rds.card>
     @endif
 
+    @if(
+        $attendanceCorrection->status === 'rejected'
+        && filled($attendanceCorrection->rejection_reason)
+    )
+        <x-rds.card>
+            <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+                <div class="text-xs font-semibold uppercase tracking-wide text-red-700">Rejection Reason</div>
+                <div class="mt-2 whitespace-pre-line text-sm font-medium text-red-900">
+                    {{ $attendanceCorrection->rejection_reason }}
+                </div>
+                @if($attendanceCorrection->rejected_at)
+                    <div class="mt-2 text-xs text-red-700">
+                        Rejected on {{ $attendanceCorrection->rejected_at->format('d M Y, h:i A') }}
+                    </div>
+                @endif
+            </div>
+        </x-rds.card>
+    @endif
+
     <x-rds.card :padding="false">
 
         <div class="border-b border-gray-200 px-4 py-4">
@@ -462,6 +489,162 @@
         </div>
 
     </x-rds.card>
+
+    @if($attendanceCorrection->status === 'draft')
+        <x-rds.card>
+            <div class="flex justify-end">
+                <form method="POST" action="{{ route('attendance-corrections.submit', $attendanceCorrection) }}">
+                    @csrf
+                    <x-rds.button type="submit" variant="primary">Submit for Approval</x-rds.button>
+                </form>
+            </div>
+        </x-rds.card>
+    @elseif($attendanceCorrection->status === 'submitted')
+        <x-rds.card>
+            <div x-data="{ rejectOpen: {{ $errors->has('rejection_reason') ? 'true' : 'false' }} }"
+                 class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+
+                <button type="button" @click="rejectOpen = true"
+                    class="inline-flex items-center justify-center rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50">
+                    Reject Correction
+                </button>
+
+                <form method="POST" action="{{ route('attendance-corrections.approve', $attendanceCorrection) }}">
+                    @csrf
+                    <x-rds.button type="submit" variant="primary">Approve Correction</x-rds.button>
+                </form>
+
+                <div x-cloak x-show="rejectOpen" x-transition.opacity
+                     @keydown.escape.window="rejectOpen = false"
+                     class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+                     role="dialog" aria-modal="true">
+                    <div @click.outside="rejectOpen = false"
+                         class="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+                        <form method="POST" action="{{ route('attendance-corrections.reject', $attendanceCorrection) }}">
+                            @csrf
+
+                            <div class="border-b border-gray-200 px-6 py-5">
+                                <h2 class="text-lg font-bold text-gray-900">Reject Attendance Correction</h2>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Enter the reason for rejection. The correction can then be edited and resubmitted.
+                                </p>
+                            </div>
+
+                            <div class="px-6 py-5">
+                                <label for="rejection_reason" class="block text-sm font-semibold text-gray-700">
+                                    Rejection Reason <span class="text-red-600">*</span>
+                                </label>
+                                <textarea id="rejection_reason" name="rejection_reason" rows="5"
+                                    minlength="3" maxlength="2000" required autofocus
+                                    placeholder="Explain what must be corrected before this request can be approved."
+                                    class="mt-2 block w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-red-500 focus:ring-red-500">{{ old('rejection_reason') }}</textarea>
+                                @error('rejection_reason')
+                                    <p class="mt-2 text-sm font-medium text-red-600">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="flex items-center justify-end gap-3 rounded-b-2xl border-t border-gray-200 bg-gray-50 px-6 py-4">
+                                <button type="button" @click="rejectOpen = false"
+                                    class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+                                    Cancel
+                                </button>
+                                <button type="submit"
+                                    class="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700">
+                                    Confirm Reject
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </x-rds.card>
+    @elseif($attendanceCorrection->status === 'approved')
+        <x-rds.card>
+            <div class="flex justify-end">
+                <form method="POST" action="{{ route('attendance-corrections.apply', $attendanceCorrection) }}">
+                    @csrf
+                    <x-rds.button type="submit" variant="primary">Apply Approved Correction</x-rds.button>
+                </form>
+            </div>
+        </x-rds.card>
+    @endif
+
+    @if($attendanceCorrection->canBeEdited())
+        <div
+            x-data="{ open: false }"
+            @open-delete-attendance-correction.window="open = true"
+            @keydown.escape.window="open = false"
+        >
+            <div
+                x-cloak
+                x-show="open"
+                x-transition.opacity
+                class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 p-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="delete-correction-title"
+            >
+                <div
+                    @click.outside="open = false"
+                    class="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+                >
+                    <div class="border-b border-gray-200 px-6 py-5">
+                        <h2
+                            id="delete-correction-title"
+                            class="text-lg font-bold text-gray-900"
+                        >
+                            Delete Attendance Correction?
+                        </h2>
+
+                        <p class="mt-2 text-sm text-gray-600">
+                            You are about to delete
+                            <span class="font-semibold text-gray-900">
+                                {{ $attendanceCorrection->correction_number }}
+                            </span>
+                            and its proposed correction changes.
+                        </p>
+                    </div>
+
+                    <div class="px-6 py-5">
+                        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                            <div class="text-sm font-semibold text-amber-900">
+                                The original approved attendance will not be affected.
+                            </div>
+
+                            <div class="mt-1 text-sm text-amber-800">
+                                Only the Draft/Rejected correction request and its proposal rows will be deleted.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-3 rounded-b-2xl border-t border-gray-200 bg-gray-50 px-6 py-4">
+                        <button
+                            type="button"
+                            @click="open = false"
+                            class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <form
+                            method="POST"
+                            action="{{ route('attendance-corrections.destroy', $attendanceCorrection) }}"
+                        >
+                            @csrf
+                            @method('DELETE')
+
+                            <button
+                                type="submit"
+                                class="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                            >
+                                Delete Correction
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 
 </div>
 

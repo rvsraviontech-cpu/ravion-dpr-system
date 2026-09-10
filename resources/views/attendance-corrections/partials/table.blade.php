@@ -1,51 +1,47 @@
-<x-rds.card :padding="false">
-
-    <div class="w-full overflow-x-auto">
-
-        <table class="w-full min-w-[1250px] table-fixed divide-y divide-gray-200">
+        <table class="w-full min-w-[1080px] table-fixed divide-y divide-gray-200">
 
             <colgroup>
-                <col class="w-[55px]">
-                <col class="w-[260px]">
-                <col class="w-[115px]">
-                <col class="w-[235px]">
+                <col class="w-[45px]">
+                <col class="w-[210px]">
+                <col class="w-[105px]">
+                <col class="w-[190px]">
+                <col class="w-[120px]">
                 <col class="w-[135px]">
-                <col class="w-[165px]">
-                <col class="w-[115px]">
-                <col class="w-[275px]">
+                <col class="w-[95px]">
+                <col class="w-[205px]">
             </colgroup>
 
-            <thead class="bg-gray-50">
+            <thead class="sticky top-0 z-20 bg-gray-50 shadow-sm">
                 <tr>
-                    <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         #
                     </th>
 
-                    <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Labour
                     </th>
 
-                    <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Change
                     </th>
 
-                    <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Project
                     </th>
 
-                    <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Attendance Date
                     </th>
 
-                    <th class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Requested By
                     </th>
 
-                    <th class="px-3 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Status
                     </th>
 
-                    <th class="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
+                    <th class="px-2 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600">
                         Actions
                     </th>
                 </tr>
@@ -139,13 +135,13 @@
                         };
                     @endphp
 
-                    <tr class="align-middle hover:bg-gray-50">
+                    <tr class="h-[58px] align-middle hover:bg-gray-50">
 
-                        <td class="px-3 py-4 text-sm text-gray-500">
+                        <td class="px-2 py-2 text-sm text-gray-500">
                             {{ $attendanceCorrections->firstItem() + $loop->index }}
                         </td>
 
-                        <td class="px-3 py-4">
+                        <td class="px-2 py-2">
                             <div class="text-sm font-semibold text-gray-900">
                                 {{ $affectedLabour?->full_name
                                     ?? $affectedLabour?->name
@@ -153,66 +149,45 @@
                             </div>
 
                             @if($affectedLabour?->designationRole?->name)
-                                <div class="mt-1 text-xs text-gray-500">
+                                <div class="mt-0.5 text-[11px] leading-tight text-gray-500">
                                     {{ $affectedLabour->designationRole->name }}
                                 </div>
                             @endif
 
                             @if($moreCount > 0)
-                                <div class="mt-1 text-xs font-semibold text-blue-600">
+                                <div class="mt-0.5 text-[11px] font-semibold leading-tight text-blue-600">
                                     +{{ $moreCount }} more
                                     {{ $moreCount === 1 ? 'labour' : 'labourers' }}
                                 </div>
                             @endif
-
-                            <div class="mt-2 space-y-0.5 text-[11px] text-gray-400">
-                                <div>
-                                    {{ $correction->correction_number ?? 'No correction number' }}
-                                </div>
-
-                                <div>
-                                    {{ $attendance?->attendance_number ?? 'No attendance number' }}
-                                </div>
-                            </div>
                         </td>
 
-                        <td class="px-3 py-4">
+                        <td class="px-2 py-2">
                             <x-rds.badge :variant="$actionVariant">
                                 {{ $actionLabel }}
                             </x-rds.badge>
 
                             @if($changesCount > 1)
-                                <div class="mt-1 text-xs text-gray-500">
+                                <div class="mt-0.5 text-[11px] leading-tight text-gray-500">
                                     {{ $changesCount }} total changes
                                 </div>
                             @endif
                         </td>
 
-                        <td class="px-3 py-4 text-sm text-gray-700">
+                        <td class="px-2 py-2 text-sm text-gray-700">
                             <div class="font-medium text-gray-900">
                                 {{ $project?->project_name ?? '—' }}
                             </div>
 
-                            @if($project?->project_code)
-                                <div class="mt-1 text-xs text-gray-500">
-                                    {{ $project->project_code }}
-                                </div>
-                            @endif
-
-                            @if($attendance?->shift?->name)
-                                <div class="mt-1 text-xs text-gray-500">
-                                    Shift: {{ $attendance->shift->name }}
-                                </div>
-                            @endif
                         </td>
 
-                        <td class="px-3 py-4 text-sm text-gray-700">
+                        <td class="px-2 py-2 text-sm text-gray-700">
                             {{ $correction->attendance_date?->format('d M Y')
                                 ?? $attendance?->attendance_date?->format('d M Y')
                                 ?? '—' }}
                         </td>
 
-                        <td class="px-3 py-4 text-sm text-gray-700">
+                        <td class="px-2 py-2 text-sm text-gray-700">
                             <div class="font-medium text-gray-900">
                                 {{ $requestedBy?->name ?? '—' }}
                             </div>
@@ -224,21 +199,21 @@
                             @endif
                         </td>
 
-                        <td class="px-3 py-4 text-center">
+                        <td class="px-2 py-2 text-center">
                             <x-rds.badge :variant="$statusVariant">
                                 {{ $statusLabel }}
                             </x-rds.badge>
                         </td>
 
-                        <td class="px-3 py-4 text-right">
-                            <div class="flex flex-wrap items-center justify-end gap-1.5">
+                        <td class="px-2 py-2 text-right">
+                            <div class="flex flex-nowrap items-center justify-end gap-1 whitespace-nowrap">
 
                                 @if(auth()->user()->hasPermission('attendance_corrections.view'))
                                     <x-rds.button
                                         href="{{ route('attendance-corrections.show', $correction) }}"
                                         variant="secondary"
                                         size="sm"
-                                        class="!px-3 !py-1.5 !text-xs"
+                                        class="!px-2.5 !py-1 !text-[11px] !leading-5"
                                     >
                                         View
                                     </x-rds.button>
@@ -256,7 +231,7 @@
                                         href="{{ route('attendance-corrections.edit', $correction) }}"
                                         variant="secondary"
                                         size="sm"
-                                        class="!px-3 !py-1.5 !text-xs"
+                                        class="!px-2.5 !py-1 !text-[11px] !leading-5"
                                     >
                                         Edit
                                     </x-rds.button>
@@ -279,7 +254,7 @@
                                     <button
                                         type="submit"
                                         form="submit-correction-{{ $correction->id }}"
-                                        class="inline-flex items-center justify-center rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                        class="inline-flex items-center justify-center rounded-md bg-blue-600 px-2.5 py-1 text-[11px] font-semibold leading-5 text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
                                     >
                                         Submit
                                     </button>
@@ -302,7 +277,7 @@
                                     <button
                                         type="submit"
                                         form="approve-correction-{{ $correction->id }}"
-                                        class="inline-flex items-center justify-center rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
+                                        class="inline-flex items-center justify-center rounded-md bg-green-600 px-2.5 py-1 text-[11px] font-semibold leading-5 text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
                                     >
                                         Approve
                                     </button>
@@ -349,7 +324,7 @@
                                     <button
                                         type="submit"
                                         form="apply-correction-{{ $correction->id }}"
-                                        class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                                        class="inline-flex items-center justify-center rounded-md bg-emerald-600 px-2.5 py-1 text-[11px] font-semibold leading-5 text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-300"
                                     >
                                         Apply
                                     </button>
@@ -377,7 +352,7 @@
                                     <button
                                         type="submit"
                                         form="delete-correction-{{ $correction->id }}"
-                                        class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
+                                        class="inline-flex items-center justify-center rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold leading-5 text-red-700 shadow-sm transition hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-200"
                                     >
                                         Delete
                                     </button>
@@ -395,7 +370,7 @@
                                 No attendance correction requests found.
                             </div>
 
-                            <div class="mt-1 text-xs text-gray-500">
+                            <div class="mt-0.5 text-[11px] leading-tight text-gray-500">
                                 Adjust the filters or create the first attendance correction request.
                             </div>
 
@@ -417,12 +392,9 @@
 
             </tbody>
         </table>
-    </div>
 
     @if($attendanceCorrections->hasPages())
         <div class="border-t border-gray-200 px-4 py-3">
             {{ $attendanceCorrections->withQueryString()->links() }}
         </div>
     @endif
-
-</x-rds.card>
