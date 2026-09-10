@@ -1626,19 +1626,22 @@ class AttendanceCorrectionController extends Controller
             $actionType
             === AttendanceCorrectionDetail::ACTION_ADD
         ) {
-            $alreadyExists = LabourAttendanceDetail::query()
-                ->where(
-                    'labour_attendance_id',
-                    $attendance->id
-                )
-                ->where(
-                    'labour_id',
-                    $correctionDetail->labour_id
-                )
-                ->where('is_active', true)
-                ->exists();
+            /*
+             * Re-adding a labour that was previously removed must restore and
+             * reuse the historical attendance-detail row. The database keeps
+             * attendance + labour unique even when the row is soft-deleted.
+             */
+            $existingAttendanceDetail = LabourAttendanceDetail::withTrashed()
+                ->where('labour_attendance_id', $attendance->id)
+                ->where('labour_id', $correctionDetail->labour_id)
+                ->lockForUpdate()
+                ->first();
 
-            if ($alreadyExists) {
+            if (
+                $existingAttendanceDetail
+                && ! $existingAttendanceDetail->trashed()
+                && $existingAttendanceDetail->is_active
+            ) {
                 throw ValidationException::withMessages([
                     'details' => [
                         "Labour ID {$correctionDetail->labour_id} already exists in this attendance sheet.",
@@ -1651,60 +1654,49 @@ class AttendanceCorrectionController extends Controller
                 ->where('is_active', true)
                 ->firstOrFail();
 
-            LabourAttendanceDetail::create([
-                'labour_attendance_id' => $attendance->id,
-                'labour_id' => $labour->id,
+            $detailValues = [
+                'attendance_status_id' => $correctionDetail->new_attendance_status_id,
+                'working_status_id' => $correctionDetail->new_working_status_id,
 
-                'attendance_status_id' =>
-                    $correctionDetail->new_attendance_status_id,
+                ...LabourAttendanceDetail::snapshotFromLabour($labour),
 
-                'working_status_id' =>
-                    $correctionDetail->new_working_status_id,
-
-                ...LabourAttendanceDetail::snapshotFromLabour(
-                    $labour
+                'check_in_time' => $this->nullableTime(
+                    $correctionDetail->new_check_in_time
                 ),
-
-                'check_in_time' =>
-                    $this->nullableTime(
-                        $correctionDetail->new_check_in_time
-                    ),
-
-                'check_out_time' =>
-                    $this->nullableTime(
-                        $correctionDetail->new_check_out_time
-                    ),
-
-                'normal_hours' =>
-                    (float) (
-                        $correctionDetail->new_normal_hours
-                        ?? 0
-                    ),
-
-                'ot_hours' =>
-                    (float) (
-                        $correctionDetail->new_ot_hours
-                        ?? 0
-                    ),
-
-                'ot_amount' =>
-                    (float) (
-                        $correctionDetail->new_ot_amount
-                        ?? 0
-                    ),
-
-                'attendance_source' =>
-                    'attendance_correction',
-
-                'remarks' =>
-                    $this->nullableTrim(
-                        $correctionDetail->new_remarks
-                    ),
-
+                'check_out_time' => $this->nullableTime(
+                    $correctionDetail->new_check_out_time
+                ),
+                'normal_hours' => (float) (
+                    $correctionDetail->new_normal_hours ?? 0
+                ),
+                'ot_hours' => (float) (
+                    $correctionDetail->new_ot_hours ?? 0
+                ),
+                'ot_amount' => (float) (
+                    $correctionDetail->new_ot_amount ?? 0
+                ),
+                'attendance_source' => 'attendance_correction',
+                'remarks' => $this->nullableTrim(
+                    $correctionDetail->new_remarks
+                ),
                 'is_active' => true,
-                'created_by' => auth()->id(),
                 'updated_by' => auth()->id(),
-            ]);
+            ];
+
+            if ($existingAttendanceDetail) {
+                if ($existingAttendanceDetail->trashed()) {
+                    $existingAttendanceDetail->restore();
+                }
+
+                $existingAttendanceDetail->update($detailValues);
+            } else {
+                LabourAttendanceDetail::create([
+                    'labour_attendance_id' => $attendance->id,
+                    'labour_id' => $labour->id,
+                    ...$detailValues,
+                    'created_by' => auth()->id(),
+                ]);
+            }
 
             return;
         }
