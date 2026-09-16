@@ -3,8 +3,8 @@
 @section('content')
 
 @php
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2.5 sm:text-sm';
-    $labelClass = 'mb-1.5 block text-sm font-semibold text-gray-700';
+    $inputClass = 'w-full rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $labelClass = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500';
 
     $oldItems = old('items', [
         [
@@ -32,66 +32,23 @@
         })
         ->values();
 
-    $materialTypeOptionsForJs = $materialTypes
-        ->map(function ($type) {
-            return [
-                'id' => $type->id,
-                'name' => $type->material_type_name,
-                'group' => $type->material_group,
-                'unit_id' => $type->unit_master_id,
-                'unit_name' => optional($type->unit)->unit_name,
-            ];
-        })
-        ->values();
-
-    $brandOptionsForJs = $brands
-        ->map(function ($brand) {
-            return [
-                'id' => $brand->id,
-                'name' => $brand->brand_name,
-                'material_type_id' => $brand->material_type_id,
-            ];
-        })
-        ->values();
-
-    $specificationOptionsForJs = $specifications
-        ->map(function ($specification) {
-            return [
-                'id' => $specification->id,
-                'name' => $specification->specification_name,
-                'material_type_id' => $specification->material_type_id,
-            ];
-        })
-        ->values();
-
-    $gradeOptionsForJs = $grades
-        ->map(function ($grade) {
-            return [
-                'id' => $grade->id,
-                'name' => $grade->grade_name,
-                'material_type_id' => $grade->material_type_id,
-            ];
-        })
-        ->values();
-
-    $materialGroupsForJs = $materialGroups->values();
 @endphp
 
 <div class="mx-auto max-w-full">
 
-    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
+            <h1 class="text-2xl font-bold text-gray-800">
                 Add Material Consumption
             </h1>
 
-            <p class="mt-1 text-gray-500">
+            <p class="mt-1 text-sm text-gray-500">
                 Record one site consumption entry containing one or more material items.
             </p>
         </div>
 
         <a href="{{ route('material-consumed.index') }}"
-           class="inline-flex w-full items-center justify-center rounded-lg bg-gray-600 px-5 py-3 font-semibold text-white hover:bg-gray-700 sm:w-auto sm:py-2.5">
+           class="inline-flex w-full items-center justify-center rounded-md bg-slate-700 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 sm:w-auto">
             Back
         </a>
     </div>
@@ -122,14 +79,14 @@
 
         @csrf
 
-        <div class="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
+        <div class="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-            <div class="mb-5 rounded-xl bg-[#0F2A52] px-4 py-3 text-white">
-                <h2 class="text-lg font-bold sm:text-xl">Consumption Information</h2>
-                <p class="mt-1 text-xs text-blue-100">Select the site location, contractor and consumption date.</p>
+            <div class="border-b border-gray-200 px-4 py-3">
+                <h2 class="text-sm font-bold text-gray-800">Consumption Information</h2>
+                <p class="mt-0.5 text-xs text-gray-500">Select the site location, contractor and consumption date.</p>
             </div>
 
-            <div class="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
+            <div class="grid grid-cols-1 gap-x-4 gap-y-3 p-4 md:grid-cols-2 xl:grid-cols-4">
 
                 <div>
                     <label class="{{ $labelClass }}">
@@ -303,7 +260,7 @@
                     <label class="{{ $labelClass }}">General Remarks</label>
 
                     <textarea name="remarks"
-                              rows="3"
+                              rows="2"
                               class="{{ $inputClass }}"
                               placeholder="General notes for this material consumption">{{ old('remarks') }}</textarea>
                 </div>
@@ -313,44 +270,40 @@
 
         <div class="rounded-xl border border-gray-200 bg-white shadow-sm">
 
-            <div class="flex flex-col gap-3 border-b border-gray-200 bg-[#0F2A52] p-4 text-white md:flex-row md:items-center md:justify-between md:p-5">
+            <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 class="text-lg font-bold text-white sm:text-xl">
+                    <h2 class="text-sm font-bold text-gray-800">
                         Material Items
                     </h2>
 
-                    <p class="mt-1 text-xs text-blue-100 sm:text-sm">
+                    <p class="mt-0.5 text-xs text-gray-500">
                         Add every material consumed under this entry.
                     </p>
                 </div>
 
                 <button type="button"
                         id="add-item-row"
-                        class="w-full rounded-lg bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700 md:w-auto md:py-2.5">
+                        class="w-full rounded-md bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 md:w-auto">
                     + Add Material Row
                 </button>
             </div>
 
             <div class="overflow-visible lg:overflow-x-auto">
 
-                <table class="block w-full text-sm lg:table lg:min-w-[2100px]">
+                <table class="block w-full text-sm lg:table lg:min-w-[1280px]">
 
                     <thead class="hidden bg-gray-100 text-xs uppercase tracking-wide text-gray-600 lg:table-header-group">
                         <tr>
                             <th class="w-14 px-3 py-3 text-center">#</th>
-                            <th class="min-w-44 px-3 py-3 text-left">Activity Division</th>
-                            <th class="min-w-52 px-3 py-3 text-left">Activity</th>
-                            <th class="min-w-48 px-3 py-3 text-left">Material Group</th>
-                            <th class="min-w-52 px-3 py-3 text-left">Material Type</th>
-                            <th class="min-w-44 px-3 py-3 text-left">Brand</th>
-                            <th class="min-w-44 px-3 py-3 text-left">Specification</th>
-                            <th class="min-w-44 px-3 py-3 text-left">Grade / Rating</th>
-                            <th class="min-w-36 px-3 py-3 text-left">Consumed Qty</th>
-                            <th class="min-w-36 px-3 py-3 text-left">Wastage Qty</th>
-                            <th class="min-w-36 px-3 py-3 text-left">Unit</th>
-                            <th class="min-w-56 px-3 py-3 text-left">Wastage Reason</th>
-                            <th class="min-w-52 px-3 py-3 text-left">Remarks</th>
-                            <th class="w-24 px-3 py-3 text-center">Action</th>
+                            <th class="min-w-36 px-2.5 py-2.5 text-left">Activity Division</th>
+                            <th class="min-w-40 px-2.5 py-2.5 text-left">Activity</th>
+                            <th class="min-w-[360px] px-2.5 py-2.5 text-left">Available Project Stock</th>
+                            <th class="min-w-28 px-2.5 py-2.5 text-left">Available</th>
+                            <th class="min-w-28 px-2.5 py-2.5 text-left">Consumed</th>
+                            <th class="min-w-28 px-2.5 py-2.5 text-left">Wastage</th>
+                            <th class="min-w-44 px-2.5 py-2.5 text-left">Wastage Reason</th>
+                            <th class="min-w-40 px-2.5 py-2.5 text-left">Remarks</th>
+                            <th class="w-20 px-2.5 py-2.5 text-left">Action</th>
                         </tr>
                     </thead>
 
@@ -373,9 +326,7 @@
                                 <td data-mobile-label="Activity Division" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                                     <select name="items[{{ $rowIndex }}][activity_division_id]"
                                             class="{{ $inputClass }} activity-division-select">
-
                                         <option value="">Select Division</option>
-
                                         @foreach($activityDivisions as $division)
                                             <option value="{{ $division->id }}"
                                                 {{ (string) ($oldItem['activity_division_id'] ?? '') === (string) $division->id ? 'selected' : '' }}>
@@ -388,127 +339,47 @@
                                 <td data-mobile-label="Activity" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
                                     <select name="items[{{ $rowIndex }}][activity_id]"
                                             class="{{ $inputClass }} activity-select">
-
                                         <option value="">Select Activity</option>
-
-                                        @foreach($activities as $activity)
-                                            <option value="{{ $activity->id }}"
-                                                    data-division="{{ $activity->activity_division_id }}"
-                                                {{ (string) ($oldItem['activity_id'] ?? '') === (string) $activity->id ? 'selected' : '' }}>
-                                                {{ $activity->activity_name }}
-                                            </option>
-                                        @endforeach
                                     </select>
                                 </td>
 
-                                <td data-mobile-label="Material Group" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <select class="{{ $inputClass }} material-group-select">
-                                        <option value="">Select Group</option>
-
-                                        @foreach($materialGroups as $group)
-                                            <option value="{{ $group }}">
-                                                {{ $group }}
-                                            </option>
-                                        @endforeach
+                                <td data-mobile-label="Available Project Stock" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
+                                    <select class="{{ $inputClass }} stock-identity-select" required>
+                                        <option value="">Select Project first</option>
                                     </select>
+
+                                    <input type="hidden" name="items[{{ $rowIndex }}][material_type_id]"
+                                           value="{{ $oldItem['material_type_id'] ?? '' }}" class="material-type-id-input">
+                                    <input type="hidden" name="items[{{ $rowIndex }}][brand_master_id]"
+                                           value="{{ $oldItem['brand_master_id'] ?? '' }}" class="brand-id-input">
+                                    <input type="hidden" name="items[{{ $rowIndex }}][material_specification_id]"
+                                           value="{{ $oldItem['material_specification_id'] ?? '' }}" class="specification-id-input">
+                                    <input type="hidden" name="items[{{ $rowIndex }}][material_grade_id]"
+                                           value="{{ $oldItem['material_grade_id'] ?? '' }}" class="grade-id-input">
+                                    <input type="hidden" name="items[{{ $rowIndex }}][unit_master_id]"
+                                           value="{{ $oldItem['unit_master_id'] ?? '' }}" class="unit-id-input">
                                 </td>
 
-                                <td data-mobile-label="Material Type" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <select name="items[{{ $rowIndex }}][material_type_id]"
-                                            class="{{ $inputClass }} material-type-select"
-                                            required>
-
-                                        <option value="">Select Material Type</option>
-
-                                        @foreach($materialTypes as $materialType)
-                                            <option value="{{ $materialType->id }}"
-                                                    data-group="{{ $materialType->material_group }}"
-                                                    data-unit-id="{{ $materialType->unit_master_id }}"
-                                                    data-unit-name="{{ optional($materialType->unit)->unit_name }}"
-                                                {{ (string) ($oldItem['material_type_id'] ?? '') === (string) $materialType->id ? 'selected' : '' }}>
-                                                {{ $materialType->material_type_name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </td>
-
-                                <td data-mobile-label="Brand" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <select name="items[{{ $rowIndex }}][brand_master_id]"
-                                            class="{{ $inputClass }} brand-select">
-
-                                        <option value="">Select Brand</option>
-
-                                        @foreach($brands as $brand)
-                                            <option value="{{ $brand->id }}"
-                                                    data-material-type="{{ $brand->material_type_id }}"
-                                                {{ (string) ($oldItem['brand_master_id'] ?? '') === (string) $brand->id ? 'selected' : '' }}>
-                                                {{ $brand->brand_name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </td>
-
-                                <td data-mobile-label="Specification" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <select name="items[{{ $rowIndex }}][material_specification_id]"
-                                            class="{{ $inputClass }} specification-select">
-
-                                        <option value="">Select Specification</option>
-
-                                        @foreach($specifications as $specification)
-                                            <option value="{{ $specification->id }}"
-                                                    data-material-type="{{ $specification->material_type_id }}"
-                                                {{ (string) ($oldItem['material_specification_id'] ?? '') === (string) $specification->id ? 'selected' : '' }}>
-                                                {{ $specification->specification_name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </td>
-
-                                <td data-mobile-label="Grade / Rating" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <select name="items[{{ $rowIndex }}][material_grade_id]"
-                                            class="{{ $inputClass }} grade-select">
-
-                                        <option value="">Select Grade / Rating</option>
-
-                                        @foreach($grades as $grade)
-                                            <option value="{{ $grade->id }}"
-                                                    data-material-type="{{ $grade->material_type_id }}"
-                                                {{ (string) ($oldItem['material_grade_id'] ?? '') === (string) $grade->id ? 'selected' : '' }}>
-                                                {{ $grade->grade_name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                <td data-mobile-label="Available Qty" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
+                                    <input type="text"
+                                           class="{{ $inputClass }} available-quantity-input bg-gray-100"
+                                           readonly
+                                           value=""
+                                           placeholder="—">
                                 </td>
 
                                 <td data-mobile-label="Consumed Qty" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <input type="number"
-                                           step="0.001"
-                                           min="0.001"
+                                    <input type="number" step="0.001" min="0.001"
                                            name="items[{{ $rowIndex }}][quantity_consumed]"
                                            value="{{ $oldItem['quantity_consumed'] ?? '' }}"
-                                           class="{{ $inputClass }}"
-                                           required>
+                                           class="{{ $inputClass }} consumed-quantity-input" required>
                                 </td>
 
                                 <td data-mobile-label="Wastage Qty" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <input type="number"
-                                           step="0.001"
-                                           min="0"
+                                    <input type="number" step="0.001" min="0"
                                            name="items[{{ $rowIndex }}][wastage_quantity]"
                                            value="{{ $oldItem['wastage_quantity'] ?? 0 }}"
                                            class="{{ $inputClass }} wastage-quantity-input">
-                                </td>
-
-                                <td data-mobile-label="Unit" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                                    <input type="hidden"
-                                           name="items[{{ $rowIndex }}][unit_master_id]"
-                                           value="{{ $oldItem['unit_master_id'] ?? '' }}"
-                                           class="unit-id-input">
-
-                                    <input type="text"
-                                           class="{{ $inputClass }} unit-name-input bg-gray-100"
-                                           readonly
-                                           placeholder="Auto">
                                 </td>
 
                                 <td data-mobile-label="Wastage Reason" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
@@ -516,7 +387,7 @@
                                            name="items[{{ $rowIndex }}][wastage_reason]"
                                            value="{{ $oldItem['wastage_reason'] ?? '' }}"
                                            class="{{ $inputClass }} wastage-reason-input"
-                                           placeholder="Required when wastage &gt; 0">
+                                           placeholder="Required when wastage > 0">
                                 </td>
 
                                 <td data-mobile-label="Remarks" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
@@ -527,13 +398,12 @@
                                            placeholder="Optional">
                                 </td>
 
-                                <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-center lg:before:hidden">
+                                <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-left lg:before:hidden">
                                     <button type="button"
-                                            class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:border-0 lg:bg-red-600 lg:text-white lg:hover:bg-red-700">
+                                            class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:rounded-md lg:border-0 lg:bg-red-600 lg:px-2.5 lg:py-2 lg:text-white lg:hover:bg-red-700">
                                         Remove
                                     </button>
                                 </td>
-
                             </tr>
                         @endforeach
 
@@ -541,19 +411,19 @@
                 </table>
             </div>
 
-            <div class="border-t border-gray-200 bg-gray-50 p-4 text-xs leading-5 text-gray-600 sm:p-5 sm:text-sm">
-                Brand, Specification, Grade/Rating and Unit are filtered automatically from the selected Material Type. Wastage reason becomes mandatory when wastage quantity is greater than zero.
+            <div class="border-t border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-5 text-gray-500">
+                Only stock currently available for the selected Project can be chosen. Brand, Specification, Grade/Rating and Unit come directly from the received stock identity. Available quantity already accounts for submitted consumption reservations. Wastage reason becomes mandatory when wastage quantity is greater than zero.
             </div>
         </div>
 
-        <div class="sticky bottom-[68px] z-30 mt-6 grid grid-cols-1 gap-3 border-t border-gray-200 bg-white/95 py-3 backdrop-blur sm:flex sm:flex-wrap lg:static lg:border-0 lg:bg-transparent lg:py-0">
+        <div class="mt-4 flex flex-col gap-2 sm:flex-row">
             <button type="submit"
-                    class="w-full rounded-xl bg-blue-600 px-7 py-3.5 text-center font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-3">
+                    class="w-full rounded-md bg-blue-600 px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto">
                 Save Material Consumption
             </button>
 
             <a href="{{ route('material-consumed.index') }}"
-               class="w-full rounded-xl bg-gray-500 px-7 py-3.5 text-center font-semibold text-white hover:bg-gray-600 sm:w-auto sm:py-3">
+               class="w-full rounded-md bg-slate-600 px-5 py-2.5 text-center text-sm font-semibold text-white hover:bg-slate-700 sm:w-auto">
                 Cancel
             </a>
         </div>
@@ -565,6 +435,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const body = document.getElementById('material-items-body');
     const addRowButton = document.getElementById('add-item-row');
+    const form = document.getElementById('material-consumption-form');
 
     const projectSelect = document.getElementById('project_id');
     const blockSelect = document.getElementById('project_block_id');
@@ -573,14 +444,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const roomSelect = document.getElementById('project_room_id');
     const subspaceSelect = document.getElementById('project_subspace_id');
 
-    let rowIndex = body.querySelectorAll('.material-item-row').length;
-
     const activityOptions = @json($activityOptionsForJs);
-    const materialTypeOptions = @json($materialTypeOptionsForJs);
-    const brandOptions = @json($brandOptionsForJs);
-    const specificationOptions = @json($specificationOptionsForJs);
-    const gradeOptions = @json($gradeOptionsForJs);
-    const materialGroups = @json($materialGroupsForJs);
+    const inventoryUrlTemplate = @json(route('material-consumed.project-inventory', ['project' => '__PROJECT__']));
+
+    let rowIndex = body.querySelectorAll('.material-item-row').length;
+    let projectInventory = [];
+    let inventoryRequestSequence = 0;
 
     function makeOption(value, label, selected = false) {
         return new Option(label, value, selected, selected);
@@ -601,32 +470,177 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function stockLabel(item) {
+        const parts = [
+            item.material_type_name,
+            item.brand_name,
+            item.specification_name,
+            item.grade_name,
+        ].filter(Boolean);
+
+        return `${parts.join(' — ')} | Available: ${formatQuantity(item.available_qty)} ${item.unit_name || ''}`.trim();
+    }
+
+    function formatQuantity(value) {
+        const number = Number(value || 0);
+
+        return Number.isInteger(number)
+            ? String(number)
+            : number.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+    }
+
+    function identityMatchesRow(item, row) {
+        return String(item.material_type_id ?? '') === String(row.querySelector('.material-type-id-input').value ?? '')
+            && String(item.brand_master_id ?? '') === String(row.querySelector('.brand-id-input').value ?? '')
+            && String(item.material_specification_id ?? '') === String(row.querySelector('.specification-id-input').value ?? '')
+            && String(item.material_grade_id ?? '') === String(row.querySelector('.grade-id-input').value ?? '')
+            && String(item.unit_master_id ?? '') === String(row.querySelector('.unit-id-input').value ?? '');
+    }
+
+    function clearStockIdentity(row) {
+        row.querySelector('.material-type-id-input').value = '';
+        row.querySelector('.brand-id-input').value = '';
+        row.querySelector('.specification-id-input').value = '';
+        row.querySelector('.grade-id-input').value = '';
+        row.querySelector('.unit-id-input').value = '';
+        row.querySelector('.available-quantity-input').value = '';
+        row.dataset.availableQty = '';
+    }
+
+    function applyStockIdentity(row, item) {
+        row.querySelector('.material-type-id-input').value = item.material_type_id ?? '';
+        row.querySelector('.brand-id-input').value = item.brand_master_id ?? '';
+        row.querySelector('.specification-id-input').value = item.material_specification_id ?? '';
+        row.querySelector('.grade-id-input').value = item.material_grade_id ?? '';
+        row.querySelector('.unit-id-input').value = item.unit_master_id ?? '';
+        row.querySelector('.available-quantity-input').value =
+            `${formatQuantity(item.available_qty)} ${item.unit_name || ''}`.trim();
+        row.dataset.availableQty = String(item.available_qty ?? 0);
+    }
+
+    function populateStockSelect(row, preserveExisting = false) {
+        const stockSelect = row.querySelector('.stock-identity-select');
+        let selectedKey = '';
+
+        if (preserveExisting) {
+            const matchingItem = projectInventory.find(function (item) {
+                return identityMatchesRow(item, row);
+            });
+
+            selectedKey = matchingItem?.stock_key || '';
+        } else {
+            clearStockIdentity(row);
+        }
+
+        stockSelect.innerHTML = '';
+
+        if (!projectSelect.value) {
+            stockSelect.add(makeOption('', 'Select Project first'));
+            stockSelect.disabled = true;
+            return;
+        }
+
+        if (projectInventory.length === 0) {
+            stockSelect.add(makeOption('', 'No available stock for this Project'));
+            stockSelect.disabled = true;
+            return;
+        }
+
+        stockSelect.disabled = false;
+        stockSelect.add(makeOption('', 'Select Available Stock'));
+
+        projectInventory.forEach(function (item) {
+            stockSelect.add(
+                makeOption(
+                    item.stock_key,
+                    stockLabel(item),
+                    item.stock_key === selectedKey
+                )
+            );
+        });
+
+        if (selectedKey) {
+            const selectedItem = projectInventory.find(item => item.stock_key === selectedKey);
+
+            if (selectedItem) {
+                applyStockIdentity(row, selectedItem);
+            }
+        } else if (preserveExisting) {
+            clearStockIdentity(row);
+        }
+    }
+
+    async function loadProjectInventory(preserveExisting = false) {
+        const projectId = projectSelect.value;
+        const requestSequence = ++inventoryRequestSequence;
+
+        projectInventory = [];
+
+        body.querySelectorAll('.material-item-row').forEach(function (row) {
+            const stockSelect = row.querySelector('.stock-identity-select');
+            stockSelect.innerHTML = '';
+            stockSelect.add(makeOption('', projectId ? 'Loading available stock...' : 'Select Project first'));
+            stockSelect.disabled = true;
+
+            if (!preserveExisting) {
+                clearStockIdentity(row);
+            }
+        });
+
+        if (!projectId) {
+            return;
+        }
+
+        try {
+            const url = inventoryUrlTemplate.replace('__PROJECT__', encodeURIComponent(projectId));
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (!response.ok) {
+                throw new Error(`Inventory request failed with status ${response.status}.`);
+            }
+
+            const payload = await response.json();
+
+            if (requestSequence !== inventoryRequestSequence) {
+                return;
+            }
+
+            projectInventory = Array.isArray(payload.inventory) ? payload.inventory : [];
+
+            body.querySelectorAll('.material-item-row').forEach(function (row) {
+                populateStockSelect(row, preserveExisting);
+            });
+        } catch (error) {
+            console.error(error);
+
+            if (requestSequence !== inventoryRequestSequence) {
+                return;
+            }
+
+            body.querySelectorAll('.material-item-row').forEach(function (row) {
+                const stockSelect = row.querySelector('.stock-identity-select');
+                stockSelect.innerHTML = '';
+                stockSelect.add(makeOption('', 'Unable to load Project stock'));
+                stockSelect.disabled = true;
+                clearStockIdentity(row);
+            });
+        }
+    }
+
     function initializeRow(row) {
         const divisionSelect = row.querySelector('.activity-division-select');
         const activitySelect = row.querySelector('.activity-select');
-        const groupSelect = row.querySelector('.material-group-select');
-        const typeSelect = row.querySelector('.material-type-select');
-        const brandSelect = row.querySelector('.brand-select');
-        const specificationSelect = row.querySelector('.specification-select');
-        const gradeSelect = row.querySelector('.grade-select');
-        const unitIdInput = row.querySelector('.unit-id-input');
-        const unitNameInput = row.querySelector('.unit-name-input');
+        const stockSelect = row.querySelector('.stock-identity-select');
         const wastageQuantityInput = row.querySelector('.wastage-quantity-input');
         const wastageReasonInput = row.querySelector('.wastage-reason-input');
 
         const preservedActivityId = activitySelect.value;
-        const preservedTypeId = typeSelect.value;
-        const preservedBrandId = brandSelect.value;
-        const preservedSpecificationId = specificationSelect.value;
-        const preservedGradeId = gradeSelect.value;
-
-        const selectedType = materialTypeOptions.find(function (type) {
-            return String(type.id) === String(preservedTypeId);
-        });
-
-        if (selectedType) {
-            groupSelect.value = selectedType.group || '';
-        }
 
         function filterActivities(selectedValue = '') {
             const divisionId = divisionSelect.value;
@@ -636,71 +650,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     || String(activity.division_id) === String(divisionId);
             });
 
-            rebuildSelect(
-                activitySelect,
-                'Select Activity',
-                filtered,
-                selectedValue
-            );
-        }
-
-        function filterMaterialTypes(selectedValue = '') {
-            const group = groupSelect.value;
-
-            const filtered = materialTypeOptions.filter(function (type) {
-                return group === '' || type.group === group;
-            });
-
-            rebuildSelect(
-                typeSelect,
-                'Select Material Type',
-                filtered,
-                selectedValue
-            );
-        }
-
-        function updateMaterialDependencies(options = {}) {
-            const materialTypeId = typeSelect.value;
-
-            const selectedMaterialType = materialTypeOptions.find(function (type) {
-                return String(type.id) === String(materialTypeId);
-            });
-
-            unitIdInput.value = selectedMaterialType?.unit_id || '';
-            unitNameInput.value = selectedMaterialType?.unit_name || '';
-
-            const filteredBrands = brandOptions.filter(function (brand) {
-                return String(brand.material_type_id) === String(materialTypeId);
-            });
-
-            const filteredSpecifications = specificationOptions.filter(function (specification) {
-                return String(specification.material_type_id) === String(materialTypeId);
-            });
-
-            const filteredGrades = gradeOptions.filter(function (grade) {
-                return String(grade.material_type_id) === String(materialTypeId);
-            });
-
-            rebuildSelect(
-                brandSelect,
-                'Select Brand',
-                filteredBrands,
-                options.brandId || ''
-            );
-
-            rebuildSelect(
-                specificationSelect,
-                'Select Specification',
-                filteredSpecifications,
-                options.specificationId || ''
-            );
-
-            rebuildSelect(
-                gradeSelect,
-                'Select Grade / Rating',
-                filteredGrades,
-                options.gradeId || ''
-            );
+            rebuildSelect(activitySelect, 'Select Activity', filtered, selectedValue);
         }
 
         function updateWastageRequirement() {
@@ -712,19 +662,19 @@ document.addEventListener('DOMContentLoaded', function () {
             filterActivities('');
         });
 
-        groupSelect.addEventListener('change', function () {
-            filterMaterialTypes('');
-            updateMaterialDependencies();
+        stockSelect.addEventListener('change', function () {
+            const selectedItem = projectInventory.find(function (item) {
+                return item.stock_key === stockSelect.value;
+            });
+
+            if (selectedItem) {
+                applyStockIdentity(row, selectedItem);
+            } else {
+                clearStockIdentity(row);
+            }
         });
 
-        typeSelect.addEventListener('change', function () {
-            updateMaterialDependencies();
-        });
-
-        wastageQuantityInput.addEventListener(
-            'input',
-            updateWastageRequirement
-        );
+        wastageQuantityInput.addEventListener('input', updateWastageRequirement);
 
         row.querySelector('.remove-item-row').addEventListener('click', function () {
             const rows = body.querySelectorAll('.material-item-row');
@@ -739,15 +689,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         filterActivities(preservedActivityId);
-        filterMaterialTypes(preservedTypeId);
-
-        updateMaterialDependencies({
-            brandId: preservedBrandId,
-            specificationId: preservedSpecificationId,
-            gradeId: preservedGradeId,
-        });
-
         updateWastageRequirement();
+        populateStockSelect(row, true);
     }
 
     function buildNewRow(index) {
@@ -765,108 +708,53 @@ document.addEventListener('DOMContentLoaded', function () {
             </td>
 
             <td data-mobile-label="Activity Division" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][activity_division_id]"
-                        class="{{ $inputClass }} activity-division-select">
+                <select name="items[${index}][activity_division_id]" class="{{ $inputClass }} activity-division-select">
                     <option value="">Select Division</option>
                     @foreach($activityDivisions as $division)
-                        <option value="{{ $division->id }}">
-                            {{ $division->name }}
-                        </option>
+                        <option value="{{ $division->id }}">{{ $division->name }}</option>
                     @endforeach
                 </select>
             </td>
 
             <td data-mobile-label="Activity" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][activity_id]"
-                        class="{{ $inputClass }} activity-select">
+                <select name="items[${index}][activity_id]" class="{{ $inputClass }} activity-select">
                     <option value="">Select Activity</option>
                 </select>
             </td>
 
-            <td data-mobile-label="Material Group" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select class="{{ $inputClass }} material-group-select">
-                    <option value="">Select Group</option>
-                    ${materialGroups.map(function (group) {
-                        return `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`;
-                    }).join('')}
+            <td data-mobile-label="Available Project Stock" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
+                <select class="{{ $inputClass }} stock-identity-select" required>
+                    <option value="">Select Available Stock</option>
                 </select>
+                <input type="hidden" name="items[${index}][material_type_id]" class="material-type-id-input">
+                <input type="hidden" name="items[${index}][brand_master_id]" class="brand-id-input">
+                <input type="hidden" name="items[${index}][material_specification_id]" class="specification-id-input">
+                <input type="hidden" name="items[${index}][material_grade_id]" class="grade-id-input">
+                <input type="hidden" name="items[${index}][unit_master_id]" class="unit-id-input">
             </td>
 
-            <td data-mobile-label="Material Type" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][material_type_id]"
-                        class="{{ $inputClass }} material-type-select"
-                        required>
-                    <option value="">Select Material Type</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Brand" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][brand_master_id]"
-                        class="{{ $inputClass }} brand-select">
-                    <option value="">Select Brand</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Specification" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][material_specification_id]"
-                        class="{{ $inputClass }} specification-select">
-                    <option value="">Select Specification</option>
-                </select>
-            </td>
-
-            <td data-mobile-label="Grade / Rating" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <select name="items[${index}][material_grade_id]"
-                        class="{{ $inputClass }} grade-select">
-                    <option value="">Select Grade / Rating</option>
-                </select>
+            <td data-mobile-label="Available Qty" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
+                <input type="text" class="{{ $inputClass }} available-quantity-input bg-gray-100" readonly placeholder="—">
             </td>
 
             <td data-mobile-label="Consumed Qty" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="number"
-                       step="0.001"
-                       min="0.001"
-                       name="items[${index}][quantity_consumed]"
-                       class="{{ $inputClass }}"
-                       required>
+                <input type="number" step="0.001" min="0.001" name="items[${index}][quantity_consumed]" class="{{ $inputClass }} consumed-quantity-input" required>
             </td>
 
             <td data-mobile-label="Wastage Qty" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="number"
-                       step="0.001"
-                       min="0"
-                       value="0"
-                       name="items[${index}][wastage_quantity]"
-                       class="{{ $inputClass }} wastage-quantity-input">
-            </td>
-
-            <td data-mobile-label="Unit" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="hidden"
-                       name="items[${index}][unit_master_id]"
-                       class="unit-id-input">
-
-                <input type="text"
-                       class="{{ $inputClass }} unit-name-input bg-gray-100"
-                       readonly
-                       placeholder="Auto">
+                <input type="number" step="0.001" min="0" value="0" name="items[${index}][wastage_quantity]" class="{{ $inputClass }} wastage-quantity-input">
             </td>
 
             <td data-mobile-label="Wastage Reason" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="text"
-                       name="items[${index}][wastage_reason]"
-                       class="{{ $inputClass }} wastage-reason-input"
-                       placeholder="Required when wastage > 0">
+                <input type="text" name="items[${index}][wastage_reason]" class="{{ $inputClass }} wastage-reason-input" placeholder="Required when wastage > 0">
             </td>
 
             <td data-mobile-label="Remarks" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:before:hidden">
-                <input type="text"
-                       name="items[${index}][remarks]"
-                       class="{{ $inputClass }}"
-                       placeholder="Optional">
+                <input type="text" name="items[${index}][remarks]" class="{{ $inputClass }}" placeholder="Optional">
             </td>
 
-            <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-center lg:before:hidden">
-                <button type="button"
-                        class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:border-0 lg:bg-red-600 lg:text-white lg:hover:bg-red-700">
+            <td data-mobile-label="Action" class="block px-3 py-3 before:mb-1 before:block before:text-[10px] before:font-bold before:uppercase before:tracking-wide before:text-gray-500 before:content-[attr(data-mobile-label)] lg:table-cell lg:text-left lg:before:hidden">
+                <button type="button" class="remove-item-row w-full rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-700 hover:bg-red-100 lg:w-auto lg:rounded-md lg:border-0 lg:bg-red-600 lg:px-2.5 lg:py-2 lg:text-white lg:hover:bg-red-700">
                     Remove
                 </button>
             </td>
@@ -879,12 +767,6 @@ document.addEventListener('DOMContentLoaded', function () {
         body.querySelectorAll('.material-item-row').forEach(function (row, index) {
             row.querySelector('.row-number').textContent = index + 1;
         });
-    }
-
-    function escapeHtml(value) {
-        const div = document.createElement('div');
-        div.textContent = value ?? '';
-        return div.innerHTML;
     }
 
     function cloneOptions(select) {
@@ -924,10 +806,7 @@ document.addEventListener('DOMContentLoaded', function () {
         filterLocationSelect(
             blockSelect,
             originalBlockOptions,
-            function (option) {
-                return projectId === ''
-                    || String(option.dataset.project) === String(projectId);
-            },
+            option => projectId === '' || String(option.dataset.project) === String(projectId),
             'Select Block'
         );
 
@@ -942,12 +821,8 @@ document.addEventListener('DOMContentLoaded', function () {
             floorSelect,
             originalFloorOptions,
             function (option) {
-                const projectMatch = projectId === ''
-                    || String(option.dataset.project) === String(projectId);
-
-                const blockMatch = blockId === ''
-                    || String(option.dataset.block) === String(blockId);
-
+                const projectMatch = projectId === '' || String(option.dataset.project) === String(projectId);
+                const blockMatch = blockId === '' || String(option.dataset.block) === String(blockId);
                 return projectMatch && blockMatch;
             },
             'Select Floor'
@@ -965,15 +840,9 @@ document.addEventListener('DOMContentLoaded', function () {
             unitSelect,
             originalUnitOptions,
             function (option) {
-                const projectMatch = projectId === ''
-                    || String(option.dataset.project) === String(projectId);
-
-                const blockMatch = blockId === ''
-                    || String(option.dataset.block) === String(blockId);
-
-                const floorMatch = floorId === ''
-                    || String(option.dataset.floor) === String(floorId);
-
+                const projectMatch = projectId === '' || String(option.dataset.project) === String(projectId);
+                const blockMatch = blockId === '' || String(option.dataset.block) === String(blockId);
+                const floorMatch = floorId === '' || String(option.dataset.floor) === String(floorId);
                 return projectMatch && blockMatch && floorMatch;
             },
             'Select Unit'
@@ -992,18 +861,10 @@ document.addEventListener('DOMContentLoaded', function () {
             roomSelect,
             originalRoomOptions,
             function (option) {
-                const projectMatch = projectId === ''
-                    || String(option.dataset.project) === String(projectId);
-
-                const blockMatch = blockId === ''
-                    || String(option.dataset.block) === String(blockId);
-
-                const floorMatch = floorId === ''
-                    || String(option.dataset.floor) === String(floorId);
-
-                const unitMatch = unitId === ''
-                    || String(option.dataset.unit) === String(unitId);
-
+                const projectMatch = projectId === '' || String(option.dataset.project) === String(projectId);
+                const blockMatch = blockId === '' || String(option.dataset.block) === String(blockId);
+                const floorMatch = floorId === '' || String(option.dataset.floor) === String(floorId);
+                const unitMatch = unitId === '' || String(option.dataset.unit) === String(unitId);
                 return projectMatch && blockMatch && floorMatch && unitMatch;
             },
             'Select Room'
@@ -1023,35 +884,28 @@ document.addEventListener('DOMContentLoaded', function () {
             subspaceSelect,
             originalSubspaceOptions,
             function (option) {
-                const projectMatch = projectId === ''
-                    || String(option.dataset.project) === String(projectId);
+                const projectMatch = projectId === '' || String(option.dataset.project) === String(projectId);
+                const blockMatch = blockId === '' || String(option.dataset.block) === String(blockId);
+                const floorMatch = floorId === '' || String(option.dataset.floor) === String(floorId);
+                const unitMatch = unitId === '' || String(option.dataset.unit) === String(unitId);
+                const roomMatch = roomId === '' || String(option.dataset.room) === String(roomId);
 
-                const blockMatch = blockId === ''
-                    || String(option.dataset.block) === String(blockId);
-
-                const floorMatch = floorId === ''
-                    || String(option.dataset.floor) === String(floorId);
-
-                const unitMatch = unitId === ''
-                    || String(option.dataset.unit) === String(unitId);
-
-                const roomMatch = roomId === ''
-                    || String(option.dataset.room) === String(roomId);
-
-                return projectMatch
-                    && blockMatch
-                    && floorMatch
-                    && unitMatch
-                    && roomMatch;
+                return projectMatch && blockMatch && floorMatch && unitMatch && roomMatch;
             },
             'Select Sub-space'
         );
     }
 
     addRowButton.addEventListener('click', function () {
+        if (!projectSelect.value) {
+            alert('Select the Project before adding material rows.');
+            return;
+        }
+
         const newRow = buildNewRow(rowIndex++);
         body.appendChild(newRow);
         initializeRow(newRow);
+        populateStockSelect(newRow, false);
         refreshRowNumbers();
     });
 
@@ -1062,6 +916,7 @@ document.addEventListener('DOMContentLoaded', function () {
         roomSelect.value = '';
         subspaceSelect.value = '';
         filterProjectLocations();
+        loadProjectInventory(false);
     });
 
     blockSelect.addEventListener('change', function () {
@@ -1090,10 +945,49 @@ document.addEventListener('DOMContentLoaded', function () {
         filterSubspaces();
     });
 
+    form.addEventListener('submit', function (event) {
+        const totalsByStockKey = new Map();
+        let message = '';
+
+        body.querySelectorAll('.material-item-row').forEach(function (row, index) {
+            if (message) {
+                return;
+            }
+
+            const stockSelect = row.querySelector('.stock-identity-select');
+            const consumed = Number(row.querySelector('.consumed-quantity-input').value || 0);
+            const wastage = Number(row.querySelector('.wastage-quantity-input').value || 0);
+            const available = Number(row.dataset.availableQty || 0);
+            const requested = consumed + wastage;
+
+            if (!stockSelect.value) {
+                message = `Row ${index + 1}: select an available Project stock item.`;
+                return;
+            }
+
+            const currentTotal = totalsByStockKey.get(stockSelect.value) || 0;
+            const combinedTotal = currentTotal + requested;
+            totalsByStockKey.set(stockSelect.value, combinedTotal);
+
+            if (combinedTotal > available + 0.000001) {
+                message = `Row ${index + 1}: total consumption plus wastage for this stock item exceeds the available quantity of ${formatQuantity(available)}.`;
+            }
+        });
+
+        if (message) {
+            event.preventDefault();
+            alert(message);
+        }
+    });
+
     body.querySelectorAll('.material-item-row').forEach(initializeRow);
 
     refreshRowNumbers();
     filterProjectLocations();
+
+    if (projectSelect.value) {
+        loadProjectInventory(true);
+    }
 });
 </script>
 

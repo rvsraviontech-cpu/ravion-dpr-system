@@ -10,7 +10,11 @@ class ProductDependencyController extends Controller
 {
     public function __invoke(MaterialType $materialType): JsonResponse
     {
-        if (! $materialType->is_active || $materialType->is_legacy || $materialType->master_status !== 'Approved') {
+        if (
+            ! $materialType->is_active
+            || $materialType->is_legacy
+            || ! in_array($materialType->master_status, ['Approved', 'CANONICAL'], true)
+        ) {
             abort(404, 'Product is not available for operational use.');
         }
 
@@ -25,7 +29,7 @@ class ProductDependencyController extends Controller
                 ->orderBy('sequence')
                 ->orderBy('grade_name'),
             'activeCanonicalBrands' => fn ($query) => $query
-    ->where('brand_masters.is_active', true),
+                ->where('brand_masters.is_active', true),
         ]);
 
         return response()->json([
@@ -52,12 +56,12 @@ class ProductDependencyController extends Controller
                     'name' => $item->grade_name,
                 ])->values(),
                 'brands' => $materialType->activeCanonicalBrands
-    ->map(fn ($item) => [
-        'id' => $item->id,
-        'name' => $item->brand_name,
-        'is_preferred' => (bool) $item->pivot->is_preferred,
-    ])
-    ->values(),
+                    ->map(fn ($item) => [
+                        'id' => $item->id,
+                        'name' => $item->brand_name,
+                        'is_preferred' => (bool) $item->pivot->is_preferred,
+                    ])
+                    ->values(),
             ],
         ]);
     }

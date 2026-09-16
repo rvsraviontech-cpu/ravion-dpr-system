@@ -36,7 +36,7 @@
         <div>
             <div class="flex flex-wrap items-center gap-3">
                 <h1 class="text-2xl font-bold text-gray-800 sm:text-3xl">
-                    Material Receipt #{{ $materialReceived->id }}
+                    Material Receipt {{ $materialReceived->receipt_number ?: '#' . $materialReceived->id }}
                 </h1>
 
                 <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClasses }}">
@@ -156,6 +156,17 @@
             </h2>
 
             <dl class="grid grid-cols-1 gap-x-8 gap-y-5 md:grid-cols-2 xl:grid-cols-3">
+
+                <div>
+                    <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Receipt Source</dt>
+                    <dd class="mt-1 font-semibold text-gray-800">{{ $materialReceived->receipt_source === 'PO' ? 'Against Purchase Order' : ($materialReceived->receipt_source === 'HO_DISPATCH' ? 'Head Office Dispatch' : ($materialReceived->receipt_source === 'DIRECT' ? 'Direct / Unplanned' : 'Legacy Receipt')) }}</dd>
+                </div>
+                @if($materialReceived->purchaseOrder)
+                    <div>
+                        <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">Purchase Order</dt>
+                        <dd class="mt-1 font-semibold text-blue-700">{{ $materialReceived->purchaseOrder->po_number }}</dd>
+                    </div>
+                @endif
 
                 <div>
                     <dt class="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -462,11 +473,6 @@
                                         ?? $item->pendingClassification?->raw_material_name
                                         ?? '-' }}
                                 </div>
-                                @if($item->work_package_display_name)
-                                    <div class="mt-1 text-xs text-gray-500">
-                                        {{ $item->work_package_display_name }}
-                                    </div>
-                                @endif
 
                                 @if($item->is_pending_classification)
                                     <div class="mt-2 inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800">
@@ -561,7 +567,6 @@
                 <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
                     <tr>
                         <th class="px-4 py-3 text-center">#</th>
-                        <th class="px-4 py-3 text-left">Work Package</th>
                         <th class="px-4 py-3 text-left">Classification</th>
                         <th class="px-4 py-3 text-left">Material Type</th>
                         <th class="px-4 py-3 text-left">Brand</th>
@@ -588,10 +593,6 @@
 
                                 <td class="px-4 py-3 text-center">
                                     {{ $index + 1 }}
-                                </td>
-
-                                <td class="px-4 py-3">
-                                    {{ $item->work_package_display_name ?? '-' }}
                                 </td>
 
                                 <td class="px-4 py-3">
@@ -665,7 +666,6 @@
                         <tr class="align-top">
 
                             <td class="px-4 py-3 text-center">1</td>
-                            <td class="px-4 py-3">-</td>
                             <td class="px-4 py-3">-</td>
 
                             <td class="px-4 py-3 font-semibold text-gray-800">

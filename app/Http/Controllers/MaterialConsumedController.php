@@ -18,7 +18,9 @@ use App\Models\ProjectRoom;
 use App\Models\ProjectSubspace;
 use App\Models\ProjectUnit;
 use App\Models\UnitMaster;
+use App\Services\MaterialInventoryService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -113,6 +115,49 @@ class MaterialConsumedController extends Controller
     public function create(): View
     {
         return view('material-consumed.create', $this->formData());
+    }
+
+    /**
+     * Return positive available inventory identities for the selected project.
+     */
+    public function projectInventory(
+        Project $project,
+        MaterialInventoryService $inventoryService
+    ): JsonResponse {
+        $projectIsAvailable = $this->availableProjects()
+            ->contains(fn (Project $availableProject): bool =>
+                (int) $availableProject->id === (int) $project->id
+            );
+
+        if (! $projectIsAvailable) {
+            abort(403, 'You do not have access to this project.');
+        }
+
+        $inventory = $inventoryService
+            ->availableForConsumption((int) $project->id)
+            ->map(fn (array $row): array => [
+                'stock_key' => $row['stock_key'],
+                'material_type_id' => $row['material_type_id'],
+                'material_type_name' => $row['material_type_name'],
+                'material_group' => $row['material_group'],
+                'brand_master_id' => $row['brand_master_id'],
+                'brand_name' => $row['brand_name'],
+                'material_specification_id' => $row['material_specification_id'],
+                'specification_name' => $row['specification_name'],
+                'material_grade_id' => $row['material_grade_id'],
+                'grade_name' => $row['grade_name'],
+                'unit_master_id' => $row['unit_master_id'],
+                'unit_name' => $row['unit_name'],
+                'book_stock_qty' => $row['book_stock_qty'],
+                'reserved_qty' => $row['reserved_qty'],
+                'available_qty' => $row['available_qty'],
+            ])
+            ->values();
+
+        return response()->json([
+            'project_id' => (int) $project->id,
+            'inventory' => $inventory,
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -282,33 +327,86 @@ class MaterialConsumedController extends Controller
         }
     }
 
-    public function submit(MaterialConsumed $materialConsumed): RedirectResponse
-    {
-        if ($materialConsumed->status !== 'Draft') {
+    public function submit(
+        MaterialConsumed $materialConsumed,
+        MaterialInventoryService $inventoryService
+    ): RedirectResponse {
+        try {
+            DB::transaction(function () use ($materialConsumed, $inventoryService): void {
+                $lockedConsumption = MaterialConsumed::query()
+                    ->whereKey($materialConsumed->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($lockedConsumption->status !== 'Draft') {
+                    throw ValidationException::withMessages([
+                        'status' => 'Only Draft material consumption entries can be submitted.',
+                    ]);
+                }
+
+                if (! $lockedConsumption->items()->exists() && empty($lockedConsumption->material_id)) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Add at least one material before submission.',
+                    ]);
+                }
+
+                /*
+                 * Serialize inventory reservations per project. Every Material Consumed
+                 * submission for the same project must acquire this lock before checking
+                 * availability, preventing two concurrent Drafts from reserving the same stock.
+                 */
+                Project::query()
+                    ->whereKey($lockedConsumption->project_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $lockedConsumption->load('items');
+
+                $items = $lockedConsumption->items
+                    ->map(fn ($item): array => [
+                        'material_type_id' => $item->material_type_id,
+                        'brand_master_id' => $item->brand_master_id,
+                        'material_specification_id' => $item->material_specification_id,
+                        'material_grade_id' => $item->material_grade_id,
+                        'quantity_consumed' => $item->quantity_consumed,
+                        'wastage_quantity' => $item->wastage_quantity,
+                        'unit_master_id' => $item->unit_master_id,
+                    ])
+                    ->values()
+                    ->all();
+
+                $inventoryService->validateAvailableStock(
+                    (int) $lockedConsumption->project_id,
+                    $items
+                );
+
+                $oldValues = ['status' => $lockedConsumption->status];
+
+                $lockedConsumption->update(['status' => 'Submitted']);
+                $lockedConsumption->refresh();
+
+                AuditHelper::log(
+                    'Material Consumed',
+                    'Submitted',
+                    'MaterialConsumed',
+                    $lockedConsumption->id,
+                    'Material consumption submitted for approval.',
+                    $oldValues,
+                    ['status' => $lockedConsumption->status]
+                );
+            });
+        } catch (ValidationException $exception) {
+            return back()
+                ->withErrors($exception->errors())
+                ->with('error', collect($exception->errors())->flatten()->first());
+        } catch (Throwable $exception) {
+            report($exception);
+
             return back()->with(
                 'error',
-                'Only Draft material consumption entries can be submitted.'
+                'Unable to submit the material consumption entry.'
             );
         }
-
-        if (! $materialConsumed->items()->exists() && empty($materialConsumed->material_id)) {
-            return back()->with('error', 'Add at least one material before submission.');
-        }
-
-        $oldValues = ['status' => $materialConsumed->status];
-
-        $materialConsumed->update(['status' => 'Submitted']);
-        $materialConsumed->refresh();
-
-        AuditHelper::log(
-            'Material Consumed',
-            'Submitted',
-            'MaterialConsumed',
-            $materialConsumed->id,
-            'Material consumption submitted for approval.',
-            $oldValues,
-            ['status' => $materialConsumed->status]
-        );
 
         return back()->with(
             'success',

@@ -15,6 +15,10 @@ use App\Models\Project;
 use App\Models\ProjectBlock;
 use App\Models\ProjectFloor;
 use App\Models\ProjectUnit;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
+use App\Models\PurchaseOrderItemAllocation;
+use App\Models\MaterialRequirementItem;
 use App\Models\UnitMaster;
 use App\Models\Vendor;
 use Illuminate\Database\Eloquent\Builder;
@@ -77,6 +81,8 @@ class MaterialReceivedController extends Controller
                 'items.specification',
                 'items.grade',
                 'items.unit',
+            'items.purchaseOrderItem',
+            'items.purchaseOrderItemAllocation',
 
                 'photos.materialReceivedItem.materialType',
                 'photos.uploader',
@@ -293,11 +299,32 @@ class MaterialReceivedController extends Controller
     /**
      * Show the multi-item receipt form.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
+        $selectedPurchaseOrder = null;
+
+        if ($request->filled('purchase_order_id')) {
+            $selectedPurchaseOrder = PurchaseOrder::query()
+                ->with([
+                    'project',
+                    'vendor',
+                    'items.materialType.unit',
+                    'items.brand',
+                    'items.materialSpecification',
+                    'items.materialGrade',
+                    'items.unit',
+                    'items.allocations.materialRequirementItem',
+                ])
+                ->whereIn('status', [
+                    PurchaseOrder::STATUS_ISSUED,
+                    PurchaseOrder::STATUS_PARTIALLY_RECEIVED,
+                ])
+                ->findOrFail((int) $request->input('purchase_order_id'));
+        }
+
         return view(
             'material-received.create',
-            $this->formData()
+            array_merge($this->formData(), compact('selectedPurchaseOrder'))
         );
     }
 
@@ -311,6 +338,8 @@ class MaterialReceivedController extends Controller
         $this->validateItemRelationships(
             $validated['items']
         );
+
+        $this->validatePurchaseOrderReceiptDraft($validated);
 
         $storedPaths = [];
 
@@ -328,6 +357,13 @@ class MaterialReceivedController extends Controller
                     $materialReceived = MaterialReceived::create([
                         'project_id' =>
                             (int) $validated['project_id'],
+
+                        'receipt_number' => $this->nextReceiptNumber(),
+                        'receipt_source' => $validated['receipt_source'] ?? 'DIRECT',
+                        'purchase_order_id' => $validated['purchase_order_id'] ?? null,
+                        'source_reference' => ! empty($validated['purchase_order_id'])
+                            ? PurchaseOrder::find($validated['purchase_order_id'])?->po_number
+                            : null,
 
                         'user_id' => auth()->id(),
 
@@ -479,6 +515,9 @@ class MaterialReceivedController extends Controller
                         $createdItems[$index] =
                             $materialReceived->items()->create([
 
+                                'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
+                                'purchase_order_item_allocation_id' => $item['purchase_order_item_allocation_id'] ?? null,
+
                                 'pending_material_classification_id' =>
                                     $pendingClassification?->id,
 
@@ -527,10 +566,16 @@ class MaterialReceivedController extends Controller
                                         $item['purpose_used_for'] ?? null
                                     ),
 
-                                'accepted_quantity' => 0,
-                                'short_quantity' => 0,
-                                'damaged_quantity' => 0,
-                                'rejected_quantity' => 0,
+                                'accepted_quantity' => $item['accepted_quantity'] ?? 0,
+                                'short_quantity' => $item['short_quantity'] ?? 0,
+                                'damaged_quantity' => $item['damaged_quantity'] ?? 0,
+                                'rejected_quantity' => $item['rejected_quantity'] ?? 0,
+
+                                'rate' => $item['rate'] ?? null,
+                                'discount_amount' => $item['discount_amount'] ?? null,
+                                'tax_percent' => $item['tax_percent'] ?? null,
+                                'tax_amount' => $item['tax_amount'] ?? null,
+                                'line_amount' => $item['line_amount'] ?? null,
 
                                 'material_condition' =>
                                     'Pending Verification',
@@ -543,6 +588,14 @@ class MaterialReceivedController extends Controller
                                     ),
                             ]);
                     }
+
+                    $materialReceived->update([
+                        'quantity_received' => round((float) $materialReceived->items()->sum('quantity_received'), 3),
+                        'accepted_quantity' => round((float) $materialReceived->items()->sum('accepted_quantity'), 3),
+                        'short_quantity' => round((float) $materialReceived->items()->sum('short_quantity'), 3),
+                        'damaged_quantity' => round((float) $materialReceived->items()->sum('damaged_quantity'), 3),
+                        'rejected_quantity' => round((float) $materialReceived->items()->sum('rejected_quantity'), 3),
+                    ]);
 
                     $this->storeUploadedPhotos(
                         request: $request,
@@ -637,7 +690,16 @@ class MaterialReceivedController extends Controller
             'material-received.edit',
             array_merge(
                 compact('materialReceived'),
-                $this->formData()
+                $this->formData(),
+                [
+                    'selectedPurchaseOrder' => $materialReceived->purchase_order_id
+                        ? PurchaseOrder::query()->with([
+                            'project', 'vendor', 'items.materialType.unit', 'items.brand',
+                            'items.materialSpecification', 'items.materialGrade', 'items.unit',
+                            'items.allocations.materialRequirementItem',
+                        ])->find($materialReceived->purchase_order_id)
+                        : null,
+                ]
             )
         );
     }
@@ -661,6 +723,8 @@ class MaterialReceivedController extends Controller
         $this->validateItemRelationships(
             $validated['items']
         );
+
+        $this->validatePurchaseOrderReceiptDraft($validated);
 
         $storedPaths = [];
         $pathsToDeleteAfterCommit = [];
@@ -689,6 +753,11 @@ class MaterialReceivedController extends Controller
                     $materialReceived->update([
                         'project_id' =>
                             (int) $validated['project_id'],
+                        'receipt_source' => $validated['receipt_source'] ?? 'DIRECT',
+                        'purchase_order_id' => $validated['purchase_order_id'] ?? null,
+                        'source_reference' => ! empty($validated['purchase_order_id'])
+                            ? PurchaseOrder::find($validated['purchase_order_id'])?->po_number
+                            : null,
 
                         'project_block_id' =>
                             $validated['project_block_id'] ?? null,
@@ -871,6 +940,9 @@ class MaterialReceivedController extends Controller
                         $createdItems[$index] =
                             $materialReceived->items()->create([
 
+                                'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
+                                'purchase_order_item_allocation_id' => $item['purchase_order_item_allocation_id'] ?? null,
+
                                 'pending_material_classification_id' =>
                                     $pendingClassification?->id,
 
@@ -919,10 +991,15 @@ class MaterialReceivedController extends Controller
                                         $item['purpose_used_for'] ?? null
                                     ),
 
-                                'accepted_quantity' => 0,
-                                'short_quantity' => 0,
-                                'damaged_quantity' => 0,
-                                'rejected_quantity' => 0,
+                                'accepted_quantity' => $item['accepted_quantity'] ?? 0,
+                                'short_quantity' => $item['short_quantity'] ?? 0,
+                                'damaged_quantity' => $item['damaged_quantity'] ?? 0,
+                                'rejected_quantity' => $item['rejected_quantity'] ?? 0,
+                                'rate' => $item['rate'] ?? null,
+                                'discount_amount' => $item['discount_amount'] ?? null,
+                                'tax_percent' => $item['tax_percent'] ?? null,
+                                'tax_amount' => $item['tax_amount'] ?? null,
+                                'line_amount' => $item['line_amount'] ?? null,
 
                                 'material_condition' =>
                                     'Pending Verification',
@@ -935,6 +1012,14 @@ class MaterialReceivedController extends Controller
                                     ),
                             ]);
                     }
+
+                    $materialReceived->update([
+                        'quantity_received' => round((float) $materialReceived->items()->sum('quantity_received'), 3),
+                        'accepted_quantity' => round((float) $materialReceived->items()->sum('accepted_quantity'), 3),
+                        'short_quantity' => round((float) $materialReceived->items()->sum('short_quantity'), 3),
+                        'damaged_quantity' => round((float) $materialReceived->items()->sum('damaged_quantity'), 3),
+                        'rejected_quantity' => round((float) $materialReceived->items()->sum('rejected_quantity'), 3),
+                    ]);
 
                     /*
                      * Reconnect surviving old photos to the recreated item
@@ -1027,63 +1112,66 @@ class MaterialReceivedController extends Controller
     public function submit(
         MaterialReceived $materialReceived
     ): RedirectResponse {
-        if ($materialReceived->status !== 'Draft') {
-            return back()->with(
-                'error',
-                'Only Draft material receipts can be submitted.'
-            );
+        try {
+            DB::transaction(function () use ($materialReceived): void {
+                $receipt = MaterialReceived::query()
+                    ->lockForUpdate()
+                    ->findOrFail($materialReceived->id);
+
+                if ($receipt->status !== 'Draft') {
+                    throw ValidationException::withMessages([
+                        'status' => 'Only Draft material receipts can be submitted.',
+                    ]);
+                }
+
+                $receipt->load('items');
+
+                if ($receipt->items->isEmpty() && empty($receipt->material_id)) {
+                    throw ValidationException::withMessages([
+                        'items' => 'Add at least one material before submission.',
+                    ]);
+                }
+
+                $oldValues = [
+                    'status' => $receipt->status,
+                    'site_engineer_verification_status' => $receipt->site_engineer_verification_status,
+                    'submitted_at' => $receipt->submitted_at,
+                ];
+
+                if ($receipt->receipt_source === 'PO') {
+                    $this->postPurchaseOrderReceipt($receipt);
+                }
+
+                $receipt->update([
+                    'status' => 'Submitted',
+                    'site_engineer_verification_status' => 'Verified',
+                    'submitted_at' => now(),
+                ]);
+
+                $receipt->refresh();
+
+                AuditHelper::log(
+                    'Material Received',
+                    'Submitted',
+                    'MaterialReceived',
+                    $receipt->id,
+                    $receipt->receipt_source === 'PO'
+                        ? 'PO material receipt physically confirmed and submitted for approval.'
+                        : 'Material receipt submitted for approval.',
+                    $oldValues,
+                    [
+                        'status' => $receipt->status,
+                        'site_engineer_verification_status' => $receipt->site_engineer_verification_status,
+                        'submitted_at' => $receipt->submitted_at,
+                    ]
+                );
+            });
+        } catch (ValidationException $exception) {
+            return back()->with('error', collect($exception->errors())->flatten()->first());
+        } catch (Throwable $exception) {
+            report($exception);
+            return back()->with('error', 'Unable to submit the material receipt. No PO quantities were changed.');
         }
-
-        if (
-            ! $materialReceived->items()->exists()
-            && empty($materialReceived->material_id)
-        ) {
-            return back()->with(
-                'error',
-                'Add at least one material before submission.'
-            );
-        }
-
-        $oldValues = [
-            'status' =>
-                $materialReceived->status,
-
-            'site_engineer_verification_status' =>
-                $materialReceived->site_engineer_verification_status,
-
-            'submitted_at' =>
-                $materialReceived->submitted_at,
-        ];
-
-        $materialReceived->update([
-            'status' => 'Submitted',
-
-            'site_engineer_verification_status' =>
-                'Verified',
-
-            'submitted_at' => now(),
-        ]);
-
-        $materialReceived->refresh();
-
-        AuditHelper::log(
-            'Material Received',
-            'Submitted',
-            'MaterialReceived',
-            $materialReceived->id,
-            'Material receipt submitted for approval.',
-            $oldValues,
-            [
-                'status' =>
-                    $materialReceived->status,
-
-                'site_engineer_verification_status' =>
-                    $materialReceived->site_engineer_verification_status,
-
-                'submitted_at' =>
-                    $materialReceived->submitted_at,
-            ]
-        );
 
         return back()->with(
             'success',
@@ -1359,6 +1447,9 @@ class MaterialReceivedController extends Controller
     private function validateReceipt(Request $request): array
     {
         return $request->validate([
+            'receipt_source' => ['required', 'string', 'in:DIRECT,PO'],
+            'purchase_order_id' => ['nullable', 'integer', 'exists:purchase_orders,id'],
+
             'project_id' => [
                 'required',
                 'integer',
@@ -1454,6 +1545,9 @@ class MaterialReceivedController extends Controller
                 'in:existing,temporary',
             ],
 
+            'items.*.purchase_order_item_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
+            'items.*.purchase_order_item_allocation_id' => ['nullable', 'integer', 'exists:purchase_order_item_allocations,id'],
+
             'items.*.material_type_id' => [
                 'nullable',
                 'integer',
@@ -1513,6 +1607,16 @@ class MaterialReceivedController extends Controller
                 'numeric',
                 'gt:0',
             ],
+
+            'items.*.accepted_quantity' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.short_quantity' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.damaged_quantity' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.rejected_quantity' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.rate' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.discount_amount' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.tax_percent' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.tax_amount' => ['nullable', 'numeric', 'gte:0'],
+            'items.*.line_amount' => ['nullable', 'numeric', 'gte:0'],
 
             'items.*.unit_master_id' => [
                 'required',
@@ -1648,9 +1752,11 @@ class MaterialReceivedController extends Controller
                 continue;
             }
 
-            if ((int) $item['unit_master_id'] !== (int) $materialType->unit_master_id) {
-                $errors["items.{$index}.unit_master_id"][] =
-                    "Row {$rowNumber}: the unit does not match the selected Material.";
+            // PO rows are validated against the locked Purchase Order item/allocation
+            // in validatePurchaseOrderReceiptDraft(), so legacy product-owned
+            // Brand/Specification checks must not reject canonical pivot mappings.
+            if (! empty($item['purchase_order_item_id'])) {
+                continue;
             }
 
             if (! empty($item['brand_master_id'])) {
@@ -1686,6 +1792,183 @@ class MaterialReceivedController extends Controller
         }
     }
 
+    private function validatePurchaseOrderReceiptDraft(array $validated): void
+    {
+        if (($validated['receipt_source'] ?? 'DIRECT') !== 'PO') {
+            return;
+        }
+
+        $poId = (int) ($validated['purchase_order_id'] ?? 0);
+        $po = PurchaseOrder::query()->with('items.allocations')->find($poId);
+
+        if (! $po || ! in_array($po->status, [PurchaseOrder::STATUS_ISSUED, PurchaseOrder::STATUS_PARTIALLY_RECEIVED], true)) {
+            throw ValidationException::withMessages([
+                'purchase_order_id' => 'Select an Issued or Partially Received Purchase Order.',
+            ]);
+        }
+
+        if ((int) $validated['project_id'] !== (int) $po->project_id) {
+            throw ValidationException::withMessages([
+                'project_id' => 'The receipt Project must match the Purchase Order Project.',
+            ]);
+        }
+
+        if ((int) ($validated['vendor_id'] ?? 0) !== (int) $po->vendor_id) {
+            throw ValidationException::withMessages([
+                'vendor_id' => 'The receipt Vendor must match the Purchase Order Vendor.',
+            ]);
+        }
+
+        foreach (array_values($validated['items']) as $index => $item) {
+            $poItemId = (int) ($item['purchase_order_item_id'] ?? 0);
+            $allocationId = (int) ($item['purchase_order_item_allocation_id'] ?? 0);
+
+            $poItem = $po->items->firstWhere('id', $poItemId);
+            if (! $poItem) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.purchase_order_item_id" => 'This receipt row does not belong to the selected Purchase Order.',
+                ]);
+            }
+
+            $allocation = $poItem->allocations->firstWhere('id', $allocationId);
+            if (! $allocation) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.purchase_order_item_allocation_id" => 'This receipt row is not linked to a valid PO allocation.',
+                ]);
+            }
+
+            if ((int) ($item['material_type_id'] ?? 0) !== (int) $poItem->material_type_id) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.material_type_id" => 'The Product cannot be changed for a PO receipt.',
+                ]);
+            }
+
+            if ((int) ($item['unit_master_id'] ?? 0) !== (int) $poItem->unit_master_id) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.unit_master_id" => 'The receipt unit must match the Purchase Order transaction unit.',
+                ]);
+            }
+
+            $received = round((float) ($item['quantity_received'] ?? 0), 3);
+            $accepted = round((float) ($item['accepted_quantity'] ?? 0), 3);
+            $damaged = round((float) ($item['damaged_quantity'] ?? 0), 3);
+            $rejected = round((float) ($item['rejected_quantity'] ?? 0), 3);
+            $short = round((float) ($item['short_quantity'] ?? 0), 3);
+
+            if (abs($received - ($accepted + $damaged + $rejected)) > 0.0005) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.accepted_quantity" => 'Receive Now must equal Accepted + Damaged + Rejected.',
+                ]);
+            }
+
+            $pending = max(0, round((float) $allocation->allocated_quantity - ((float) $allocation->received_quantity + (float) $allocation->short_quantity), 3));
+            if (($received + $short) - $pending > 0.0005) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.quantity_received" => 'Receive Now + Short exceeds the current pending PO quantity.',
+                ]);
+            }
+        }
+    }
+
+    private function postPurchaseOrderReceipt(MaterialReceived $receipt): void
+    {
+        $po = PurchaseOrder::query()->lockForUpdate()->findOrFail($receipt->purchase_order_id);
+
+        if (! in_array($po->status, [PurchaseOrder::STATUS_ISSUED, PurchaseOrder::STATUS_PARTIALLY_RECEIVED], true)) {
+            throw ValidationException::withMessages([
+                'purchase_order_id' => 'This Purchase Order is no longer open for receiving.',
+            ]);
+        }
+
+        foreach ($receipt->items as $receiptItem) {
+            $poItem = PurchaseOrderItem::query()->lockForUpdate()->find($receiptItem->purchase_order_item_id);
+            $allocation = PurchaseOrderItemAllocation::query()->lockForUpdate()->find($receiptItem->purchase_order_item_allocation_id);
+
+            if (! $poItem || (int) $poItem->purchase_order_id !== (int) $po->id || ! $allocation || (int) $allocation->purchase_order_item_id !== (int) $poItem->id) {
+                throw ValidationException::withMessages(['items' => 'A PO receipt linkage is invalid. Nothing was posted.']);
+            }
+
+            $received = round((float) $receiptItem->quantity_received, 3);
+            $accepted = round((float) $receiptItem->accepted_quantity, 3);
+            $short = round((float) $receiptItem->short_quantity, 3);
+            $damaged = round((float) $receiptItem->damaged_quantity, 3);
+            $rejected = round((float) $receiptItem->rejected_quantity, 3);
+
+            if (abs($received - ($accepted + $damaged + $rejected)) > 0.0005) {
+                throw ValidationException::withMessages(['items' => 'Receive Now must equal Accepted + Damaged + Rejected.']);
+            }
+
+            $allocationPending = max(0, round((float) $allocation->allocated_quantity - ((float) $allocation->received_quantity + (float) $allocation->short_quantity), 3));
+            if (($received + $short) - $allocationPending > 0.0005) {
+                throw ValidationException::withMessages(['items' => 'The PO pending quantity changed after this Draft was saved. Refresh the receipt and enter the current quantities.']);
+            }
+
+            $allocation->increment('received_quantity', $received);
+            $allocation->increment('accepted_quantity', $accepted);
+            $allocation->increment('short_quantity', $short);
+            $allocation->increment('damaged_quantity', $damaged);
+            $allocation->increment('rejected_quantity', $rejected);
+
+            $poItem->increment('received_quantity', $received);
+            $poItem->increment('accepted_quantity', $accepted);
+            $poItem->increment('short_quantity', $short);
+            $poItem->increment('damaged_quantity', $damaged);
+            $poItem->increment('rejected_quantity', $rejected);
+
+            if ($accepted > 0 && $allocation->material_requirement_item_id) {
+                $requirementItem = MaterialRequirementItem::query()->lockForUpdate()->find($allocation->material_requirement_item_id);
+                if ($requirementItem) {
+                    $newFulfilled = round((float) $requirementItem->fulfilled_quantity + $accepted, 3);
+                    if ($newFulfilled - (float) $requirementItem->required_quantity > 0.0005) {
+                        throw ValidationException::withMessages(['items' => 'Accepted quantity would over-fulfil a Material Requirement item. Nothing was posted.']);
+                    }
+                    $requirementItem->update(['fulfilled_quantity' => $newFulfilled]);
+                }
+            }
+        }
+
+        $this->refreshPurchaseOrderReceiptStatus($po);
+    }
+
+    private function refreshPurchaseOrderReceiptStatus(PurchaseOrder $po): void
+    {
+        $items = PurchaseOrderItem::query()->where('purchase_order_id', $po->id)->lockForUpdate()->get();
+        $hasAny = false;
+        $allAccounted = true;
+
+        foreach ($items as $item) {
+            $accounted = round((float) $item->received_quantity + (float) $item->short_quantity, 3);
+            if ($accounted > 0.0005) {
+                $hasAny = true;
+            }
+            if (((float) $item->ordered_quantity - $accounted) > 0.0005) {
+                $allAccounted = false;
+            }
+        }
+
+        $status = $allAccounted
+            ? PurchaseOrder::STATUS_RECEIVED
+            : ($hasAny ? PurchaseOrder::STATUS_PARTIALLY_RECEIVED : PurchaseOrder::STATUS_ISSUED);
+
+        $po->update(['status' => $status]);
+    }
+
+    private function nextReceiptNumber(): string
+    {
+        $year = now()->format('Y');
+        $prefix = "MR-{$year}-";
+
+        $last = MaterialReceived::query()
+            ->where('receipt_number', 'like', $prefix . '%')
+            ->lockForUpdate()
+            ->orderByDesc('receipt_number')
+            ->value('receipt_number');
+
+        $next = $last ? ((int) substr($last, -4)) + 1 : 1;
+
+        return $prefix . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
+    }
+
     /**
      * Data required by create and edit forms.
      */
@@ -1700,6 +1983,13 @@ class MaterialReceivedController extends Controller
             ->get();
 
         return [
+            'receivablePurchaseOrders' => PurchaseOrder::query()
+                ->with(['project', 'vendor'])
+                ->whereIn('status', [PurchaseOrder::STATUS_ISSUED, PurchaseOrder::STATUS_PARTIALLY_RECEIVED])
+                ->orderByDesc('po_date')
+                ->orderByDesc('id')
+                ->get(),
+
             'projects' => $this->availableProjects(),
 
             'projectBlocks' => ProjectBlock::query()->where('is_active', true)->orderBy('name')->get(),
@@ -1760,6 +2050,7 @@ class MaterialReceivedController extends Controller
     {
         return [
             'project',
+            'purchaseOrder',
             'engineer',
             'block',
             'floor',
@@ -1775,6 +2066,8 @@ class MaterialReceivedController extends Controller
             'items.specification',
             'items.grade',
             'items.unit',
+            'items.purchaseOrderItem',
+            'items.purchaseOrderItemAllocation',
             'items.photos.uploader',
 
             'photos.materialReceivedItem.materialType',

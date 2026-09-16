@@ -8,6 +8,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const unitSelect = document.getElementById('project_unit_id');
     const photoRows = document.getElementById('photo-rows');
     const addPhotoRowButton = document.getElementById('add-photo-row');
+    const receiptSource = document.getElementById('receipt_source');
+    const purchaseOrderSelect = document.getElementById('purchase_order_id');
+    const purchaseOrderWrap = document.getElementById('purchase-order-source-wrap');
+    const loadPurchaseOrderButton = document.getElementById('load-purchase-order');
 
     const materialTypeOptions = @json($materialTypeOptionsForJs);
     const brandOptions = @json($brandOptionsForJs);
@@ -89,6 +93,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const unitName = row.querySelector('.unit-name-input');
         const temporaryUnit = row.querySelector('.temporary-unit-select');
         const quantity = row.querySelector('.quantity-input');
+        const transactionUnit = row.querySelector('.transaction-unit-select');
+        const accepted = row.querySelector('.accepted-input');
+        const shortQty = row.querySelector('.short-input');
+        const damaged = row.querySelector('.damaged-input');
+        const rejected = row.querySelector('.rejected-input');
 
         const initialMode = row.querySelector('.entry-mode-input').value || 'existing';
         const initialTypeId = typeSelect.value;
@@ -104,8 +113,16 @@ document.addEventListener('DOMContentLoaded', function () {
         function updateDependencies(preserve = {}) {
             const selected = materialById(typeSelect.value);
             category.value = selected?.group || '';
-            unitId.value = selected?.unit_id || '';
+            // Product Master unit is only the default. Never overwrite a saved/PO transaction unit.
             unitName.value = selected?.unit_name || '';
+            if (transactionUnit) {
+                if (!transactionUnit.value) {
+                    transactionUnit.value = selected?.unit_id || '';
+                }
+                unitId.value = transactionUnit.value || '';
+            } else {
+                unitId.value = selected?.unit_id || '';
+            }
 
             rebuildSelect(brand, 'Brand', brandOptions.filter(x => String(x.material_type_id) === String(typeSelect.value)), preserve.brandId || '');
             rebuildSelect(specification, 'Specification', specificationOptions.filter(x => String(x.material_type_id) === String(typeSelect.value)), preserve.specificationId || '');
@@ -168,7 +185,14 @@ document.addEventListener('DOMContentLoaded', function () {
             searchInput.focus();
         });
 
-        temporaryUnit.addEventListener('change', () => unitId.value = temporaryUnit.value);
+        temporaryUnit.addEventListener('change', () => { unitId.value = temporaryUnit.value; if (transactionUnit) transactionUnit.value = temporaryUnit.value; });
+        transactionUnit?.addEventListener('change', () => unitId.value = transactionUnit.value);
+
+        let acceptedAuto = !accepted?.value;
+        accepted?.addEventListener('input', () => acceptedAuto = false);
+        quantity?.addEventListener('input', () => {
+            if (accepted && acceptedAuto) accepted.value = quantity.value;
+        });
 
         row.querySelector('.temporary-material-name').addEventListener('input', refreshPhotoItemOptions);
 
@@ -187,6 +211,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         setMode(row, initialMode, false);
+        if (transactionUnit?.value) unitId.value = transactionUnit.value;
 
         if (initialMode === 'temporary') {
             temporaryUnit.value = unitId.value || '';
@@ -307,6 +332,46 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function refreshReceiptSource() {
+        const isPo = receiptSource?.value === 'PO';
+        purchaseOrderWrap?.classList.toggle('hidden', !isPo);
+        if (!isPo && purchaseOrderSelect) purchaseOrderSelect.value = '';
+    }
+
+    receiptSource?.addEventListener('change', refreshReceiptSource);
+    loadPurchaseOrderButton?.addEventListener('click', function () {
+        if (!purchaseOrderSelect?.value) { alert('Select a Purchase Order first.'); return; }
+        const url = new URL(window.location.href);
+        url.searchParams.set('purchase_order_id', purchaseOrderSelect.value);
+        window.location.href = url.toString();
+    });
+
+    document.getElementById('material-receipt-form')?.addEventListener('submit', function (event) {
+        let valid = true;
+        body.querySelectorAll('.material-item-row').forEach((row, index) => {
+            const received = Number(row.querySelector('.quantity-input')?.value || 0);
+            const acceptedQty = Number(row.querySelector('.accepted-input')?.value || 0);
+            const damagedQty = Number(row.querySelector('.damaged-input')?.value || 0);
+            const rejectedQty = Number(row.querySelector('.rejected-input')?.value || 0);
+            const shortValue = Number(row.querySelector('.short-input')?.value || 0);
+            if (Math.abs(received - (acceptedQty + damagedQty + rejectedQty)) > 0.0005) {
+                alert(`Row ${index + 1}: Receive Now must equal Accepted + Damaged + Rejected.`);
+                valid = false;
+                return;
+            }
+            const pendingEl = row.querySelector('.po-pending-quantity');
+            if (pendingEl) {
+                const pending = Number((pendingEl.textContent || '0').replace(/,/g, ''));
+                if ((received + shortValue) - pending > 0.0005) {
+                    alert(`Row ${index + 1}: Receive Now + Short exceeds Pending quantity.`);
+                    valid = false;
+                }
+            }
+        });
+        if (!valid) event.preventDefault();
+    });
+
+    refreshReceiptSource();
     refreshLocations();
     refreshPhotoItemOptions();
 });

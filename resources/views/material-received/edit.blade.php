@@ -10,6 +10,8 @@
         $pending = $item->pendingClassification;
         return [
             'entry_mode' => $pending ? 'temporary' : 'existing',
+            'purchase_order_item_id' => $item->purchase_order_item_id,
+            'purchase_order_item_allocation_id' => $item->purchase_order_item_allocation_id,
             'material_type_id' => $item->material_type_id,
             'brand_master_id' => $item->brand_master_id,
             'material_specification_id' => $item->material_specification_id,
@@ -20,7 +22,19 @@
             'temporary_grade' => $pending?->raw_grade,
             'temporary_classification_notes' => $pending?->remarks,
             'quantity_received' => $item->quantity_received,
+            'accepted_quantity' => $item->accepted_quantity,
+            'short_quantity' => $item->short_quantity,
+            'damaged_quantity' => $item->damaged_quantity,
+            'rejected_quantity' => $item->rejected_quantity,
             'unit_master_id' => $item->unit_master_id,
+            'po_ordered_quantity' => $item->purchaseOrderItem?->ordered_quantity ?? 0,
+            'po_previously_accounted' => $item->purchaseOrderItemAllocation ? round((float)$item->purchaseOrderItemAllocation->received_quantity + (float)$item->purchaseOrderItemAllocation->short_quantity, 3) : 0,
+            'po_pending_quantity' => $item->purchaseOrderItemAllocation ? max(0, round((float)$item->purchaseOrderItemAllocation->allocated_quantity - ((float)$item->purchaseOrderItemAllocation->received_quantity + (float)$item->purchaseOrderItemAllocation->short_quantity), 3)) : 0,
+            'rate' => $item->rate,
+            'discount_amount' => $item->discount_amount,
+            'tax_percent' => $item->tax_percent,
+            'tax_amount' => $item->tax_amount,
+            'line_amount' => $item->line_amount,
             'purpose_used_for' => $item->purpose_used_for,
             'remarks' => $item->remarks,
         ];
@@ -28,11 +42,12 @@
 
     if (empty($existingItems)) {
         $existingItems = [[
-            'entry_mode' => 'existing', 'material_type_id' => '', 'brand_master_id' => '',
+            'entry_mode' => 'existing', 'purchase_order_item_id' => '', 'purchase_order_item_allocation_id' => '', 'material_type_id' => '', 'brand_master_id' => '',
             'material_specification_id' => '', 'material_grade_id' => '',
             'temporary_material_name' => '', 'temporary_brand' => '',
             'temporary_specification' => '', 'temporary_grade' => '',
             'temporary_classification_notes' => '', 'quantity_received' => '',
+            'accepted_quantity' => '', 'short_quantity' => 0, 'damaged_quantity' => 0, 'rejected_quantity' => 0,
             'unit_master_id' => '', 'purpose_used_for' => '', 'remarks' => '',
         ]];
     }

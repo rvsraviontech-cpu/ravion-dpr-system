@@ -10,6 +10,8 @@ class MaterialReceivedItem extends Model
 {
     protected $fillable = [
         'material_received_id',
+        'purchase_order_item_id',
+        'purchase_order_item_allocation_id',
 
         // Legacy / execution classification
         'activity_division_id',
@@ -57,6 +59,11 @@ class MaterialReceivedItem extends Model
         'short_quantity' => 'decimal:3',
         'damaged_quantity' => 'decimal:3',
         'rejected_quantity' => 'decimal:3',
+        'rate' => 'decimal:4',
+        'discount_amount' => 'decimal:2',
+        'tax_percent' => 'decimal:4',
+        'tax_amount' => 'decimal:2',
+        'line_amount' => 'decimal:2',
 
         'sort_order' => 'integer',
     ];
@@ -90,6 +97,16 @@ class MaterialReceivedItem extends Model
     public function activity(): BelongsTo
     {
         return $this->belongsTo(Activity::class, 'activity_id');
+    }
+
+    public function purchaseOrderItem(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderItem::class, 'purchase_order_item_id');
+    }
+
+    public function purchaseOrderItemAllocation(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderItemAllocation::class, 'purchase_order_item_allocation_id');
     }
 
     public function materialType(): BelongsTo

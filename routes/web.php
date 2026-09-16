@@ -84,6 +84,7 @@ use App\Http\Controllers\Materials\ProductDependencyController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\MaterialDispatchController;
 use App\Http\Controllers\MaterialDispatchReceiptController;
+use App\Http\Controllers\MaterialReceivedPurchaseOrderController;
 
 
 
@@ -196,6 +197,16 @@ Route::patch(
     '/dispatch-receipts/{materialDispatchReceipt}/confirm',
     [MaterialDispatchReceiptController::class, 'confirm']
 )->name('dispatch-receipts.confirm');
+
+Route::get(
+    '/material-received/purchase-orders',
+    [MaterialReceivedPurchaseOrderController::class, 'index']
+)->name('material-received.purchase-orders');
+
+Route::get(
+    '/material-received/purchase-orders/{purchaseOrder}',
+    [MaterialReceivedPurchaseOrderController::class, 'show']
+)->name('material-received.purchase-orders.show');
 
 Route::resource('purchase-orders', PurchaseOrderController::class);
 
@@ -1561,6 +1572,13 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
     Route::patch('/material-received/{materialReceived}/approve', [MaterialReceivedController::class, 'approve'])
         ->name('material-received.approve')
         ->middleware('permission:material_received.approve');
+
+        Route::get(
+    '/material-consumed/project-inventory/{project}',
+    [MaterialConsumedController::class, 'projectInventory']
+)
+    ->name('material-consumed.project-inventory')
+    ->middleware('permission:material_consumed.view');
 
     Route::resource('material-consumed', MaterialConsumedController::class)
         ->middleware('permission:material_consumed.view');

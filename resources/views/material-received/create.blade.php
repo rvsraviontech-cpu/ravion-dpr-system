@@ -6,8 +6,50 @@
     $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2.5 sm:text-sm';
     $labelClass = 'mb-1.5 block text-sm font-semibold text-gray-700';
 
-    $oldItems = old('items', [[
+    $poDefaultItems = collect();
+    if (!empty($selectedPurchaseOrder)) {
+        foreach ($selectedPurchaseOrder->items as $poItem) {
+            foreach ($poItem->allocations as $allocation) {
+                $pending = max(0, round(
+                    (float) $allocation->allocated_quantity
+                    - ((float) $allocation->received_quantity + (float) $allocation->short_quantity),
+                    3
+                ));
+                if ($pending <= 0) continue;
+
+                $poDefaultItems->push([
+                    'entry_mode' => 'existing',
+                    'purchase_order_item_id' => $poItem->id,
+                    'purchase_order_item_allocation_id' => $allocation->id,
+                    'material_type_id' => $poItem->material_type_id,
+                    'brand_master_id' => $poItem->brand_master_id,
+                    'material_specification_id' => $poItem->material_specification_id,
+                    'material_grade_id' => $poItem->material_grade_id,
+                    'quantity_received' => '',
+                    'accepted_quantity' => '',
+                    'short_quantity' => 0,
+                    'damaged_quantity' => 0,
+                    'rejected_quantity' => 0,
+                    'unit_master_id' => $poItem->unit_master_id,
+                    'purpose_used_for' => '',
+                    'remarks' => '',
+                    'po_ordered_quantity' => $poItem->ordered_quantity,
+                    'po_previously_accounted' => round((float) $allocation->received_quantity + (float) $allocation->short_quantity, 3),
+                    'po_pending_quantity' => $pending,
+                    'rate' => $poItem->rate,
+                    'discount_amount' => $poItem->discount_amount,
+                    'tax_percent' => $poItem->tax_percent,
+                    'tax_amount' => null,
+                    'line_amount' => null,
+                ]);
+            }
+        }
+    }
+
+    $oldItems = old('items', $poDefaultItems->isNotEmpty() ? $poDefaultItems->all() : [[
         'entry_mode' => 'existing',
+        'purchase_order_item_id' => '',
+        'purchase_order_item_allocation_id' => '',
         'material_type_id' => '',
         'brand_master_id' => '',
         'material_specification_id' => '',
@@ -18,6 +60,10 @@
         'temporary_grade' => '',
         'temporary_classification_notes' => '',
         'quantity_received' => '',
+        'accepted_quantity' => '',
+        'short_quantity' => 0,
+        'damaged_quantity' => 0,
+        'rejected_quantity' => 0,
         'unit_master_id' => '',
         'purpose_used_for' => '',
         'remarks' => '',

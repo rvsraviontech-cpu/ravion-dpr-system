@@ -10,6 +10,12 @@ class MaterialReceived extends Model
 {
     protected $fillable = [
         'dpr_id',
+        'receipt_number',
+        'receipt_source',
+        'purchase_order_id',
+        'material_dispatch_id',
+        'material_dispatch_receipt_id',
+        'source_reference',
         'project_id',
         'user_id',
 
@@ -61,6 +67,11 @@ class MaterialReceived extends Model
 
         'accountant_verified_by',
         'accountant_verified_at',
+
+        'subtotal',
+        'tax_amount',
+        'other_charges',
+        'grand_total',
     ];
 
     protected $casts = [
@@ -76,6 +87,10 @@ class MaterialReceived extends Model
         'short_quantity' => 'decimal:3',
         'damaged_quantity' => 'decimal:3',
         'rejected_quantity' => 'decimal:3',
+        'subtotal' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
+        'other_charges' => 'decimal:2',
+        'grand_total' => 'decimal:2',
     ];
 
     /*
@@ -90,6 +105,21 @@ class MaterialReceived extends Model
             Dpr::class,
             'dpr_id'
         );
+    }
+
+    public function purchaseOrder(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
+    }
+
+    public function materialDispatch(): BelongsTo
+    {
+        return $this->belongsTo(MaterialDispatch::class, 'material_dispatch_id');
+    }
+
+    public function materialDispatchReceipt(): BelongsTo
+    {
+        return $this->belongsTo(MaterialDispatchReceipt::class, 'material_dispatch_receipt_id');
     }
 
     public function project(): BelongsTo

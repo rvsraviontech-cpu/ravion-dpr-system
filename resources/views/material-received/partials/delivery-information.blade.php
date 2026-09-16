@@ -5,13 +5,50 @@
         <p class="mt-1 text-xs text-slate-200">Project, delivery and supplier details for this receipt.</p>
     </div>
 
+
+    <div class="mb-5 grid grid-cols-1 gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4 md:grid-cols-2">
+        <div>
+            <label class="{{ $labelClass }}">Receipt Source <span class="text-red-500">*</span></label>
+            <select name="receipt_source" id="receipt_source" class="{{ $inputClass }}" required {{ !empty($selectedPurchaseOrder) ? 'disabled' : '' }}>
+                <option value="DIRECT" {{ old('receipt_source', $materialReceived->receipt_source ?? (!empty($selectedPurchaseOrder) ? 'PO' : 'DIRECT')) === 'DIRECT' ? 'selected' : '' }}>Direct / Unplanned Receipt</option>
+                <option value="PO" {{ old('receipt_source', $materialReceived->receipt_source ?? (!empty($selectedPurchaseOrder) ? 'PO' : 'DIRECT')) === 'PO' ? 'selected' : '' }}>Against Purchase Order</option>
+            </select>
+            @if(!empty($selectedPurchaseOrder))<input type="hidden" name="receipt_source" value="PO">@endif
+        </div>
+        <div id="purchase-order-source-wrap" class="{{ old('receipt_source', $materialReceived->receipt_source ?? (!empty($selectedPurchaseOrder) ? 'PO' : 'DIRECT')) === 'PO' ? '' : 'hidden' }}">
+            <label class="{{ $labelClass }}">Purchase Order</label>
+            <div class="flex gap-2">
+                <select name="purchase_order_id" id="purchase_order_id" class="{{ $inputClass }}" {{ !empty($selectedPurchaseOrder) ? 'disabled' : '' }}>
+                    <option value="">Select Issued PO</option>
+                    @foreach($receivablePurchaseOrders as $po)
+                        <option value="{{ $po->id }}" {{ (string) old('purchase_order_id', $materialReceived->purchase_order_id ?? $selectedPurchaseOrder?->id ?? '') === (string) $po->id ? 'selected' : '' }}>
+                            {{ $po->po_number }} — {{ $po->po_date ? \Carbon\Carbon::parse($po->po_date)->format('d M Y') : 'No Date' }} — {{ $po->vendor_name }} — {{ $po->project_name }}
+                        </option>
+                    @endforeach
+                </select>
+                @if(!empty($selectedPurchaseOrder))<input type="hidden" name="purchase_order_id" value="{{ $selectedPurchaseOrder->id }}">@endif
+                @if(!isset($materialReceived) && empty($selectedPurchaseOrder))
+                    <button type="button" id="load-purchase-order" class="shrink-0 rounded-lg bg-[#10212F] px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">Load PO</button>
+                @endif
+            </div>
+            <p class="mt-1 text-xs text-blue-700">Load the PO to bring its pending items into this receipt. Partial receipts are allowed.</p>
+        </div>
+    </div>
+
+    @if(!empty($selectedPurchaseOrder))
+        <div class="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <strong>{{ $selectedPurchaseOrder->po_number }}</strong> · {{ $selectedPurchaseOrder->vendor_name }} · {{ $selectedPurchaseOrder->project_name }}
+            <span class="ml-2">Status: {{ $selectedPurchaseOrder->status }}</span>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <div>
             <label class="{{ $labelClass }}">Project <span class="text-red-500">*</span></label>
             <select name="project_id" id="project_id" class="{{ $inputClass }}" required>
                 <option value="">Select Project</option>
                 @foreach($projects as $project)
-                    <option value="{{ $project->id }}" {{ (string) old('project_id', $materialReceived->project_id ?? '') === (string) $project->id ? 'selected' : '' }}>{{ $project->project_name }}</option>
+                    <option value="{{ $project->id }}" {{ (string) old('project_id', $materialReceived->project_id ?? $selectedPurchaseOrder?->project_id ?? '') === (string) $project->id ? 'selected' : '' }}>{{ $project->project_name }}</option>
                 @endforeach
             </select>
         </div>
@@ -28,7 +65,7 @@
             <select name="vendor_id" class="{{ $inputClass }}">
                 <option value="">Select Vendor</option>
                 @foreach($vendors as $vendor)
-                    <option value="{{ $vendor->id }}" {{ (string) old('vendor_id', $materialReceived->vendor_id ?? '') === (string) $vendor->id ? 'selected' : '' }}>{{ $vendor->vendor_name }}</option>
+                    <option value="{{ $vendor->id }}" {{ (string) old('vendor_id', $materialReceived->vendor_id ?? $selectedPurchaseOrder?->vendor_id ?? '') === (string) $vendor->id ? 'selected' : '' }}>{{ $vendor->vendor_name }}</option>
                 @endforeach
             </select>
         </div>

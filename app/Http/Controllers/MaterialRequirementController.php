@@ -457,10 +457,10 @@ class MaterialRequirementController extends Controller
             if (
                 ! $product->is_active
                 || $product->is_legacy
-                || $product->master_status !== 'Approved'
+                || ! in_array($product->master_status, ['Approved', 'CANONICAL'], true)
             ) {
                 $errors["items.{$index}.material_type_id"][] =
-                    "Row {$rowNumber}: select an active Approved Product.";
+                    "Row {$rowNumber}: select an active Product available for operational use.";
             }
 
             if (! empty($item['material_specification_id'])) {

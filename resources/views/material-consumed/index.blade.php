@@ -493,35 +493,54 @@
         @endif
     </div>
 
-    {{-- Consumption Table --}}
+    {{-- Desktop Material Consumption Register --}}
     <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
 
-        <div class="overflow-x-auto">
+        <div class="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-3">
+            <div>
+                <h2 class="text-sm font-bold text-gray-800">Material Consumption Register</h2>
+                <p class="mt-0.5 text-xs text-gray-500">
+                    Compact consumption register. Open View for complete transaction details.
+                </p>
+            </div>
 
-            <table class="min-w-[1450px] w-full text-sm">
+            <div class="text-xs font-medium text-gray-500">
+                Showing {{ $materialConsumeds->firstItem() ?? 0 }}–{{ $materialConsumeds->lastItem() ?? 0 }}
+                of {{ $materialConsumeds->total() }} entries
+            </div>
+        </div>
 
-                <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+        <div class="max-h-[470px] overflow-auto overscroll-contain">
+            <table class="w-full min-w-[940px] table-fixed text-[13px] text-gray-700">
+
+                <colgroup>
+                    <col class="w-[48px]">
+                    <col class="w-[100px]">
+                    <col class="w-[175px]">
+                    <col class="w-[205px]">
+                    <col class="w-[90px]">
+                    <col class="w-[78px]">
+                    <col class="w-[90px]">
+                    <col class="w-[105px]">
+                    <col class="w-[150px]">
+                </colgroup>
+
+                <thead class="sticky top-0 z-20 bg-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-600 shadow-[0_1px_0_rgba(0,0,0,0.08)]">
                     <tr>
                         <th class="px-3 py-3 text-center">#</th>
                         <th class="px-3 py-3 text-left">Date</th>
                         <th class="px-3 py-3 text-left">Project</th>
-                        <th class="px-3 py-3 text-left">Activity</th>
-                        <th class="px-3 py-3 text-left">Material</th>
-                        <th class="px-3 py-3 text-left">Specification</th>
-                        <th class="px-3 py-3 text-left">Brand</th>
+                        <th class="px-3 py-3 text-left">Material (Spec / Grade)</th>
                         <th class="px-3 py-3 text-right">Consumed</th>
-                        <th class="px-3 py-3 text-right">Wastage</th>
                         <th class="px-3 py-3 text-left">Unit</th>
-                        <th class="px-3 py-3 text-left">Contractor</th>
-                        <th class="px-3 py-3 text-left">Status</th>
-                        <th class="px-3 py-3 text-center">Actions</th>
+                        <th class="px-3 py-3 text-right">Wastage</th>
+                        <th class="px-3 py-3 text-center">Status</th>
+                        <th class="px-3 py-3 text-left">Actions</th>
                     </tr>
                 </thead>
 
-                <tbody class="divide-y divide-gray-200">
-
+                <tbody class="divide-y divide-gray-200 bg-white">
                     @forelse($materialConsumeds as $index => $materialConsumed)
-
                         @php
                             $hasNewItems = $materialConsumed->items->isNotEmpty();
 
@@ -531,227 +550,170 @@
                                 'Rejected' => 'bg-red-100 text-red-800',
                                 default => 'bg-yellow-100 text-yellow-800',
                             };
+
+                            $registerItems = $hasNewItems
+                                ? $materialConsumed->items
+                                : collect([null]);
+
+                            $entryNumber = ($materialConsumeds->firstItem() ?? 1) + $index;
+
                         @endphp
 
-                        <tr class="align-top hover:bg-gray-50">
+                        @foreach($registerItems as $itemIndex => $item)
+                            @php
+                                $isFirstItem = $itemIndex === 0;
 
-                            <td class="px-3 py-3 text-center">
-                                {{ $materialConsumeds->firstItem() + $index }}
-                            </td>
+                                $materialName = $hasNewItems
+                                    ? ($item?->materialType?->material_type_name ?? '-')
+                                    : ($materialConsumed->material?->material_name ?? '-');
 
-                            <td class="whitespace-nowrap px-3 py-3">
-                                {{ $materialConsumed->consumed_date?->format('d/m/Y') ?? '-' }}
-                            </td>
+                                $specificationName = $hasNewItems
+                                    ? ($item?->specification?->specification_name ?? null)
+                                    : null;
 
-                            <td class="px-3 py-3">
-                                <div class="font-semibold text-gray-800">
-                                    {{ $materialConsumed->project?->project_name ?? '-' }}
-                                </div>
+                                $gradeName = $hasNewItems
+                                    ? ($item?->grade?->grade_name ?? null)
+                                    : null;
 
-                                @if($materialConsumed->block)
-                                    <div class="mt-1 text-xs text-gray-500">
-                                        {{ $materialConsumed->block->name }}
+                                $consumedQty = $hasNewItems
+                                    ? $item?->quantity_consumed
+                                    : $materialConsumed->quantity_consumed;
+
+                                $wastageQty = $hasNewItems
+                                    ? $item?->wastage_quantity
+                                    : $materialConsumed->wastage_quantity;
+
+                                $unitName = $hasNewItems
+                                    ? ($item?->unit?->unit_name ?? '-')
+                                    : ($materialConsumed->unit ?? '-');
+
+                                $materialDetails = collect([
+                                    $specificationName,
+                                    $gradeName,
+                                ])->filter()->implode(' / ');
+                            @endphp
+
+                            <tr class="hover:bg-slate-50 {{ ! $isFirstItem ? 'bg-gray-50/40' : '' }}">
+                                <td class="px-3 py-2.5 text-center font-semibold text-gray-500">
+                                    {{ $isFirstItem ? $entryNumber : '↳' }}
+                                </td>
+
+                                <td class="whitespace-nowrap px-3 py-2.5">
+                                    @if($isFirstItem)
+                                        <div class="font-medium text-gray-800">
+                                            {{ $materialConsumed->consumed_date?->format('d/m/Y') ?? '-' }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-300">—</span>
+                                    @endif
+                                </td>
+
+                                <td class="px-3 py-2.5">
+                                    @if($isFirstItem)
+                                        <div class="truncate font-semibold text-gray-900"
+                                             title="{{ $materialConsumed->project?->project_name ?? '-' }}">
+                                            {{ $materialConsumed->project?->project_name ?? '-' }}
+                                        </div>
+                                    @else
+                                        <span class="text-gray-300">—</span>
+                                    @endif
+                                </td>
+
+                                <td class="px-3 py-2.5">
+                                    <div class="truncate font-semibold text-gray-900"
+                                         title="{{ $materialName }}{{ $materialDetails ? ' — ' . $materialDetails : '' }}">
+                                        {{ $materialName }}
                                     </div>
-                                @endif
-                            </td>
 
-                            {{-- Activity --}}
-                            <td class="px-3 py-3">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1">
-                                                <div class="font-semibold text-gray-800">
-                                                    {{ $item->activity?->activity_name ?? '-' }}
-                                                </div>
-
-                                                @if($item->activityDivision)
-                                                    <div class="text-xs text-gray-500">
-                                                        {{ $item->activityDivision->name }}
-                                                    </div>
-                                                @endif
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <div class="font-semibold text-gray-800">
-                                        {{ $materialConsumed->activity?->activity_name ?? '-' }}
-                                    </div>
-
-                                    @if($materialConsumed->activityDivision)
-                                        <div class="mt-1 text-xs text-gray-500">
-                                            {{ $materialConsumed->activityDivision->name }}
+                                    @if($materialDetails)
+                                        <div class="mt-0.5 truncate text-[11px] text-gray-500"
+                                             title="{{ $materialDetails }}">
+                                            {{ $materialDetails }}
                                         </div>
                                     @endif
-                                @endif
-                            </td>
+                                </td>
 
-                            {{-- Material --}}
-                            <td class="px-3 py-3">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1">
-                                                <div class="font-semibold text-gray-800">
-                                                    {{ $item->materialType?->material_type_name ?? '-' }}
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    {{ $materialConsumed->material?->material_name ?? '-' }}
-                                @endif
-                            </td>
+                                <td class="px-2 py-2.5 text-right font-semibold text-blue-700">
+                                    {{ formatQuantity($consumedQty) }}
+                                </td>
 
-                            {{-- Specification --}}
-                            <td class="px-3 py-3">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1">
-                                                {{ $item->specification?->specification_name ?? '-' }}
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    -
-                                @endif
-                            </td>
+                                <td class="whitespace-nowrap px-2 py-2.5">
+                                    {{ $unitName }}
+                                </td>
 
-                            {{-- Brand --}}
-                            <td class="px-3 py-3">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1">
-                                                {{ $item->brand?->brand_name ?? '-' }}
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    -
-                                @endif
-                            </td>
+                                <td class="px-2 py-2.5 text-right font-semibold {{ (float) $wastageQty > 0 ? 'text-red-700' : 'text-gray-600' }}">
+                                    {{ formatQuantity($wastageQty) }}
+                                </td>
 
-                            {{-- Consumed --}}
-                            <td class="px-3 py-3 text-right">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1 font-semibold">
-                                                {{ formatQuantity($item->quantity_consumed) }}
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    {{ formatQuantity($materialConsumed->quantity_consumed) }}
-                                @endif
-                            </td>
-
-                            {{-- Wastage --}}
-                            <td class="px-3 py-3 text-right">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1">
-                                                {{ formatQuantity($item->wastage_quantity) }}
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    {{ formatQuantity($materialConsumed->wastage_quantity) }}
-                                @endif
-                            </td>
-
-                            {{-- Unit --}}
-                            <td class="px-3 py-3">
-                                @if($hasNewItems)
-                                    <div class="space-y-2">
-                                        @foreach($materialConsumed->items as $item)
-                                            <div class="min-h-[42px] py-1">
-                                                {{ $item->unit?->unit_name ?? '-' }}
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    {{ $materialConsumed->unit ?? '-' }}
-                                @endif
-                            </td>
-
-                            <td class="px-3 py-3">
-                                {{ $materialConsumed->contractor?->contractor_name ?? '-' }}
-                            </td>
-
-                            <td class="px-3 py-3">
-                                <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClasses }}">
-                                    {{ $materialConsumed->status }}
-                                </span>
-                            </td>
-
-                            <td class="px-3 py-3">
-                                <div class="flex flex-col gap-2">
-
-                                    <a href="{{ route('material-consumed.show', $materialConsumed) }}"
-                                       class="rounded bg-slate-700 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-slate-800">
-                                        View
-                                    </a>
-
-                                    @if(
-                                        $materialConsumed->status === 'Draft'
-                                        && $canEdit
-                                    )
-                                        <a href="{{ route('material-consumed.edit', $materialConsumed) }}"
-                                           class="rounded bg-yellow-500 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-yellow-600">
-                                            Edit
-                                        </a>
+                                <td class="px-3 py-2.5 text-center">
+                                    @if($isFirstItem)
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold {{ $statusClasses }}">
+                                            {{ $materialConsumed->status }}
+                                        </span>
+                                    @else
+                                        <span class="text-gray-300">—</span>
                                     @endif
+                                </td>
 
-                                    @if(
-                                        $materialConsumed->status === 'Submitted'
-                                        && $canApprove
-                                    )
-                                        <form method="POST"
-                                              action="{{ route('material-consumed.approve', $materialConsumed) }}">
-                                            @csrf
-                                            @method('PATCH')
+                                <td class="px-3 py-2">
+                                    @if($isFirstItem)
+                                        <div class="flex items-center justify-start gap-1.5">
+                                            <a href="{{ route('material-consumed.show', $materialConsumed) }}"
+                                               class="inline-flex min-w-[46px] items-center justify-center rounded-md bg-slate-700 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-800">
+                                                View
+                                            </a>
 
-                                            <button type="submit"
-                                                    onclick="return confirm('Approve this material consumption entry?')"
-                                                    class="w-full rounded bg-green-600 px-3 py-1.5 text-center text-xs font-semibold text-white hover:bg-green-700">
-                                                Approve
-                                            </button>
-                                        </form>
+                                            @if($materialConsumed->status === 'Draft' && $canEdit)
+                                                <a href="{{ route('material-consumed.edit', $materialConsumed) }}"
+                                                   class="inline-flex min-w-[42px] items-center justify-center rounded-md bg-amber-500 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-600">
+                                                    Edit
+                                                </a>
+                                            @endif
+
+                                            @if($materialConsumed->status === 'Submitted' && $canApprove)
+                                                <form method="POST"
+                                                      action="{{ route('material-consumed.approve', $materialConsumed) }}">
+                                                    @csrf
+                                                    @method('PATCH')
+
+                                                    <button type="submit"
+                                                            onclick="return confirm('Approve this material consumption entry?')"
+                                                            class="inline-flex min-w-[58px] items-center justify-center rounded-md bg-green-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-green-700">
+                                                        Approve
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <div class="text-center text-gray-300">—</div>
                                     @endif
-
-                                </div>
-                            </td>
-
-                        </tr>
-
+                                </td>
+                            </tr>
+                        @endforeach
                     @empty
-
                         <tr>
-                            <td colspan="13"
-                                class="px-6 py-12 text-center text-gray-500">
-                                No material consumption entries found.
+                            <td colspan="9" class="px-6 py-14 text-center">
+                                <div class="font-semibold text-gray-700">No material consumption entries found</div>
+                                <div class="mt-1 text-sm text-gray-500">Adjust the filters or create the first consumption entry.</div>
                             </td>
                         </tr>
-
                     @endforelse
-
                 </tbody>
-
             </table>
         </div>
 
-        @if($materialConsumeds->hasPages())
-            <div class="border-t border-gray-200 px-5 py-4">
-                {{ $materialConsumeds->links() }}
+        <div class="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3">
+            <div class="text-xs text-gray-500">
+                {{ $materialConsumeds->total() }} matching entr{{ $materialConsumeds->total() === 1 ? 'y' : 'ies' }}
             </div>
-        @endif
 
+            @if($materialConsumeds->hasPages())
+                <div>
+                    {{ $materialConsumeds->links() }}
+                </div>
+            @endif
+        </div>
     </div>
-
 </div>
 
 @endsection
