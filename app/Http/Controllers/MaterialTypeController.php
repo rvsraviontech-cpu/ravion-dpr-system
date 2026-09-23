@@ -236,31 +236,33 @@ class MaterialTypeController extends Controller
     }
 
     public function show(MaterialType $materialType): View
-    {
-        $materialType->load([
-            'productGroup',
-            'productType',
-            'unit',
-            'creator',
-            'specifications',
-            'grades',
-            'variants',
-            'searchAliases',
-            'usageMappings',
-            'productBrandMappings.brand',
-        ]);
+{
+    $materialType->load([
+        'productGroup',
+        'productType',
+        'unit',
+        'creator',
+        'specifications',
+        'grades',
+        'variants',
+        'searchAliases',
+        'usageMappings',
+        'productBrandMappings.brand.segment',
+    ]);
 
-        $availableBrands = BrandMaster::query()
-            ->where('is_active', true)
-            ->whereDoesntHave('productMappings', function ($query) use ($materialType) {
-                $query->where('material_type_id', $materialType->id);
-            })
-            ->orderBy('brand_name')
-            ->get();
+    $availableBrands = BrandMaster::query()
+        ->with('segment')
+        ->where('is_active', true)
+        ->whereDoesntHave('productMappings', function ($query) use ($materialType) {
+            $query->where('material_type_id', $materialType->id);
+        })
+        ->orderByRaw('CASE WHEN brand_segment_id IS NULL THEN 1 ELSE 0 END')
+        ->orderBy('brand_segment_id')
+        ->orderBy('brand_name')
+        ->get();
 
-        return view('material-types.show', compact('materialType', 'availableBrands'));
-    }
-
+    return view('material-types.show', compact('materialType', 'availableBrands'));
+}
     public function storeBrandMapping(Request $request, MaterialType $materialType): RedirectResponse
     {
         $validated = $request->validate([

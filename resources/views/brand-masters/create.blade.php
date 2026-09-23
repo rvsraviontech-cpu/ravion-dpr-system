@@ -17,7 +17,7 @@
             </h1>
 
             <p class="mt-1 text-gray-500">
-                Create a reusable brand for the selected Material Type.
+                Create a reusable Brand identity. Products can be associated with the Brand after it is created.
             </p>
         </div>
 
@@ -49,113 +49,133 @@
 
         <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
 
-            <h2 class="mb-5 text-xl font-bold text-gray-800">
-                Brand Details
-            </h2>
+            <div class="mb-5">
+                <h2 class="text-xl font-bold text-gray-800">
+                    Brand Details
+                </h2>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    Brand Segment identifies the commercial category of the Brand. Product applicability is managed separately.
+                </p>
+            </div>
 
             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
 
                 <div>
-                    <label class="{{ $labelClass }}">
-                        Material Group
+                    <label class="{{ $labelClass }}"
+                           for="brand_segment_id">
+                        Brand Segment
+                        <span class="text-red-500">*</span>
                     </label>
 
-                    <select id="material_group"
-                            class="{{ $inputClass }}">
+                    <select id="brand_segment_id"
+                            name="brand_segment_id"
+                            class="{{ $inputClass }}"
+                            required>
 
                         <option value="">
-                            Select Material Group
+                            Select Brand Segment
                         </option>
 
-                        @foreach($materialGroups as $group)
-                            <option value="{{ $group }}"
-                                {{ old('material_group') === $group ? 'selected' : '' }}>
-                                {{ $group }}
+                        @foreach($brandSegments as $segment)
+                            <option value="{{ $segment->id }}"
+                                {{ (string) old('brand_segment_id') === (string) $segment->id ? 'selected' : '' }}>
+                                {{ $segment->segment_name }}
                             </option>
                         @endforeach
 
                     </select>
 
                     <p class="mt-1 text-xs text-gray-500">
-                        Used only to filter the Material Type dropdown.
+                        Example: Building Materials, Electrical, Plumbing &amp; Sanitary, HVAC &amp; Ventilation.
                     </p>
                 </div>
 
                 <div>
-                    <label class="{{ $labelClass }}">
-                        Material Type <span class="text-red-500">*</span>
-                    </label>
-
-                    <select id="material_type_id"
-                            name="material_type_id"
-                            class="{{ $inputClass }}"
-                            required>
-
-                        <option value="">
-                            Select Material Type
-                        </option>
-
-                        @foreach($materialTypes as $materialType)
-                            <option value="{{ $materialType->id }}"
-                                    data-group="{{ $materialType->material_group }}"
-                                    data-unit="{{ $materialType->unit?->unit_name }}"
-                                {{ (string) old('material_type_id') === (string) $materialType->id ? 'selected' : '' }}>
-                                {{ $materialType->material_type_name }}
-                            </option>
-                        @endforeach
-
-                    </select>
-                </div>
-
-                <div>
-                    <label class="{{ $labelClass }}">
-                        Brand Name <span class="text-red-500">*</span>
+                    <label class="{{ $labelClass }}"
+                           for="brand_name">
+                        Brand Name
+                        <span class="text-red-500">*</span>
                     </label>
 
                     <input type="text"
+                           id="brand_name"
                            name="brand_name"
                            value="{{ old('brand_name') }}"
                            class="{{ $inputClass }}"
                            placeholder="Example: Ambuja, UltraTech, JSW, Astral"
+                           maxlength="255"
                            required>
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        The same Brand name may exist in another Brand Segment when they represent different commercial Brand identities.
+                    </p>
                 </div>
 
                 <div>
-                    <label class="{{ $labelClass }}">
-                        Default Unit
+                    <label class="{{ $labelClass }}"
+                           for="brand_code">
+                        Brand Code
                     </label>
 
                     <input type="text"
-                           id="unit_display"
-                           class="{{ $inputClass }} bg-gray-100"
-                           readonly
-                           placeholder="Auto-filled from Material Type">
+                           id="brand_code"
+                           name="brand_code"
+                           value="{{ old('brand_code') }}"
+                           class="{{ $inputClass }}"
+                           placeholder="Optional internal code"
+                           maxlength="100">
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Optional internal reference code for this Brand.
+                    </p>
                 </div>
 
                 <div>
-                    <label class="{{ $labelClass }}">
+                    <label class="{{ $labelClass }}"
+                           for="sequence">
                         Display Sequence
                     </label>
 
                     <input type="number"
+                           id="sequence"
                            name="sequence"
                            value="{{ old('sequence', 0) }}"
                            min="0"
                            class="{{ $inputClass }}">
+
+                    <p class="mt-1 text-xs text-gray-500">
+                        Lower numbers appear first when Brands are ordered.
+                    </p>
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="{{ $labelClass }}">
+                    <label class="{{ $labelClass }}"
+                           for="remarks">
                         Remarks
                     </label>
 
-                    <textarea name="remarks"
+                    <textarea id="remarks"
+                              name="remarks"
                               rows="4"
                               class="{{ $inputClass }}"
-                              placeholder="Optional notes about this brand">{{ old('remarks') }}</textarea>
+                              maxlength="2000"
+                              placeholder="Optional notes about this Brand">{{ old('remarks') }}</textarea>
                 </div>
 
             </div>
+
+        </div>
+
+        <div class="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+
+            <div class="font-semibold text-blue-900">
+                Product Associations
+            </div>
+
+            <p class="mt-1 text-sm leading-6 text-blue-800">
+                After saving the Brand, open its Edit page to associate one or more Products with it. A Brand is not restricted to a single Product.
+            </p>
 
         </div>
 
@@ -176,81 +196,5 @@
     </form>
 
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const groupSelect = document.getElementById('material_group');
-    const typeSelect = document.getElementById('material_type_id');
-    const unitDisplay = document.getElementById('unit_display');
-
-    if (!groupSelect || !typeSelect || !unitDisplay) {
-        return;
-    }
-
-    const originalOptions = Array.from(
-        typeSelect.querySelectorAll('option')
-    ).map(option => option.cloneNode(true));
-
-    const oldTypeId = @json((string) old('material_type_id', ''));
-    const oldGroup = @json((string) old('material_group', ''));
-
-    function resetTypeSelect() {
-        typeSelect.innerHTML = '';
-        typeSelect.add(new Option('Select Material Type', ''));
-    }
-
-    function filterMaterialTypes(preserveSelection = false) {
-        const selectedGroup = groupSelect.value;
-
-        resetTypeSelect();
-
-        originalOptions.forEach(function (option) {
-            if (option.value === '') {
-                return;
-            }
-
-            if (
-                selectedGroup === ''
-                || option.dataset.group === selectedGroup
-            ) {
-                const clonedOption = option.cloneNode(true);
-
-                if (
-                    preserveSelection
-                    && clonedOption.value === oldTypeId
-                ) {
-                    clonedOption.selected = true;
-                }
-
-                typeSelect.add(clonedOption);
-            }
-        });
-
-        updateUnit();
-    }
-
-    function updateUnit() {
-        const selectedOption =
-            typeSelect.options[typeSelect.selectedIndex];
-
-        unitDisplay.value =
-            selectedOption?.dataset?.unit || '';
-    }
-
-    groupSelect.addEventListener('change', function () {
-        filterMaterialTypes(false);
-        typeSelect.value = '';
-        updateUnit();
-    });
-
-    typeSelect.addEventListener('change', updateUnit);
-
-    if (oldGroup !== '') {
-        groupSelect.value = oldGroup;
-    }
-
-    filterMaterialTypes(true);
-});
-</script>
 
 @endsection

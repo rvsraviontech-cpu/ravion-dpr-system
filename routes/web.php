@@ -49,6 +49,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\LabourCategoryController;
 use App\Http\Controllers\UnitMasterController;
 use App\Http\Controllers\BrandMasterController;
+use App\Http\Controllers\BrandSegmentController;
 use App\Http\Controllers\ActivityDivisionController;
 use App\Http\Controllers\WorkStageController;
 use App\Http\Controllers\ContractorServiceCategoryController;
@@ -1215,6 +1216,44 @@ Route::get(
     ->name('ajax.designation-roles')
     ->middleware('permission:labour_masters.view');
 
+    /*
+|--------------------------------------------------------------------------
+| Brand Segment Master
+|--------------------------------------------------------------------------
+|
+| Reusable commercial classification for Brand identities.
+| Brand Segment does not restrict Product applicability.
+| Actual Product ↔ Brand applicability is managed separately through
+| material_product_brand.
+|
+*/
+
+Route::get('/brand-segments', [BrandSegmentController::class, 'index'])
+    ->name('brand-segments.index')
+    ->middleware('permission:materials.view');
+
+Route::get('/brand-segments/create', [BrandSegmentController::class, 'create'])
+    ->name('brand-segments.create')
+    ->middleware('permission:materials.manage');
+
+Route::post('/brand-segments', [BrandSegmentController::class, 'store'])
+    ->name('brand-segments.store')
+    ->middleware('permission:materials.manage');
+
+Route::get('/brand-segments/{brandSegment}/edit', [BrandSegmentController::class, 'edit'])
+    ->name('brand-segments.edit')
+    ->middleware('permission:materials.manage');
+
+Route::put('/brand-segments/{brandSegment}', [BrandSegmentController::class, 'update'])
+    ->name('brand-segments.update')
+    ->middleware('permission:materials.manage');
+
+Route::patch(
+    '/brand-segments/{brandSegment}/toggle-status',
+    [BrandSegmentController::class, 'toggleStatus']
+)
+    ->name('brand-segments.toggle-status')
+    ->middleware('permission:materials.manage');
 
     /*
     |--------------------------------------------------------------------------

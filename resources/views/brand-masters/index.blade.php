@@ -14,7 +14,7 @@
         </h1>
 
         <p class="mt-1 text-gray-500">
-            Manage reusable brands for each Material Type.
+            Manage reusable Brand identities and their commercial Brand Segments.
         </p>
     </div>
 
@@ -41,7 +41,7 @@
 
     <form method="GET"
           action="{{ route('brand-masters.index') }}"
-          class="grid grid-cols-1 gap-4 md:grid-cols-5">
+          class="grid grid-cols-1 gap-4 md:grid-cols-4">
 
         <div>
             <label class="mb-1 block text-sm font-semibold text-gray-700">
@@ -51,47 +51,26 @@
             <input type="text"
                    name="search"
                    value="{{ request('search') }}"
-                   placeholder="Brand or Material Type"
+                   placeholder="Brand, code or segment"
                    class="{{ $inputClass }}">
         </div>
 
         <div>
             <label class="mb-1 block text-sm font-semibold text-gray-700">
-                Material Group
+                Brand Segment
             </label>
 
-            <select id="material_group"
-                    name="material_group"
+            <select name="brand_segment_id"
                     class="{{ $inputClass }}">
 
-                <option value="">All Groups</option>
+                <option value="">
+                    All Brand Segments
+                </option>
 
-                @foreach($materialGroups as $group)
-                    <option value="{{ $group }}"
-                        {{ request('material_group') === $group ? 'selected' : '' }}>
-                        {{ $group }}
-                    </option>
-                @endforeach
-
-            </select>
-        </div>
-
-        <div>
-            <label class="mb-1 block text-sm font-semibold text-gray-700">
-                Material Type
-            </label>
-
-            <select id="material_type_id"
-                    name="material_type_id"
-                    class="{{ $inputClass }}">
-
-                <option value="">All Material Types</option>
-
-                @foreach($materialTypes as $materialType)
-                    <option value="{{ $materialType->id }}"
-                            data-group="{{ $materialType->material_group }}"
-                        {{ (string) request('material_type_id') === (string) $materialType->id ? 'selected' : '' }}>
-                        {{ $materialType->material_type_name }}
+                @foreach($brandSegments as $segment)
+                    <option value="{{ $segment->id }}"
+                        {{ (string) request('brand_segment_id') === (string) $segment->id ? 'selected' : '' }}>
+                        {{ $segment->segment_name }}
                     </option>
                 @endforeach
 
@@ -106,7 +85,9 @@
             <select name="status"
                     class="{{ $inputClass }}">
 
-                <option value="">All Statuses</option>
+                <option value="">
+                    All Statuses
+                </option>
 
                 <option value="1"
                     {{ request('status') === '1' ? 'selected' : '' }}>
@@ -148,15 +129,37 @@
             <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
 
                 <tr>
-                    <th class="px-4 py-3 text-left">#</th>
-                    <th class="px-4 py-3 text-left">Material Group</th>
-                    <th class="px-4 py-3 text-left">Material Type</th>
-                    <th class="px-4 py-3 text-left">Brand</th>
-                    <th class="px-4 py-3 text-center">Default Unit</th>
-                    <th class="px-4 py-3 text-center">Sequence</th>
-                    <th class="px-4 py-3 text-center">Status</th>
-                    <th class="px-4 py-3 text-left">Remarks</th>
-                    <th class="px-4 py-3 text-center">Actions</th>
+                    <th class="px-4 py-3 text-left">
+                        #
+                    </th>
+
+                    <th class="px-4 py-3 text-left">
+                        Brand Segment
+                    </th>
+
+                    <th class="px-4 py-3 text-left">
+                        Brand
+                    </th>
+
+                    <th class="px-4 py-3 text-left">
+                        Brand Code
+                    </th>
+
+                    <th class="px-4 py-3 text-center">
+                        Sequence
+                    </th>
+
+                    <th class="px-4 py-3 text-center">
+                        Status
+                    </th>
+
+                    <th class="px-4 py-3 text-left">
+                        Remarks
+                    </th>
+
+                    <th class="px-4 py-3 text-center">
+                        Actions
+                    </th>
                 </tr>
 
             </thead>
@@ -167,26 +170,51 @@
 
                     <tr class="hover:bg-gray-50">
 
-                        <td class="px-4 py-3">
+                        <td class="px-4 py-3 text-gray-600">
                             {{ $brands->firstItem() + $index }}
                         </td>
 
-                        <td class="px-4 py-3 whitespace-nowrap">
-                            {{ $brand->materialType?->material_group ?? '-' }}
-                        </td>
+                        <td class="px-4 py-3">
 
-                        <td class="px-4 py-3 font-semibold text-gray-800">
-                            {{ $brand->materialType?->material_type_name ?? '-' }}
+                            @if($brand->segment)
+
+                                <div class="font-semibold text-gray-800">
+                                    {{ $brand->segment->segment_name }}
+                                </div>
+
+                                <div class="mt-0.5 text-xs text-gray-500">
+                                    {{ $brand->segment->segment_code }}
+                                </div>
+
+                            @else
+
+                                <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                                    Legacy / Unclassified
+                                </span>
+
+                            @endif
+
                         </td>
 
                         <td class="px-4 py-3">
+
                             <span class="font-semibold text-gray-800">
                                 {{ $brand->brand_name }}
                             </span>
+
+                            @if(!$brand->segment && $brand->materialType)
+
+                                <div class="mt-1 text-xs text-gray-500">
+                                    Legacy Product:
+                                    {{ $brand->materialType->material_type_name }}
+                                </div>
+
+                            @endif
+
                         </td>
 
-                        <td class="px-4 py-3 text-center">
-                            {{ $brand->materialType?->unit?->unit_name ?? '-' }}
+                        <td class="px-4 py-3 whitespace-nowrap">
+                            {{ $brand->brand_code ?: '-' }}
                         </td>
 
                         <td class="px-4 py-3 text-center">
@@ -196,19 +224,37 @@
                         <td class="px-4 py-3 text-center">
 
                             @if($brand->is_active)
+
                                 <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
                                     Active
                                 </span>
+
                             @else
+
                                 <span class="inline-flex rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-800">
                                     Inactive
                                 </span>
+
                             @endif
 
                         </td>
 
                         <td class="px-4 py-3">
-                            {{ $brand->remarks ?? '-' }}
+
+                            @if($brand->remarks)
+
+                                <div class="max-w-md whitespace-normal text-gray-700">
+                                    {{ $brand->remarks }}
+                                </div>
+
+                            @else
+
+                                <span class="text-gray-400">
+                                    -
+                                </span>
+
+                            @endif
+
                         </td>
 
                         <td class="px-4 py-3">
@@ -251,7 +297,7 @@
                 @empty
 
                     <tr>
-                        <td colspan="9"
+                        <td colspan="8"
                             class="px-6 py-10 text-center text-gray-500">
                             No material brands found.
                         </td>
@@ -272,62 +318,5 @@
     @endif
 
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const groupSelect =
-        document.getElementById('material_group');
-
-    const typeSelect =
-        document.getElementById('material_type_id');
-
-    if (!groupSelect || !typeSelect) {
-        return;
-    }
-
-    const originalOptions = Array.from(
-        typeSelect.querySelectorAll('option')
-    ).map(option => option.cloneNode(true));
-
-    const selectedTypeId =
-        @json((string) request('material_type_id', ''));
-
-    function filterMaterialTypes(preserveSelection = true) {
-        const selectedGroup = groupSelect.value;
-
-        typeSelect.innerHTML = '';
-        typeSelect.add(new Option('All Material Types', ''));
-
-        originalOptions.forEach(function (option) {
-            if (option.value === '') {
-                return;
-            }
-
-            if (
-                selectedGroup === ''
-                || option.dataset.group === selectedGroup
-            ) {
-                const clonedOption = option.cloneNode(true);
-
-                if (
-                    preserveSelection
-                    && clonedOption.value === selectedTypeId
-                ) {
-                    clonedOption.selected = true;
-                }
-
-                typeSelect.add(clonedOption);
-            }
-        });
-    }
-
-    groupSelect.addEventListener('change', function () {
-        filterMaterialTypes(false);
-        typeSelect.value = '';
-    });
-
-    filterMaterialTypes(true);
-});
-</script>
 
 @endsection

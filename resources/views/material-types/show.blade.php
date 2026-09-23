@@ -258,10 +258,10 @@
                                             class="w-full rounded-lg border-gray-300 text-sm focus:border-sky-500 focus:ring-sky-500">
                                         <option value="">Select Brand</option>
                                         @foreach($availableBrands as $brand)
-                                            <option value="{{ $brand->id }}" @selected((string) old('brand_master_id') === (string) $brand->id)>
-                                                {{ $brand->brand_name }}
-                                            </option>
-                                        @endforeach
+    <option value="{{ $brand->id }}" @selected((string) old('brand_master_id') === (string) $brand->id)>
+        {{ $brand->brand_name }} — {{ $brand->segment?->segment_name ?? 'Legacy / Unclassified' }}
+    </option>
+@endforeach
                                     </select>
                                     @error('brand_master_id')
                                         <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p>
@@ -326,10 +326,18 @@
                     @forelse($materialType->productBrandMappings->sortBy('sort_order') as $mapping)
                         <tr>
                             <td class="px-4 py-3">
-                                <div class="font-semibold text-gray-900">{{ $mapping->brand?->brand_name ?? 'Missing Brand' }}</div>
-                                @if($mapping->brand?->brand_code)
-                                    <div class="mt-0.5 text-xs text-gray-500">{{ $mapping->brand->brand_code }}</div>
-                                @endif
+                                <div class="font-semibold text-gray-900">
+    {{ $mapping->brand?->brand_name ?? 'Missing Brand' }}
+</div>
+
+@if($mapping->brand)
+    <div class="mt-0.5 text-xs text-gray-500">
+        {{ $mapping->brand->segment?->segment_name ?? 'Legacy / Unclassified' }}
+        @if($mapping->brand->brand_code)
+            · {{ $mapping->brand->brand_code }}
+        @endif
+    </div>
+@endif
                             </td>
                             <td class="px-4 py-3 text-center">
                                 @if($mapping->is_preferred)
