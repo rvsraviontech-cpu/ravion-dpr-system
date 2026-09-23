@@ -6,8 +6,11 @@
             'id' => $item->id,
             'material_type_id' => $item->material_type_id,
             'product_name' => $item->materialType?->material_type_name,
-            'specification_text' => $item->specification_text
-                ?: $item->specification?->specification_name,
+            'specification_text' => $item->specification_text,
+            'material_specification_id' => $item->material_specification_id,
+            'specification_name' => $item->specification?->specification_name,
+            'material_grade_id' => $item->material_grade_id,
+            'grade_name' => $item->grade?->grade_name,
             'brand_master_id' => $item->brand_master_id,
             'brand_name' => $item->brand?->brand_name,
             'required_quantity' => $item->required_quantity,
@@ -19,7 +22,7 @@
 
     $formItems = old('items', $existingItems);
 
-    $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
+    $inputClass = 'block h-11 w-full min-w-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100';
     $labelClass = 'mb-1.5 block text-sm font-semibold text-gray-700';
 @endphp
 
@@ -130,7 +133,7 @@
             <div>
                 <h2 class="text-lg font-bold text-gray-800">Add Product to Requirement</h2>
                 <p class="mt-1 text-xs text-gray-500">
-                    Product, exact specification/size, optional Brand, quantity, transaction unit and remarks.
+                    Select a Product, then choose its Specification, Grade and Brand as applicable. Enter a custom specification when needed.
                 </p>
             </div>
 
@@ -140,66 +143,55 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-4 lg:grid-cols-12 lg:items-end">
-            <div class="lg:col-span-3">
-                <x-rds.product-selector
-                    name="entry_product_id"
-                    label="Product"
-                    placeholder="Search Product..."
-                />
+        {{-- Four aligned fields per row on wide screens; no uneven column spans. --}}
+        <div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-4">
+            <div class="min-w-0">
+                <x-rds.product-selector name="entry_product_id" label="Product" placeholder="Search Product..." />
             </div>
-
-            <div class="lg:col-span-2">
-                <label class="{{ $labelClass }}">Specification / Size</label>
-
-                <input type="text"
-                       id="entry_specification"
-                       class="{{ $inputClass }}"
-                       placeholder='120 mm, 6", 6A, SN4'>
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_specification_id">Specification / Size</label>
+                <select id="entry_specification_id" class="{{ $inputClass }}">
+                    <option value="">Any / Not listed</option>
+                </select>
             </div>
-
-            <div class="lg:col-span-2">
-                <label class="{{ $labelClass }}">Brand</label>
-
-                <select id="entry_brand" class="{{ $inputClass }}">
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_grade">Grade</label>
+                <select id="entry_grade" class="{{ $inputClass }}">
                     <option value="">Any / Blank</option>
                 </select>
             </div>
-
-            <div class="lg:col-span-1">
-                <label class="{{ $labelClass }}">Qty</label>
-
-                <input type="number"
-                       id="entry_quantity"
-                       min="0.001"
-                       step="0.001"
-                       class="{{ $inputClass }} text-right"
-                       placeholder="0">
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_brand">Brand</label>
+                <select id="entry_brand" class="{{ $inputClass }}">
+                    <option value="">Any / Blank</option>
+                </select>
+                <p id="entry-brand-hint" class="mt-1 text-xs text-amber-700" hidden></p>
             </div>
-
-            <div class="lg:col-span-2">
-                <label class="{{ $labelClass }}">Unit <span class="text-red-500">*</span></label>
-
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_specification">Custom specification / size</label>
+                <input type="text" id="entry_specification" maxlength="500" class="{{ $inputClass }}"
+                       placeholder='If not listed: 120 mm, 6", SN4'>
+            </div>
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_quantity">Quantity <span class="text-red-500">*</span></label>
+                <input type="number" id="entry_quantity" min="0.001" step="0.001"
+                       class="{{ $inputClass }} text-right" placeholder="0">
+            </div>
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_unit">Unit <span class="text-red-500">*</span></label>
                 <select id="entry_unit" class="{{ $inputClass }}">
                     <option value="">Select Unit</option>
                     @foreach($units as $unit)
-                        <option value="{{ $unit->id }}">
-                            {{ $unit->unit_code ?: $unit->symbol ?: $unit->unit_name }}
-                        </option>
+                        <option value="{{ $unit->id }}">{{ $unit->unit_code ?: $unit->symbol ?: $unit->unit_name }}</option>
                     @endforeach
                 </select>
-                <p class="mt-1 text-[11px] text-gray-500">Defaults from Product; change when required.</p>
             </div>
-
-            <div class="lg:col-span-2">
-                <label class="{{ $labelClass }}">Remarks</label>
-
-                <input type="text"
-                       id="entry_remarks"
-                       class="{{ $inputClass }}"
-                       placeholder="Optional">
+            <div class="min-w-0">
+                <label class="{{ $labelClass }}" for="entry_remarks">Remarks</label>
+                <input type="text" id="entry_remarks" class="{{ $inputClass }}" placeholder="Optional">
             </div>
         </div>
+        <p class="mt-3 text-xs text-gray-500">Custom specification is optional. Unit defaults from the selected Product and can be changed.</p>
 
         <div class="mt-4 flex flex-wrap justify-end gap-2">
             <button type="button"
@@ -235,6 +227,7 @@
                         <th class="w-12 px-3 py-3 text-center">#</th>
                         <th class="min-w-[280px] px-3 py-3 text-left">Product</th>
                         <th class="min-w-[190px] px-3 py-3 text-left">Specification / Size</th>
+                        <th class="min-w-[110px] px-3 py-3 text-left">Grade</th>
                         <th class="min-w-[150px] px-3 py-3 text-left">Brand</th>
                         <th class="w-24 px-3 py-3 text-right">Qty</th>
                         <th class="w-24 px-3 py-3 text-left">Unit</th>
@@ -275,7 +268,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('material-requirement-form');
     const productHidden = form.querySelector('input[name="entry_product_id"]');
     const specificationInput = document.getElementById('entry_specification');
+    const specificationSelect = document.getElementById('entry_specification_id');
+    const gradeSelect = document.getElementById('entry_grade');
     const brandSelect = document.getElementById('entry_brand');
+    const brandHint = document.getElementById('entry-brand-hint');
     const quantityInput = document.getElementById('entry_quantity');
     const unitSelect = document.getElementById('entry_unit');
     const remarksInput = document.getElementById('entry_remarks');
@@ -296,6 +292,9 @@ document.addEventListener('DOMContentLoaded', function () {
     let selectedUnitId = null;
     let selectedUnitName = null;
     let availableBrands = [];
+    let availableSpecifications = [];
+    let availableGrades = [];
+    let dependencyRequest = 0;
 
     function escapeHtml(value) {
         const div = document.createElement('div');
@@ -342,6 +341,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function rebuildBrands(selectedId = '', selectedName = '') {
         brandSelect.innerHTML = '';
         brandSelect.add(new Option('Any / Blank', ''));
+        if (brandHint) {
+            brandHint.hidden = availableBrands.length > 0 || ! productHidden?.value;
+            brandHint.textContent = brandHint.hidden ? '' : 'No approved brands mapped to this Product. Leave blank if not applicable.';
+        }
 
         let selectedFound = false;
 
@@ -374,13 +377,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    async function loadProductDependencies(productId, selectedBrandId = '', selectedBrandName = '') {
+    function rebuildOptions(select, options, placeholder, selectedId = '', selectedName = '') {
+        select.replaceChildren(new Option(placeholder, ''));
+        let found = false;
+        options.forEach(function (option) {
+            const selected = String(option.id) === String(selectedId) && String(selectedId) !== '';
+            select.add(new Option(option.name, option.id, selected, selected));
+            if (selected) found = true;
+        });
+        // Existing historical selections remain editable without changing their saved ID.
+        if (selectedId && ! found) {
+            select.add(new Option(selectedName || 'Existing selection', selectedId, true, true));
+        }
+    }
+
+    function clearDependencies() {
+        availableBrands = [];
+        availableSpecifications = [];
+        availableGrades = [];
+        rebuildBrands();
+        rebuildOptions(specificationSelect, [], 'Any / Not listed');
+        rebuildOptions(gradeSelect, [], 'Any / Blank');
+    }
+
+    async function loadProductDependencies(productId, selectedBrandId = '', selectedBrandName = '', selectedSpecificationId = '', selectedSpecificationName = '', selectedGradeId = '', selectedGradeName = '') {
+        const requestId = ++dependencyRequest;
         selectedUnitId = null;
         selectedUnitName = null;
-        availableBrands = [];
+        clearDependencies();
 
         if (! productId) {
-            rebuildBrands();
             return null;
         }
 
@@ -400,6 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const payload = await response.json();
         const data = payload.data || {};
+        if (requestId !== dependencyRequest) return null;
 
         setEntryUnit(
             data.unit?.id || '',
@@ -407,12 +434,17 @@ document.addEventListener('DOMContentLoaded', function () {
         );
         availableBrands = Array.isArray(data.brands) ? data.brands : [];
 
+        availableSpecifications = Array.isArray(data.specifications) ? data.specifications : [];
+        availableGrades = Array.isArray(data.grades) ? data.grades : [];
         rebuildBrands(selectedBrandId, selectedBrandName);
+        rebuildOptions(specificationSelect, availableSpecifications, 'Any / Not listed', selectedSpecificationId, selectedSpecificationName);
+        rebuildOptions(gradeSelect, availableGrades, 'Any / Blank', selectedGradeId, selectedGradeName);
 
         return data;
     }
 
     function clearEntry() {
+        ++dependencyRequest;
         editingIndex = null;
         selectedProduct = null;
         selectedUnitId = null;
@@ -420,6 +452,7 @@ document.addEventListener('DOMContentLoaded', function () {
         availableBrands = [];
 
         specificationInput.value = '';
+        clearDependencies();
         quantityInput.value = '';
         if (unitSelect) unitSelect.value = '';
         remarksInput.value = '';
@@ -450,7 +483,9 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedUnitId = item.unit_master_id;
         selectedUnitName = item.unit_name;
 
-        specificationInput.value = item.specification_text || '';
+        specificationInput.value = item.specification_text && (!item.specification_name || item.specification_text.trim().toLowerCase() !== item.specification_name.trim().toLowerCase()) ? item.specification_text : '';
+        rebuildOptions(specificationSelect, [], 'Any / Not listed', item.material_specification_id || '', item.specification_name || '');
+        rebuildOptions(gradeSelect, [], 'Any / Blank', item.material_grade_id || '', item.grade_name || '');
         quantityInput.value = item.required_quantity || '';
         remarksInput.value = item.remarks || '';
 
@@ -468,7 +503,11 @@ document.addEventListener('DOMContentLoaded', function () {
             await loadProductDependencies(
                 item.material_type_id,
                 item.brand_master_id || '',
-                item.brand_name || ''
+                item.brand_name || '',
+                item.material_specification_id || '',
+                item.specification_name || '',
+                item.material_grade_id || '',
+                item.grade_name || ''
             );
 
             // Restore the transaction unit saved on this MR item.
@@ -476,6 +515,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } catch (error) {
             console.error(error);
             rebuildBrands(item.brand_master_id || '', item.brand_name || '');
+            rebuildOptions(specificationSelect, [], 'Any / Not listed', item.material_specification_id || '', item.specification_name || '');
+            rebuildOptions(gradeSelect, [], 'Any / Blank', item.material_grade_id || '', item.grade_name || '');
         }
 
         editBadge.classList.remove('hidden');
@@ -493,7 +534,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const fields = {
                 id: item.id || '',
                 material_type_id: item.material_type_id,
-                material_specification_id: '',
+                material_specification_id: item.material_specification_id || '',
+                material_grade_id: item.material_grade_id || '',
                 specification_text: item.specification_text || '',
                 brand_master_id: item.brand_master_id || '',
                 required_quantity: item.required_quantity,
@@ -532,9 +574,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 </td>
 
                 <td class="px-3 py-2.5">
-                    ${item.specification_text
-                        ? `<span class="font-medium text-gray-800">${escapeHtml(item.specification_text)}</span>`
-                        : '<span class="text-gray-400">-</span>'}
+                    ${item.specification_name
+                        ? `<div class="font-semibold text-gray-800">${escapeHtml(item.specification_name)}</div>`
+                        : ''}
+                    ${item.specification_text && (!item.specification_name || item.specification_text.trim().toLowerCase() !== item.specification_name.trim().toLowerCase())
+                        ? `<div class="${item.specification_name ? 'mt-0.5 text-xs text-gray-500' : 'font-medium text-gray-800'}">${item.specification_name ? 'Additional details: ' : ''}${escapeHtml(item.specification_text)}</div>`
+                        : ''}
+                    ${!item.specification_name && !item.specification_text
+                        ? '<span class="text-gray-400">-</span>'
+                        : ''}
+                </td>
+
+                <td class="px-3 py-2.5">
+                    ${item.grade_name ? escapeHtml(item.grade_name) : '<span class="text-gray-400">-</span>'}
                 </td>
 
                 <td class="px-3 py-2.5">
@@ -607,6 +659,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         product_type: null,
                     },
                     specification_text: item.specification_text || '',
+                    material_specification_id: item.material_specification_id || '',
+                    specification_name: item.specification_name || '',
+                    material_grade_id: item.material_grade_id || '',
+                    grade_name: item.grade_name || '',
                     brand_master_id: item.brand_master_id || '',
                     brand_name: item.brand_name || '',
                     required_quantity: item.required_quantity || '',
@@ -627,6 +683,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         selectedProduct = product;
+        specificationInput.value = '';
 
         try {
             const data = await loadProductDependencies(product.id);
@@ -644,8 +701,9 @@ document.addEventListener('DOMContentLoaded', function () {
         selectedProduct = null;
         selectedUnitId = null;
         selectedUnitName = null;
-        availableBrands = [];
-        rebuildBrands();
+        ++dependencyRequest;
+        clearDependencies();
+        specificationInput.value = '';
     });
 
     unitSelect?.addEventListener('change', function () {
@@ -681,6 +739,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const productFromSelector = selector?.selectedProduct || selectedProduct;
 
         const selectedBrandOption = brandSelect.options[brandSelect.selectedIndex];
+        const selectedSpecificationOption = specificationSelect.options[specificationSelect.selectedIndex];
+        const selectedGradeOption = gradeSelect.options[gradeSelect.selectedIndex];
 
         const item = {
             id: editingIndex !== null ? (items[editingIndex]?.id || '') : '',
@@ -694,7 +754,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     name: selectedUnitName || '',
                 } : null,
             },
-            specification_text: specificationInput.value.trim(),
+            specification_text: specificationInput.value.trim() || (specificationSelect.value ? (selectedSpecificationOption?.text || '') : ''),
+            material_specification_id: specificationSelect.value || '',
+            specification_name: specificationSelect.value ? (selectedSpecificationOption?.text || '') : '',
+            material_grade_id: gradeSelect.value || '',
+            grade_name: gradeSelect.value ? (selectedGradeOption?.text || '') : '',
             brand_master_id: brandSelect.value || '',
             brand_name: brandSelect.value ? (selectedBrandOption?.text || '') : '',
             required_quantity: quantityInput.value,

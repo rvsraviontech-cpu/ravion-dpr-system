@@ -80,11 +80,15 @@
             line-height: 1.35;
         }
         .items .num { width: 5%; text-align: center; }
-        .items .product { width: 34%; }
-        .items .spec { width: 24%; }
-        .items .qty { width: 10%; text-align: right; }
-        .items .unit { width: 12%; }
-        .items .remarks { width: 15%; }
+        .items .product { width: 18%; }
+        .items .spec { width: 25%; }
+        .items .grade { width: 12%; }
+        .items .brand { width: 12%; }
+        .items .qty { width: 8%; text-align: right; }
+        .items .unit { width: 8%; }
+        .items .remarks { width: 12%; }
+        .spec-detail { color: #6b7280; font-size: 8px; margin-top: 3px; overflow-wrap: break-word; }
+        .items td { overflow-wrap: break-word; }
         .summary {
             margin-top: 8px;
             text-align: right;
@@ -121,22 +125,7 @@
             ?? '-';
     };
 
-    $specLabel = function ($item) {
-        // V2 free-text specification/size takes precedence.
-        foreach (['specification_size', 'specification_text', 'specification'] as $field) {
-            if (!empty($item->{$field})) {
-                return $item->{$field};
-            }
-        }
 
-        if ($item->materialSpecification) {
-            return $item->materialSpecification->specification_name
-                ?? $item->materialSpecification->name
-                ?? '-';
-        }
-
-        return '-';
-    };
 @endphp
 
 <div class="company">RAVION VERTEX SYSTEMS PVT LTD</div>
@@ -170,6 +159,8 @@
         <th class="num">#</th>
         <th class="product">Product</th>
         <th class="spec">Specification / Size</th>
+        <th class="grade">Grade</th>
+        <th class="brand">Brand</th>
         <th class="qty">Qty</th>
         <th class="unit">Unit</th>
         <th class="remarks">Remarks</th>
@@ -182,14 +173,27 @@
             <td class="product">
                 <strong>{{ $item->materialType->material_type_name ?? $item->material->material_name ?? '-' }}</strong>
             </td>
-            <td class="spec">{{ $specLabel($item) }}</td>
+            <td class="spec">
+                @php
+                    $masterSpec = trim((string) ($item->specification?->specification_name ?? ''));
+                    $customSpec = trim((string) ($item->specification_text ?? ''));
+                @endphp
+                @if($masterSpec !== '')<strong>{{ $masterSpec }}</strong>@endif
+                @if($customSpec !== '' && ($masterSpec === '' || strcasecmp($customSpec, $masterSpec) !== 0))
+                    <div class="{{ $masterSpec !== '' ? 'spec-detail' : '' }}">@if($masterSpec !== '')Additional details: @endif{{ $customSpec }}</div>
+                @elseif($masterSpec === '')
+                    -
+                @endif
+            </td>
+            <td class="grade">{{ $item->grade?->grade_name ?? '-' }}</td>
+            <td class="brand">{{ $item->brand?->brand_name ?? '-' }}</td>
             <td class="qty">{{ rtrim(rtrim(number_format((float) $item->required_quantity, 3, '.', ''), '0'), '.') }}</td>
             <td class="unit">{{ $unitLabel($item) }}</td>
             <td class="remarks">{{ $item->remarks ?: '-' }}</td>
         </tr>
     @empty
         <tr>
-            <td colspan="6" style="text-align:center; color:#6b7280;">No material items recorded.</td>
+            <td colspan="8" style="text-align:center; color:#6b7280;">No material items recorded.</td>
         </tr>
     @endforelse
     </tbody>

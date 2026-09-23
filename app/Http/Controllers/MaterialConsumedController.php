@@ -523,10 +523,7 @@ class MaterialConsumedController extends Controller
                 continue;
             }
 
-            if ((int) $item['unit_master_id'] !== (int) $materialType->unit_master_id) {
-                $errors["items.{$index}.unit_master_id"][] =
-                    "Row {$rowNumber}: the unit does not match the selected Material Type.";
-            }
+            
 
             if (! empty($item['brand_master_id'])) {
                 $brandValid = BrandMaster::query()

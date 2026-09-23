@@ -299,10 +299,81 @@ Route::resource(
     MaterialSpecificationController::class
 );
 
-Route::resource(
-    'material-types',
-    MaterialTypeController::class
-);
+/*
+|--------------------------------------------------------------------------
+| Product Master
+|--------------------------------------------------------------------------
+|
+| Canonical Materials Product Master.
+| Viewing requires materials.view.
+| Any master-data modification requires materials.manage.
+|
+*/
+
+Route::get('/material-types', [MaterialTypeController::class, 'index'])
+    ->name('material-types.index')
+    ->middleware('permission:materials.view');
+
+Route::get('/material-types/create', [MaterialTypeController::class, 'create'])
+    ->name('material-types.create')
+    ->middleware('permission:materials.manage');
+
+Route::post('/material-types', [MaterialTypeController::class, 'store'])
+    ->name('material-types.store')
+    ->middleware('permission:materials.manage');
+
+Route::get('/material-types/{material_type}', [MaterialTypeController::class, 'show'])
+    ->name('material-types.show')
+    ->middleware('permission:materials.view');
+
+Route::get('/material-types/{material_type}/edit', [MaterialTypeController::class, 'edit'])
+    ->name('material-types.edit')
+    ->middleware('permission:materials.manage');
+
+Route::put('/material-types/{material_type}', [MaterialTypeController::class, 'update'])
+    ->name('material-types.update')
+    ->middleware('permission:materials.manage');
+
+Route::patch('/material-types/{material_type}', [MaterialTypeController::class, 'update'])
+    ->name('material-types.update')
+    ->middleware('permission:materials.manage');
+
+Route::delete('/material-types/{material_type}', [MaterialTypeController::class, 'destroy'])
+    ->name('material-types.destroy')
+    ->middleware('permission:materials.manage');
+
+
+    /*
+|--------------------------------------------------------------------------
+| Product ↔ Brand Associations
+|--------------------------------------------------------------------------
+|
+| Canonical Product-first Brand mapping.
+| These routes manage material_product_brand only.
+| They do not create/delete Brand Master records.
+|
+*/
+
+Route::post(
+    '/material-types/{material_type}/brands',
+    [MaterialTypeController::class, 'storeBrandMapping']
+)
+    ->name('material-types.brands.store')
+    ->middleware('permission:materials.manage');
+
+Route::put(
+    '/material-types/{material_type}/brands/{materialProductBrand}',
+    [MaterialTypeController::class, 'updateBrandMapping']
+)
+    ->name('material-types.brands.update')
+    ->middleware('permission:materials.manage');
+
+Route::patch(
+    '/material-types/{material_type}/brands/{materialProductBrand}/toggle-status',
+    [MaterialTypeController::class, 'toggleBrandMapping']
+)
+    ->name('material-types.brands.toggle-status')
+    ->middleware('permission:materials.manage');
 
 
 Route::resource(
@@ -497,41 +568,7 @@ Route::prefix('work-done')
         )->name('destroy');
     });
 
-// BRAND MASTER CONTROLLER ROUTES
 
-Route::middleware(['auth'])->group(function () {
-
-    Route::get(
-        '/brand-masters',
-        [BrandMasterController::class, 'index']
-    )->name('brand-masters.index');
-
-    Route::get(
-        '/brand-masters/create',
-        [BrandMasterController::class, 'create']
-    )->name('brand-masters.create');
-
-    Route::post(
-        '/brand-masters',
-        [BrandMasterController::class, 'store']
-    )->name('brand-masters.store');
-
-    Route::get(
-        '/brand-masters/{brandMaster}/edit',
-        [BrandMasterController::class, 'edit']
-    )->name('brand-masters.edit');
-
-    Route::put(
-        '/brand-masters/{brandMaster}',
-        [BrandMasterController::class, 'update']
-    )->name('brand-masters.update');
-
-    Route::patch(
-        '/brand-masters/{brandMaster}/toggle-status',
-        [BrandMasterController::class, 'toggleStatus']
-    )->name('brand-masters.toggle-status');
-
-});
 
     /*
     |--------------------------------------------------------------------------
@@ -1205,25 +1242,60 @@ Route::get(
         ->name('unit-masters.toggle-status')
         ->middleware('permission:materials.view');
 
-    Route::get('/brand-masters', [BrandMasterController::class, 'index'])
-        ->name('brand-masters.index')
-        ->middleware('permission:materials.view');
+    /*
+|--------------------------------------------------------------------------
+| Brand Masters
+|--------------------------------------------------------------------------
+|
+| Brand Master supports canonical Product ↔ Brand relationships.
+|
+| View permission:
+|   - Browse Brand Master
+|
+| Manage permission:
+|   - Create brands
+|   - Edit brands
+|   - Activate/deactivate brands
+|   - Manage Product ↔ Brand assignments
+|
+*/
 
-    Route::post('/brand-masters', [BrandMasterController::class, 'store'])
-        ->name('brand-masters.store')
-        ->middleware('permission:materials.view');
+Route::get('/brand-masters', [BrandMasterController::class, 'index'])
+    ->name('brand-masters.index')
+    ->middleware('permission:materials.view');
 
-    Route::get('/brand-masters/{brandMaster}/edit', [BrandMasterController::class, 'edit'])
-        ->name('brand-masters.edit')
-        ->middleware('permission:materials.view');
+Route::get('/brand-masters/create', [BrandMasterController::class, 'create'])
+    ->name('brand-masters.create')
+    ->middleware('permission:materials.manage');
 
-    Route::put('/brand-masters/{brandMaster}', [BrandMasterController::class, 'update'])
-        ->name('brand-masters.update')
-        ->middleware('permission:materials.view');
+Route::post('/brand-masters', [BrandMasterController::class, 'store'])
+    ->name('brand-masters.store')
+    ->middleware('permission:materials.manage');
 
-    Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterController::class, 'toggleStatus'])
-        ->name('brand-masters.toggle-status')
-        ->middleware('permission:materials.view');
+Route::get('/brand-masters/{brandMaster}/edit', [BrandMasterController::class, 'edit'])
+    ->name('brand-masters.edit')
+    ->middleware('permission:materials.manage');
+
+Route::put('/brand-masters/{brandMaster}', [BrandMasterController::class, 'update'])
+    ->name('brand-masters.update')
+    ->middleware('permission:materials.manage');
+
+Route::patch('/brand-masters/{brandMaster}/toggle-status', [BrandMasterController::class, 'toggleStatus'])
+    ->name('brand-masters.toggle-status')
+    ->middleware('permission:materials.manage');
+
+
+    Route::post('/brand-masters/{brandMaster}/products', [BrandMasterController::class, 'storeProductMapping'])
+    ->name('brand-masters.products.store')
+    ->middleware('permission:materials.manage');
+
+Route::put('/brand-masters/{brandMaster}/products/{materialProductBrand}', [BrandMasterController::class, 'updateProductMapping'])
+    ->name('brand-masters.products.update')
+    ->middleware('permission:materials.manage');
+
+Route::patch('/brand-masters/{brandMaster}/products/{materialProductBrand}/toggle-status', [BrandMasterController::class, 'toggleProductMapping'])
+    ->name('brand-masters.products.toggle-status')
+    ->middleware('permission:materials.manage');
 
 
     /*

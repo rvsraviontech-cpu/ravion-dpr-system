@@ -199,15 +199,17 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-[900px] w-full text-sm">
+            <table class="min-w-[1050px] w-full text-sm">
                 <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-600">
                     <tr>
                         <th class="w-12 px-3 py-3 text-center">#</th>
-                        <th class="min-w-[300px] px-3 py-3 text-left">Product</th>
-                        <th class="min-w-[220px] px-3 py-3 text-left">Specification / Size</th>
-                        <th class="min-w-[170px] px-3 py-3 text-left">Brand</th>
-                        <th class="w-28 px-3 py-3 text-right">Qty</th>
-                        <th class="min-w-[220px] px-3 py-3 text-left">Remarks</th>
+                        <th class="min-w-[200px] px-3 py-3 text-left">Product</th>
+                        <th class="min-w-[210px] px-3 py-3 text-left">Specification / Size</th>
+                        <th class="min-w-[100px] px-3 py-3 text-left">Grade</th>
+                        <th class="min-w-[120px] px-3 py-3 text-left">Brand</th>
+                        <th class="w-20 px-3 py-3 text-right">Qty</th>
+                        <th class="w-20 px-3 py-3 text-left">Unit</th>
+                        <th class="min-w-[130px] px-3 py-3 text-left">Remarks</th>
                     </tr>
                 </thead>
 
@@ -223,10 +225,23 @@
                             </td>
 
                             <td class="px-3 py-3">
-                                {{ $item->specification_text
-                                    ?: $item->specification?->specification_name
-                                    ?: '-' }}
+                                @php
+                                    $masterSpec = trim((string) ($item->specification?->specification_name ?? ''));
+                                    $customSpec = trim((string) ($item->specification_text ?? ''));
+                                @endphp
+                                @if($masterSpec !== '')
+                                    <div class="font-semibold text-gray-800">{{ $masterSpec }}</div>
+                                @endif
+                                @if($customSpec !== '' && ($masterSpec === '' || strcasecmp($customSpec, $masterSpec) !== 0))
+                                    <div class="{{ $masterSpec !== '' ? 'mt-1 text-xs text-gray-500' : 'text-gray-800' }}">
+                                        @if($masterSpec !== '')Additional details: @endif{{ $customSpec }}
+                                    </div>
+                                @elseif($masterSpec === '')
+                                    <span class="text-gray-400">-</span>
+                                @endif
                             </td>
+
+                            <td class="px-3 py-3">{{ $item->grade?->grade_name ?? '-' }}</td>
 
                             <td class="px-3 py-3">
                                 {{ $item->brand?->brand_name ?? '-' }}
@@ -235,6 +250,8 @@
                             <td class="px-3 py-3 text-right font-semibold text-blue-700">
                                 {{ formatQuantity($item->required_quantity) }}
                             </td>
+
+                            <td class="px-3 py-3">{{ $item->unit?->unit_code ?: ($item->unit?->symbol ?: ($item->unit?->unit_name ?? '-')) }}</td>
 
                             <td class="px-3 py-3">
                                 {{ $item->remarks ?? '-' }}

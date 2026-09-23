@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Helpers\AuditHelper;
 use App\Models\ActivityDivision;
+use App\Models\BrandMaster;
+use App\Models\MaterialProductBrand;
 use App\Models\MaterialProductGroup;
 use App\Models\MaterialProductType;
 use App\Models\MaterialType;
@@ -245,9 +247,117 @@ class MaterialTypeController extends Controller
             'variants',
             'searchAliases',
             'usageMappings',
+            'productBrandMappings.brand',
         ]);
 
-        return view('material-types.show', compact('materialType'));
+        $availableBrands = BrandMaster::query()
+            ->where('is_active', true)
+            ->whereDoesntHave('productMappings', function ($query) use ($materialType) {
+                $query->where('material_type_id', $materialType->id);
+            })
+            ->orderBy('brand_name')
+            ->get();
+
+        return view('material-types.show', compact('materialType', 'availableBrands'));
+    }
+
+    public function storeBrandMapping(Request $request, MaterialType $materialType): RedirectResponse
+    {
+        $validated = $request->validate([
+            'brand_master_id' => [
+                'required', 'integer',
+                Rule::exists('brand_masters', 'id')->where(fn ($q) => $q->where('is_active', true)),
+                Rule::unique('material_product_brand', 'brand_master_id')
+                    ->where(fn ($q) => $q->where('material_type_id', $materialType->id)),
+            ],
+            'is_preferred' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'remarks' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $brand = BrandMaster::query()->where('is_active', true)->findOrFail($validated['brand_master_id']);
+
+        DB::transaction(function () use ($validated, $request, $materialType, $brand) {
+            $mapping = MaterialProductBrand::create([
+                'material_type_id' => $materialType->id,
+                'brand_master_id' => $brand->id,
+                'is_preferred' => $request->boolean('is_preferred'),
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'is_active' => true,
+                'remarks' => $validated['remarks'] ?? null,
+            ]);
+
+            AuditHelper::log(
+                'Product Brand Mapping', 'Created', 'MaterialProductBrand', $mapping->id,
+                'Brand assigned to product: '.$brand->brand_name.' → '.$materialType->material_type_name,
+                null, $this->brandMappingAuditValues($mapping->fresh(['product', 'brand']))
+            );
+        });
+
+        return redirect()->route('material-types.show', $materialType)
+            ->with('success', 'Brand '.$brand->brand_name.' assigned successfully.');
+    }
+
+    public function updateBrandMapping(
+        Request $request,
+        MaterialType $materialType,
+        MaterialProductBrand $materialProductBrand
+    ): RedirectResponse {
+        $this->ensureBrandMappingBelongsToProduct($materialType, $materialProductBrand);
+
+        $validated = $request->validate([
+            'is_preferred' => ['nullable', 'boolean'],
+            'sort_order' => ['nullable', 'integer', 'min:0'],
+            'remarks' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        DB::transaction(function () use ($validated, $request, $materialProductBrand) {
+            $old = $this->brandMappingAuditValues($materialProductBrand->load(['product', 'brand']));
+
+            $materialProductBrand->update([
+                'is_preferred' => $request->boolean('is_preferred'),
+                'sort_order' => $validated['sort_order'] ?? 0,
+                'remarks' => $validated['remarks'] ?? null,
+            ]);
+
+            $materialProductBrand->refresh()->load(['product', 'brand']);
+
+            AuditHelper::log(
+                'Product Brand Mapping', 'Updated', 'MaterialProductBrand', $materialProductBrand->id,
+                'Product–Brand mapping updated: '.($materialProductBrand->product?->material_type_name ?? '-')
+                    .' ↔ '.($materialProductBrand->brand?->brand_name ?? '-'),
+                $old, $this->brandMappingAuditValues($materialProductBrand)
+            );
+        });
+
+        return redirect()->route('material-types.show', $materialType)
+            ->with('success', 'Brand association updated successfully.');
+    }
+
+    public function toggleBrandMapping(
+        MaterialType $materialType,
+        MaterialProductBrand $materialProductBrand
+    ): RedirectResponse {
+        $this->ensureBrandMappingBelongsToProduct($materialType, $materialProductBrand);
+
+        DB::transaction(function () use ($materialProductBrand) {
+            $old = $this->brandMappingAuditValues($materialProductBrand->load(['product', 'brand']));
+            $materialProductBrand->update(['is_active' => ! $materialProductBrand->is_active]);
+            $materialProductBrand->refresh()->load(['product', 'brand']);
+
+            AuditHelper::log(
+                'Product Brand Mapping',
+                $materialProductBrand->is_active ? 'Activated' : 'Deactivated',
+                'MaterialProductBrand', $materialProductBrand->id,
+                ($materialProductBrand->is_active ? 'Product–Brand mapping activated: ' : 'Product–Brand mapping deactivated: ')
+                    .($materialProductBrand->product?->material_type_name ?? '-')
+                    .' ↔ '.($materialProductBrand->brand?->brand_name ?? '-'),
+                $old, $this->brandMappingAuditValues($materialProductBrand)
+            );
+        });
+
+        return redirect()->route('material-types.show', $materialType)
+            ->with('success', 'Brand association status updated successfully.');
     }
 
     public function edit(MaterialType $materialType): View
@@ -451,6 +561,31 @@ class MaterialTypeController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
+    }
+
+    private function ensureBrandMappingBelongsToProduct(
+        MaterialType $materialType,
+        MaterialProductBrand $materialProductBrand
+    ): void {
+        abort_unless(
+            (int) $materialProductBrand->material_type_id === (int) $materialType->id,
+            404
+        );
+    }
+
+    private function brandMappingAuditValues(MaterialProductBrand $mapping): array
+    {
+        return [
+            'id' => $mapping->id,
+            'material_type_id' => $mapping->material_type_id,
+            'product' => $mapping->product?->material_type_name,
+            'brand_master_id' => $mapping->brand_master_id,
+            'brand' => $mapping->brand?->brand_name,
+            'is_preferred' => $mapping->is_preferred,
+            'sort_order' => $mapping->sort_order,
+            'is_active' => $mapping->is_active,
+            'remarks' => $mapping->remarks,
+        ];
     }
 
     private function auditValues(MaterialType $materialType): array

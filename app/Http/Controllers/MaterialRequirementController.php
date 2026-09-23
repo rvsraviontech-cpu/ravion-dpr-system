@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Helpers\AuditHelper;
 use App\Models\MaterialRequirement;
 use App\Models\MaterialSpecification;
+use App\Models\MaterialGrade;
 use App\Models\MaterialType;
 use App\Models\Project;
 use App\Models\ProjectBlock;
@@ -137,7 +138,7 @@ class MaterialRequirementController extends Controller
                         'brand_master_id' => $item['brand_master_id'] ?? null,
                         'material_specification_id' => $item['material_specification_id'] ?? null,
                         'specification_text' => $this->nullableTrim($item['specification_text'] ?? null),
-                        'material_grade_id' => null,
+                        'material_grade_id' => $item['material_grade_id'] ?? null,
                         'required_quantity' => $item['required_quantity'],
                         'fulfilled_quantity' => 0,
                         'unit_master_id' => (int) $item['unit_master_id'],
@@ -268,7 +269,7 @@ class MaterialRequirementController extends Controller
                         'brand_master_id' => $item['brand_master_id'] ?? null,
                         'material_specification_id' => $item['material_specification_id'] ?? null,
                         'specification_text' => $this->nullableTrim($item['specification_text'] ?? null),
-                        'material_grade_id' => $existingItem?->material_grade_id,
+                        'material_grade_id' => $item['material_grade_id'] ?? null,
                         'required_quantity' => $item['required_quantity'],
 
                         // Fulfilment is system-controlled.
@@ -423,6 +424,7 @@ class MaterialRequirementController extends Controller
             'items.*.material_type_id' => ['required', 'integer', 'exists:material_types,id'],
             'items.*.brand_master_id' => ['nullable', 'integer', 'exists:brand_masters,id'],
             'items.*.material_specification_id' => ['nullable', 'integer', 'exists:material_specifications,id'],
+            'items.*.material_grade_id' => ['nullable', 'integer', 'exists:material_grades,id'],
             'items.*.specification_text' => ['nullable', 'string', 'max:500'],
             'items.*.required_quantity' => ['required', 'numeric', 'gt:0'],
             'items.*.unit_master_id' => ['required', 'integer', 'exists:unit_masters,id'],
@@ -473,6 +475,19 @@ class MaterialRequirementController extends Controller
                 if (! $valid) {
                     $errors["items.{$index}.material_specification_id"][] =
                         "Row {$rowNumber}: invalid Specification for selected Product.";
+                }
+            }
+
+            if (! empty($item['material_grade_id'])) {
+                $validGrade = MaterialGrade::query()
+                    ->whereKey($item['material_grade_id'])
+                    ->where('material_type_id', $product->id)
+                    ->where('is_active', true)
+                    ->exists();
+
+                if (! $validGrade) {
+                    $errors["items.{$index}.material_grade_id"][] =
+                        "Row {$rowNumber}: invalid Grade for selected Product.";
                 }
             }
 
@@ -630,6 +645,8 @@ class MaterialRequirementController extends Controller
                     'material_specification_id' => $item->material_specification_id,
                     'specification_name' => $item->specification?->specification_name,
                     'specification_text' => $item->specification_text,
+                    'material_grade_id' => $item->material_grade_id,
+                    'grade_name' => $item->grade?->grade_name,
                     'required_quantity' => $item->required_quantity,
                     'fulfilled_quantity' => $item->fulfilled_quantity,
                     'unit_master_id' => $item->unit_master_id,
