@@ -9,7 +9,7 @@
             </p>
         </div>
         @if(!$isPoReceipt)
-            <button type="button" id="add-item-row" class="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 md:w-auto md:py-2">+ Add Row</button>
+            <button type="button" id="add-item-row" class="hidden">+ Add Row</button>
         @else
             <button type="button" id="add-item-row" class="hidden">+ Add Row</button>
         @endif
@@ -25,9 +25,21 @@
         </div>
     @endif
 
-    <div class="overflow-x-auto">
+    @if(!$isPoReceipt)
+    <div id="direct-entry-card" class="mx-4 my-5 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:mx-5 sm:p-5">
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2"><h3 class="text-base font-bold text-[#10212F]">Add Material to Receipt</h3><span id="direct-entry-status" class="text-xs text-slate-500">Choose a product and enter its receipt details</span></div>
+        <div id="direct-entry-host"></div>
+        <div class="mt-4 flex flex-wrap gap-3"><button type="button" id="commit-direct-item" class="rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800">+ Add to Receipt</button><button type="button" id="cancel-direct-edit" class="hidden rounded-lg border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-700">Cancel Edit</button></div>
+    </div>
+    <div id="direct-summary-card" class="mx-4 mb-5 overflow-hidden rounded-xl border border-slate-200 sm:mx-5">
+        <div class="flex items-center justify-between bg-slate-100 px-4 py-3"><h3 class="font-bold text-[#10212F]">Material Items <span id="direct-item-count" class="text-sm font-normal text-slate-500">(0)</span></h3><span class="text-xs text-slate-500">Edit or remove an item below</span></div>
+        <div class="overflow-x-auto"><table class="w-full min-w-[700px] text-sm"><thead class="bg-white text-left text-xs uppercase text-slate-500"><tr><th class="px-3 py-3">#</th><th class="px-3 py-3">Product / Specification / Brand</th><th class="px-3 py-3 text-right">Received</th><th class="px-3 py-3 text-right">Accepted</th><th class="px-3 py-3">Remarks</th><th class="px-3 py-3">Action</th></tr></thead><tbody id="direct-summary-body" class="divide-y divide-slate-100"></tbody></table></div>
+        <p id="direct-empty-message" class="px-4 py-5 text-sm text-slate-500">No materials added yet. Complete the form above and click Add to Receipt.</p>
+    </div>
+    @endif
+    <div class="{{ $isPoReceipt ? 'po-material-scroll overflow-auto' : 'overflow-x-auto direct-original-table' }}">
         <table class="min-w-[1850px] w-full text-sm">
-            <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
+            <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600 {{ $isPoReceipt ? 'sticky top-0 z-10' : '' }}">
                 <tr>
                     <th class="px-3 py-3 text-center">#</th>
                     <th class="min-w-[260px] px-3 py-3 text-left">Product</th>
@@ -58,7 +70,12 @@
                             <input type="hidden" name="items[{{ $rowIndex }}][purchase_order_item_id]" value="{{ $oldItem['purchase_order_item_id'] ?? '' }}" class="po-item-id">
                             <input type="hidden" name="items[{{ $rowIndex }}][purchase_order_item_allocation_id]" value="{{ $oldItem['purchase_order_item_allocation_id'] ?? '' }}" class="po-allocation-id">
                             <div class="existing-panel {{ $entryMode === 'temporary' ? 'hidden' : '' }}">
-                                <input type="search" class="{{ $inputClass }} material-search-input {{ $isPoReceipt ? 'bg-gray-50 pointer-events-none' : '' }}" autocomplete="off" placeholder="Search product..." {{ $isPoReceipt ? 'readonly' : '' }}>
+                                @if($isPoReceipt)
+                                    <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-800">{{ $materialTypes->firstWhere('id', $oldItem['material_type_id'] ?? null)?->material_type_name ?? 'PO Product' }}</div>
+                                    <input type="search" class="material-search-input hidden" readonly tabindex="-1" aria-hidden="true">
+                                @else
+                                    <input type="search" class="{{ $inputClass }} material-search-input" autocomplete="off" placeholder="Search product...">
+                                @endif
                                 <div class="material-search-results absolute left-3 right-3 z-50 mt-1 hidden max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl"></div>
                                 @if(!$isPoReceipt)<button type="button" class="enable-temporary-material mt-2 w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">+ Material Not Found</button>@else<span class="enable-temporary-material hidden"></span>@endif
                             </div>
@@ -69,10 +86,14 @@
                                     <input type="text" name="items[{{ $rowIndex }}][temporary_classification_notes]" value="{{ $oldItem['temporary_classification_notes'] ?? '' }}" class="{{ $inputClass }} mt-2" placeholder="Optional classification note">
                                 </div>
                             </div>
-                            <select name="items[{{ $rowIndex }}][material_type_id]" class="material-type-select existing-field hidden">
-                                <option value="">Select Product</option>
-                                @foreach($materialTypes as $materialType)<option value="{{ $materialType->id }}" {{ (string)($oldItem['material_type_id'] ?? '') === (string)$materialType->id ? 'selected' : '' }}>{{ $materialType->material_type_name }}</option>@endforeach
-                            </select>
+                            @if($isPoReceipt)
+                                <input type="hidden" name="items[{{ $rowIndex }}][material_type_id]" value="{{ $oldItem['material_type_id'] ?? '' }}" class="material-type-select existing-field">
+                            @else
+                                <select name="items[{{ $rowIndex }}][material_type_id]" class="material-type-select existing-field hidden">
+                                    <option value="">Select Product</option>
+                                    @foreach($materialTypes as $materialType)<option value="{{ $materialType->id }}" {{ (string)($oldItem['material_type_id'] ?? '') === (string)$materialType->id ? 'selected' : '' }}>{{ $materialType->material_type_name }}</option>@endforeach
+                                </select>
+                            @endif
                             <input type="hidden" class="category-display">
                         </td>
                         <td class="px-3 py-3">
@@ -108,8 +129,8 @@
                         <td class="px-3 py-3"><input type="number" step="0.001" min="0" name="items[{{ $rowIndex }}][damaged_quantity]" value="{{ $oldItem['damaged_quantity'] ?? 0 }}" class="{{ $inputClass }} damaged-input text-right"></td>
                         <td class="px-3 py-3"><input type="number" step="0.001" min="0" name="items[{{ $rowIndex }}][rejected_quantity]" value="{{ $oldItem['rejected_quantity'] ?? 0 }}" class="{{ $inputClass }} rejected-input text-right"></td>
                         <td class="px-3 py-3">
-                            <input type="text" name="items[{{ $rowIndex }}][purpose_used_for]" value="{{ $oldItem['purpose_used_for'] ?? '' }}" class="{{ $inputClass }}" placeholder="Purpose / used for">
-                            <input type="text" name="items[{{ $rowIndex }}][remarks]" value="{{ $oldItem['remarks'] ?? '' }}" class="{{ $inputClass }} mt-2" placeholder="Remarks">
+                            <input type="text" name="items[{{ $rowIndex }}][purpose_used_for]" value="{{ $oldItem['purpose_used_for'] ?? '' }}" class="{{ $inputClass }} hidden" placeholder="Purpose / used for">
+                            <input type="text" name="items[{{ $rowIndex }}][remarks]" value="{{ $oldItem['remarks'] ?? '' }}" class="{{ $inputClass }}" placeholder="Remarks (optional)">
                             <input type="hidden" name="items[{{ $rowIndex }}][rate]" value="{{ $oldItem['rate'] ?? '' }}"><input type="hidden" name="items[{{ $rowIndex }}][discount_amount]" value="{{ $oldItem['discount_amount'] ?? '' }}"><input type="hidden" name="items[{{ $rowIndex }}][tax_percent]" value="{{ $oldItem['tax_percent'] ?? '' }}"><input type="hidden" name="items[{{ $rowIndex }}][tax_amount]" value="{{ $oldItem['tax_amount'] ?? '' }}"><input type="hidden" name="items[{{ $rowIndex }}][line_amount]" value="{{ $oldItem['line_amount'] ?? '' }}">
                         </td>
                         <td class="px-3 py-3 text-center"><button type="button" class="remove-item-row rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">Remove</button></td>
@@ -119,3 +140,91 @@
         </table>
     </div>
 </div>
+
+@if(!$isPoReceipt)
+<style>
+/* Compact desktop entry: one product-details row, one quantity row, then actions. */
+.direct-original-table { display:none!important; }
+#direct-entry-card { margin:12px 16px 14px; padding:12px 14px; }
+#direct-entry-card>div:first-child { margin-bottom:10px; }
+#direct-entry-card .material-item-row { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:9px 12px; align-items:start; }
+#direct-entry-card .material-item-row>td { display:block!important; padding:0!important; min-width:0!important; }
+#direct-entry-card .material-item-row>td:first-child,
+#direct-entry-card .material-item-row>td:last-child { display:none!important; }
+#direct-entry-card .material-item-row>td:nth-child(2) { grid-column:span 5; }
+#direct-entry-card .material-item-row>td:nth-child(3) { grid-column:span 4; }
+#direct-entry-card .material-item-row>td:nth-child(4) { grid-column:span 3; }
+#direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 2; }
+#direct-entry-card .material-item-row>td:nth-child(11) { grid-column:span 12; display:grid!important; grid-template-columns:1fr; gap:0; }
+#direct-entry-card .material-item-row>td:nth-child(11) input:not(.hidden) { margin:0!important; }
+#direct-entry-card .material-item-row>td:nth-child(11) input.hidden { display:none!important; }
+#direct-entry-card .material-item-row>td:nth-child(2):before { content:'Product'; }
+#direct-entry-card .material-item-row>td:nth-child(3):before { content:'Specification / Grade'; }
+#direct-entry-card .material-item-row>td:nth-child(4):before { content:'Brand'; }
+#direct-entry-card .material-item-row>td:nth-child(5):before { content:'Receive Now'; }
+#direct-entry-card .material-item-row>td:nth-child(6):before { content:'Unit'; }
+#direct-entry-card .material-item-row>td:nth-child(7):before { content:'Accepted'; }
+#direct-entry-card .material-item-row>td:nth-child(8):before { content:'Short'; }
+#direct-entry-card .material-item-row>td:nth-child(9):before { content:'Damaged'; }
+#direct-entry-card .material-item-row>td:nth-child(10):before { content:'Rejected'; }
+#direct-entry-card .material-item-row>td:nth-child(11):before { content:'Remarks'; grid-column:1/-1; }
+#direct-entry-card .material-item-row>td:nth-child(n+2):nth-child(-n+11):before { display:block; font-size:11px; font-weight:600; color:#334155; margin-bottom:4px; }
+#direct-entry-card .material-item-row input:not([type=hidden]),
+#direct-entry-card .material-item-row select:not(.hidden) { min-height:36px; padding:6px 9px; font-size:13px; }
+#direct-entry-card .material-item-row .material-type-select,
+#direct-entry-card .material-item-row .category-display,
+#direct-entry-card .material-item-row .temporary-unit-select { display:none!important; }
+#direct-entry-card .material-item-row .existing-field.grid { grid-template-columns:1fr 1fr; gap:8px; }
+/* Keep Product, Specification / Grade and Brand on the same top line. */
+#direct-entry-card .material-item-row>td:nth-child(2),
+#direct-entry-card .material-item-row>td:nth-child(3),
+#direct-entry-card .material-item-row>td:nth-child(4) { align-self:start; }
+#direct-entry-card .material-item-row .enable-temporary-material { width:auto; margin-top:5px; padding:4px 9px; font-size:11px; }
+#direct-entry-card .material-item-row .temporary-panel .rounded-lg { padding:7px; }
+#direct-entry-card .material-item-row .temporary-panel input.mt-2 { margin-top:5px; }
+#direct-entry-card #commit-direct-item,
+#direct-entry-card #cancel-direct-edit { padding:8px 14px; font-size:13px; }
+#direct-entry-card>div:last-child { margin-top:10px; }
+@media(max-width:1100px) {
+ #direct-entry-card .material-item-row>td:nth-child(2) { grid-column:span 12; }
+ #direct-entry-card .material-item-row>td:nth-child(3),
+ #direct-entry-card .material-item-row>td:nth-child(4) { grid-column:span 6; }
+ #direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 4; }
+}
+@media(max-width:640px) {
+ #direct-entry-card .material-item-row>td:nth-child(n) { grid-column:span 12; }
+ #direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 6; }
+ #direct-entry-card .material-item-row>td:nth-child(11) { grid-template-columns:1fr; }
+}
+</style>
+@endif
+
+@if($isPoReceipt)
+<style>
+/* PO items: independent two-axis scrolling, without affecting Direct Receipts. */
+.po-material-scroll {
+    height: 450px;
+    max-height: 60vh;
+    min-height: 220px;
+    overflow-x: scroll;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+    overscroll-behavior: contain;
+}
+.po-material-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f3f4f6;
+}
+/* Chromium/Edge scrollbar styling; native scrollbar behavior remains intact. */
+.po-material-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
+.po-material-scroll::-webkit-scrollbar-track { background: #e2e8f0; }
+.po-material-scroll::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+}
+.po-material-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+</style>
+@endif

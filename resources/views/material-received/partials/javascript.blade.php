@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const gradeOptions = @json($gradeOptionsForJs);
     const photoTypes = @json($photoTypes);
 
+    const directMode = document.getElementById('direct-entry-host') !== null;
+    const entryHost = document.getElementById('direct-entry-host');
+    const summaryBody = document.getElementById('direct-summary-body');
+    let editingDirectRow = null;
     let rowIndex = body.querySelectorAll('.material-item-row').length;
     let photoIndex = photoRows ? photoRows.querySelectorAll('.photo-row').length : 0;
 
@@ -52,9 +56,11 @@ document.addEventListener('DOMContentLoaded', function () {
         existingFields.forEach(el => el.classList.toggle('hidden', mode !== 'existing'));
         temporaryFields.forEach(el => el.classList.toggle('hidden', mode !== 'temporary'));
 
-        tempName.required = mode === 'temporary';
-        tempUnit.required = mode === 'temporary';
-        typeSelect.required = mode === 'existing';
+        // Direct Receipt uses explicit Add/Save validation. Hidden controls must not
+        // block the browser's submit event before our handler can run.
+        tempName.required = !directMode && mode === 'temporary';
+        tempUnit.required = !directMode && mode === 'temporary';
+        typeSelect.required = !directMode && mode === 'existing';
 
         if (clearOther && mode === 'temporary') {
             typeSelect.value = '';
@@ -197,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('.temporary-material-name').addEventListener('input', refreshPhotoItemOptions);
 
         row.querySelector('.remove-item-row').addEventListener('click', function () {
+            if (directMode) { removeDirectRow(row); return; }
             if (body.querySelectorAll('.material-item-row').length <= 1) {
                 alert('At least one material row is required.');
                 return;
@@ -226,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function buildNewRow(index) {
-        const row = body.querySelector('.material-item-row').cloneNode(true);
+        const row = (body.querySelector('.material-item-row') || entryHost?.querySelector('.material-item-row')).cloneNode(true);
         row.dataset.rowIndex = index;
 
         row.querySelectorAll('input, select').forEach(field => {
@@ -305,8 +312,10 @@ document.addEventListener('DOMContentLoaded', function () {
     [projectSelect, blockSelect, floorSelect].forEach(select => select?.addEventListener('change', refreshLocations));
 
     body.querySelectorAll('.material-item-row').forEach(initializeRow);
+    if (directMode) setupDirectReceipt();
 
     addRowButton.addEventListener('click', function () {
+        if (directMode) return;
         const row = buildNewRow(rowIndex++);
         body.appendChild(row);
         renumberMaterialRows();
@@ -332,6 +341,139 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function setupDirectReceipt() {
+        const initialRows = Array.from(body.querySelectorAll('.material-item-row'));
+        // The default blank row becomes the entry form; old() rows stay committed.
+        const initialIsBlank = initialRows.length === 1 && !initialRows[0].querySelector('.material-type-select').value && !initialRows[0].querySelector('.temporary-material-name').value.trim();
+        if (initialIsBlank) {
+            entryHost.appendChild(initialRows[0]);
+            clearDirectDraftRequired();
+        } else createDirectDraft();
+        refreshDirectSummary();
+        document.getElementById('commit-direct-item').addEventListener('click', commitDirectItem);
+        document.getElementById('cancel-direct-edit').addEventListener('click', () => {
+            if (!editingDirectRow) return;
+            // Editing is performed in-place; cancel returns the row to the list.
+            body.appendChild(editingDirectRow);
+            editingDirectRow = null;
+            renumberMaterialRows();
+            createDirectDraft();
+            refreshDirectSummary();
+        });
+    }
+
+    function clearDirectDraftRequired() {
+        // The entry row is a draft, not a receipt item. Browser validation
+        // happens before the submit event, so a hidden required draft input
+        // otherwise blocks Save without letting our submit handler run.
+        entryHost?.querySelectorAll('.material-item-row [required]').forEach(field => {
+            field.required = false;
+        });
+    }
+
+    function createDirectDraft() {
+        const template = body.querySelector('.material-item-row') || entryHost.querySelector('.material-item-row');
+        if (!template) return;
+        const draft = buildNewRow(rowIndex++);
+        draft.querySelector('.short-input').value = '0';
+        draft.querySelector('.damaged-input').value = '0';
+        draft.querySelector('.rejected-input').value = '0';
+        entryHost.replaceChildren(draft);
+        initializeRow(draft);
+        clearDirectDraftRequired();
+        draft.querySelector('.material-search-input').focus();
+        document.getElementById('commit-direct-item').textContent = '+ Add to Receipt';
+        document.getElementById('cancel-direct-edit').classList.add('hidden');
+        document.getElementById('direct-entry-status').textContent = 'Choose a product and enter its receipt details';
+    }
+
+    function validateDirectEntry(row) {
+        const mode = row.querySelector('.entry-mode-input').value;
+        if (mode === 'temporary' ? !row.querySelector('.temporary-material-name').value.trim() : !row.querySelector('.material-type-select').value) return 'Select a product or enter the Material Not Found name.';
+        const received = Number(row.querySelector('.quantity-input').value);
+        const unit = row.querySelector('.unit-id-input').value;
+        if (!(received > 0)) return 'Enter a Receive Now quantity greater than zero.';
+        if (!unit) return 'Select a unit.';
+        const accepted = Number(row.querySelector('.accepted-input').value || 0);
+        const damaged = Number(row.querySelector('.damaged-input').value || 0);
+        const rejected = Number(row.querySelector('.rejected-input').value || 0);
+        if ([accepted, damaged, rejected, Number(row.querySelector('.short-input').value || 0)].some(x => x < 0)) return 'Quantities cannot be negative.';
+        if (Math.abs(received - accepted - damaged - rejected) > 0.0005) return 'Receive Now must equal Accepted + Damaged + Rejected.';
+        return '';
+    }
+
+    function commitDirectItem() {
+        const row = entryHost.querySelector('.material-item-row');
+        if (!row) return;
+        const error = validateDirectEntry(row);
+        if (error) { alert(error); return; }
+        body.appendChild(row);
+        editingDirectRow = null;
+        renumberMaterialRows();
+        createDirectDraft();
+        refreshDirectSummary();
+        refreshPhotoItemOptions();
+    }
+
+    function editDirectRow(row) {
+        if (editingDirectRow) { alert('Update the material currently being edited first.'); return; }
+        const draft = entryHost.querySelector('.material-item-row');
+        if (draft) draft.remove();
+        editingDirectRow = row;
+        entryHost.appendChild(row);
+        document.getElementById('commit-direct-item').textContent = 'Update Material';
+        document.getElementById('cancel-direct-edit').classList.remove('hidden');
+        document.getElementById('direct-entry-status').textContent = 'Editing an item already in this receipt';
+        document.getElementById('direct-entry-card').scrollIntoView({behavior:'smooth',block:'start'});
+    }
+
+    function removeDirectRow(row) {
+        if (editingDirectRow === row) { alert('Finish editing this material first.'); return; }
+        if (body.querySelectorAll('.material-item-row').length <= 1 && !confirm('Remove the last material? You must add another before saving.')) return;
+        const removedIndex = Array.from(body.querySelectorAll('.material-item-row')).indexOf(row);
+        row.remove();
+        // Photos previously associated with a removed item become general photos;
+        // subsequent item indices shift down to follow their original material.
+        photoRows?.querySelectorAll('.photo-item-select').forEach(select => {
+            if (select.value === '') return;
+            const value = Number(select.value);
+            select.value = value === removedIndex ? '' : String(value > removedIndex ? value - 1 : value);
+            select.dataset.selected = select.value;
+        });
+        renumberMaterialRows();
+        refreshDirectSummary();
+        refreshPhotoItemOptions();
+    }
+
+    function refreshDirectSummary() {
+        if (!directMode) return;
+        summaryBody.replaceChildren();
+        const rows = Array.from(body.querySelectorAll('.material-item-row'));
+        document.getElementById('direct-item-count').textContent = `(${rows.length})`;
+        document.getElementById('direct-empty-message').classList.toggle('hidden', rows.length > 0);
+        rows.forEach((row, index) => {
+            const mode = row.querySelector('.entry-mode-input').value;
+            const product = mode === 'temporary' ? row.querySelector('.temporary-material-name').value + ' — Pending Classification' : row.querySelector('.material-search-input').value;
+            const spec = mode === 'temporary' ? row.querySelector('[name$="[temporary_specification]"]').value : row.querySelector('.specification-select').selectedOptions[0]?.textContent;
+            const grade = mode === 'temporary' ? row.querySelector('[name$="[temporary_grade]"]').value : row.querySelector('.grade-select').selectedOptions[0]?.textContent;
+            const brand = mode === 'temporary' ? row.querySelector('[name$="[temporary_brand]"]').value : row.querySelector('.brand-select').selectedOptions[0]?.textContent;
+            const unit = row.querySelector('.transaction-unit-select').selectedOptions[0]?.textContent || '';
+            const tr = document.createElement('tr');
+            const cell = (value, cls='') => { const td = document.createElement('td'); td.className = 'px-3 py-3 ' + cls; td.textContent = value || '—'; tr.appendChild(td); return td; };
+            cell(String(index + 1));
+            const detail = [spec,grade,brand].filter(v => v && !['Specification','Grade / Rating','Brand'].includes(v)).join(' · ');
+            const productCell = cell(product); productCell.classList.add('font-semibold','text-slate-800');
+            if (detail) { const small = document.createElement('div'); small.className = 'mt-1 text-xs font-normal text-slate-500'; small.textContent = detail; productCell.appendChild(small); }
+            cell(`${row.querySelector('.quantity-input').value} ${unit}`, 'text-right');
+            cell(row.querySelector('.accepted-input').value, 'text-right');
+            cell(row.querySelector('[name$="[remarks]"]').value);
+            const actions = document.createElement('td'); actions.className = 'whitespace-nowrap px-3 py-3';
+            const edit = document.createElement('button'); edit.type='button'; edit.className='mr-3 font-semibold text-blue-700 hover:underline'; edit.textContent='Edit'; edit.addEventListener('click',()=>editDirectRow(row));
+            const remove = document.createElement('button'); remove.type='button'; remove.className='font-semibold text-red-700 hover:underline'; remove.textContent='Remove'; remove.addEventListener('click',()=>removeDirectRow(row));
+            actions.append(edit,remove); tr.appendChild(actions); summaryBody.appendChild(tr);
+        });
+    }
+
     function refreshReceiptSource() {
         const isPo = receiptSource?.value === 'PO';
         purchaseOrderWrap?.classList.toggle('hidden', !isPo);
@@ -349,6 +491,14 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('material-receipt-form')?.addEventListener('submit', function (event) {
         let valid = true;
         body.querySelectorAll('.material-item-row').forEach((row, index) => {
+            if (directMode) {
+                const entryError = validateDirectEntry(row);
+                if (entryError) {
+                    alert(`Row ${index + 1}: ${entryError}`);
+                    valid = false;
+                    return;
+                }
+            }
             const received = Number(row.querySelector('.quantity-input')?.value || 0);
             const acceptedQty = Number(row.querySelector('.accepted-input')?.value || 0);
             const damagedQty = Number(row.querySelector('.damaged-input')?.value || 0);
@@ -368,7 +518,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
-        if (!valid) event.preventDefault();
+        if (directMode) {
+            if (editingDirectRow) { event.preventDefault(); alert('Click Update Material before saving the receipt.'); return; }
+            if (!body.querySelector('.material-item-row')) { event.preventDefault(); alert('Add at least one material to the receipt.'); return; }
+            // Uncommitted entry inputs are outside the submitted item list.
+            entryHost.querySelectorAll('[name^="items["]').forEach(field => field.disabled = true);
+        }
+        if (!valid) { event.preventDefault(); if (directMode) entryHost.querySelectorAll('[name^="items["]').forEach(field => field.disabled = false); }
     });
 
     refreshReceiptSource();
