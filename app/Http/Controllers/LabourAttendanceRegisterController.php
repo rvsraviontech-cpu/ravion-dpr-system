@@ -625,53 +625,69 @@ class LabourAttendanceRegisterController extends Controller
                             $detail
                         );
 
-                    $days[$dateKey] = [
-                        'code' =>
-                            $statusCode,
+                    /*
+                     * A labour can have more than one active detail for the
+                     * same project/date (for example an OT-only attendance
+                     * correction). The register represents attendance by day,
+                     * so the status counter must only be incremented once for
+                     * that calendar date. Hours, however, are cumulative.
+                     */
+                    $existingDay = $days[$dateKey];
 
-                        'label' =>
-                            $detail
-                                ->attendanceStatus
-                                ?->name
-                            ?? 'Unknown',
+                    if ($existingDay === null) {
+                        $days[$dateKey] = [
+                            'code' => $statusCode,
 
-                        'working_status' =>
-                            $detail
-                                ->workingStatus
-                                ?->name,
-
-                        'check_in' =>
-                            $this->formatTime(
+                            'label' =>
                                 $detail
-                                    ->check_in_time
-                            ),
+                                    ->attendanceStatus
+                                    ?->name
+                                ?? 'Unknown',
 
-                        'check_out' =>
-                            $this->formatTime(
+                            'working_status' =>
                                 $detail
-                                    ->check_out_time
-                            ),
+                                    ->workingStatus
+                                    ?->name,
 
-                        'normal_hours' =>
-                            (float) $detail
-                                ->normal_hours,
+                            'check_in' =>
+                                $this->formatTime(
+                                    $detail
+                                        ->check_in_time
+                                ),
 
-                        'ot_hours' =>
-                            (float) $detail
-                                ->ot_hours,
+                            'check_out' =>
+                                $this->formatTime(
+                                    $detail
+                                        ->check_out_time
+                                ),
 
-                        'attendance_number' =>
-                            $detail
-                                ->attendance
-                                ?->attendance_number,
-                    ];
+                            'normal_hours' => 0.0,
+                            'ot_hours' => 0.0,
 
-                    $bucket =
-                        $this->summaryBucket(
-                            $statusCode
-                        );
+                            'attendance_number' =>
+                                $detail
+                                    ->attendance
+                                    ?->attendance_number,
+                        ];
 
-                    $totals[$bucket]++;
+                        $bucket =
+                            $this->summaryBucket(
+                                $statusCode
+                            );
+
+                        $totals[$bucket]++;
+                    }
+
+                    /*
+                     * Keep the daily cell and row totals aligned: duplicate
+                     * same-day details contribute their hours (including OT)
+                     * without creating another Present/Absent/etc. day.
+                     */
+                    $days[$dateKey]['normal_hours'] +=
+                        (float) $detail->normal_hours;
+
+                    $days[$dateKey]['ot_hours'] +=
+                        (float) $detail->ot_hours;
 
                     $totals['normal_hours'] +=
                         (float) $detail
