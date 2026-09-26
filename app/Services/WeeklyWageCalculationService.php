@@ -193,6 +193,53 @@ class WeeklyWageCalculationService
         $otHours = 0.0;
         $otAmount = 0.0;
 
+        /*
+         * A weekly wage sheet is project-specific, so normalize Regular
+         * Attendance to one payable/status contribution per labour/date.
+         *
+         * Historical correction rows may exist as a second Regular detail
+         * for the same date solely to carry OT (normal_hours = 0). Those rows
+         * must not create another payable day, but their OT remains payable.
+         */
+        $regularContributionIds = $attendanceDetails
+            ->reject(
+                fn (LabourAttendanceDetail $detail): bool =>
+                    $this->isAdditionalWork($detail)
+            )
+            ->groupBy(
+                fn (LabourAttendanceDetail $detail): string =>
+                    $detail->attendance?->attendance_date?->format('Y-m-d') ?? ''
+            )
+            ->filter(
+                fn (Collection $details, string $date): bool =>
+                    $date !== ''
+            )
+            ->mapWithKeys(
+                function (Collection $details, string $date): array {
+                    $ordered = $details
+                        ->sortBy(
+                            fn (LabourAttendanceDetail $detail): int =>
+                                (int) $detail->labour_attendance_id
+                        )
+                        ->values();
+
+                    /*
+                     * Prefer a Regular row that actually carries normal hours.
+                     * This makes the original day-attendance authoritative when
+                     * a later correction-created Regular row contains OT only.
+                     */
+                    $authoritative = $ordered
+                        ->first(
+                            fn (LabourAttendanceDetail $detail): bool =>
+                                (float) $detail->normal_hours > 0
+                        ) ?? $ordered->first();
+
+                    return $authoritative
+                        ? [$date => (int) $authoritative->id]
+                        : [];
+                }
+            );
+
         foreach ($attendanceDetails as $detail) {
             $status = $detail->attendanceStatus;
 
@@ -205,6 +252,10 @@ class WeeklyWageCalculationService
             )));
 
             $isAdditionalWork = $this->isAdditionalWork($detail);
+            $dateKey = $detail->attendance?->attendance_date?->format('Y-m-d') ?? '';
+            $isAuthoritativeRegular = ! $isAdditionalWork
+                && $dateKey !== ''
+                && (int) ($regularContributionIds->get($dateKey) ?? 0) === (int) $detail->id;
 
             /*
              * Additional Work is OT-only.
@@ -213,16 +264,16 @@ class WeeklyWageCalculationService
              * payable factor (for example Present = 1.00), an Additional Work
              * session must never create a second payable day or normal wage.
              */
-            $payableFactor = $isAdditionalWork
-                ? 0.0
-                : round(
+            $payableFactor = $isAuthoritativeRegular
+                ? round(
                     (float) ($status->payable_factor ?? 0),
                     2
-                );
+                )
+                : 0.0;
 
             $payableDays += $payableFactor;
 
-            if (! $isAdditionalWork) {
+            if ($isAuthoritativeRegular) {
                 if ($payableFactor >= 1) {
                     $fullDays += 1;
                 } elseif ($payableFactor > 0) {
