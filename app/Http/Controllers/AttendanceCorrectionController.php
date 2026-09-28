@@ -1627,6 +1627,41 @@ class AttendanceCorrectionController extends Controller
             === AttendanceCorrectionDetail::ACTION_ADD
         ) {
             /*
+             * Final transactional safeguard.
+             *
+             * Draft validation can become stale before Apply. For Regular
+             * Attendance, do not allow ACTION_ADD to create a second active
+             * Regular attendance detail for the same labour/project/date on
+             * another sheet.
+             *
+             * Additional Work is intentionally excluded because separate
+             * Additional Work sessions are valid and remain OT-only.
+             */
+            if (! $attendance->isAdditionalWork()) {
+                $existingRegularDetail = $this
+                    ->findExistingRegularAttendanceDetail(
+                        labourId: (int) $correctionDetail->labour_id,
+                        projectId: (int) $attendance->project_id,
+                        attendanceDate:
+                            $attendance->attendance_date->format('Y-m-d'),
+                        excludeAttendanceId: (int) $attendance->id,
+                        lockForUpdate: true
+                    );
+
+                if ($existingRegularDetail) {
+                    $formattedDate = $attendance
+                        ->attendance_date
+                        ->format('d M Y');
+
+                    throw ValidationException::withMessages([
+                        'details' => [
+                            "Labour ID {$correctionDetail->labour_id} already has Regular Attendance for this project on {$formattedDate}. Apply was stopped to prevent duplicate Regular attendance. Correct the existing Regular attendance row instead.",
+                        ],
+                    ]);
+                }
+            }
+
+            /*
              * Re-adding a labour that was previously removed must restore and
              * reuse the historical attendance-detail row. The database keeps
              * attendance + labour unique even when the row is soft-deleted.
@@ -2251,6 +2286,37 @@ class AttendanceCorrectionController extends Controller
                             'This labour already has working/payable attendance recorded on another project for the same date.',
                         ],
                     ]);
+                }
+
+                /*
+                 * A Regular Add must never create a second Regular attendance
+                 * detail for the same labour/project/date on another sheet.
+                 *
+                 * Historical duplicate Regular sheets may still exist, so
+                 * header-only duplicate validation remains intentionally
+                 * separate. This guard is labour-specific and applies only
+                 * when adding a labour to Regular Attendance.
+                 */
+                if ($proposedAttendanceType === 'regular') {
+                    $existingRegularDetail = $this
+                        ->findExistingRegularAttendanceDetail(
+                            labourId: $labourId,
+                            projectId: (int) $attendance->project_id,
+                            attendanceDate: $targetAttendanceDate,
+                            excludeAttendanceId: (int) $attendance->id
+                        );
+
+                    if ($existingRegularDetail) {
+                        $formattedDate = \Carbon\Carbon::parse(
+                            $targetAttendanceDate
+                        )->format('d M Y');
+
+                        throw ValidationException::withMessages([
+                            "details.{$rowIndex}.labour_id" => [
+                                "This labour already has Regular Attendance for this project on {$formattedDate}. Use Attendance Correction on the existing Regular attendance row instead of adding another Regular attendance.",
+                            ],
+                        ]);
+                    }
                 }
             }
 
@@ -2912,6 +2978,89 @@ class AttendanceCorrectionController extends Controller
                 $message,
             ],
         ]);
+    }
+
+    /**
+     * Find another active Regular attendance detail for the same
+     * labour/project/date.
+     *
+     * This is deliberately labour-specific. Historical duplicate Regular
+     * attendance headers are not blocked here unless the same labour would be
+     * duplicated across those sheets.
+     */
+    private function findExistingRegularAttendanceDetail(
+        int $labourId,
+        int $projectId,
+        mixed $attendanceDate,
+        ?int $excludeAttendanceId = null,
+        bool $lockForUpdate = false
+    ): ?LabourAttendanceDetail {
+        if (blank($attendanceDate)) {
+            return null;
+        }
+
+        $attendanceDate = \Carbon\Carbon::parse(
+            $attendanceDate
+        )->format('Y-m-d');
+
+        $query = LabourAttendanceDetail::query()
+            ->select('labour_attendance_details.*')
+            ->join(
+                'labour_attendances',
+                'labour_attendances.id',
+                '=',
+                'labour_attendance_details.labour_attendance_id'
+            )
+            ->where(
+                'labour_attendance_details.labour_id',
+                $labourId
+            )
+            ->where(
+                'labour_attendance_details.is_active',
+                true
+            )
+            ->whereNull(
+                'labour_attendance_details.deleted_at'
+            )
+            ->where(
+                'labour_attendances.project_id',
+                $projectId
+            )
+            ->whereDate(
+                'labour_attendances.attendance_date',
+                $attendanceDate
+            )
+            ->where(
+                'labour_attendances.attendance_type',
+                'regular'
+            )
+            ->where(
+                'labour_attendances.status',
+                'approved'
+            )
+            ->where(
+                'labour_attendances.is_active',
+                true
+            )
+            ->whereNull(
+                'labour_attendances.deleted_at'
+            );
+
+        if ($excludeAttendanceId !== null) {
+            $query->where(
+                'labour_attendances.id',
+                '!=',
+                $excludeAttendanceId
+            );
+        }
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        return $query
+            ->orderBy('labour_attendance_details.id')
+            ->first();
     }
 
     /**
