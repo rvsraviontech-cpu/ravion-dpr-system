@@ -264,7 +264,35 @@ class WeeklyLabourPaymentCalculationService
                         )
                         ->values();
 
-                    if ($payableRegular->count() > 1) {
+                    $normalPayableRegular = $payableRegular
+                        ->filter(
+                            fn (LabourAttendanceDetail $detail): bool =>
+                                (float) $detail->normal_hours > 0
+                        )
+                        ->values();
+
+                    $correctionOtOnlyRegular = $payableRegular
+                        ->filter(
+                            fn (LabourAttendanceDetail $detail): bool =>
+                                $detail->attendance_source === 'attendance_correction'
+                                && (float) $detail->normal_hours <= 0
+                                && (
+                                    (float) $detail->ot_hours > 0
+                                    || (float) ($detail->ot_amount ?? 0) > 0
+                                )
+                        )
+                        ->values();
+
+                    $allowedCorrectionOtOnlyCase =
+                        $payableRegular->count() > 1
+                        && $normalPayableRegular->count() === 1
+                        && $correctionOtOnlyRegular->count()
+                            === ($payableRegular->count() - 1);
+
+                    if (
+                        $payableRegular->count() > 1
+                        && ! $allowedCorrectionOtOnlyCase
+                    ) {
                         $projects = $payableRegular
                             ->map(
                                 fn (LabourAttendanceDetail $detail): string =>
@@ -288,7 +316,8 @@ class WeeklyLabourPaymentCalculationService
                      * If there is no payable Regular row, retain the earliest
                      * non-payable Regular row for absence/leave reporting.
                      */
-                    $regular = $payableRegular->first()
+                    $regular = $normalPayableRegular->first()
+                        ?? $payableRegular->first()
                         ?? $regularDetails
                             ->sortBy(
                                 fn (LabourAttendanceDetail $detail): int =>
@@ -301,8 +330,32 @@ class WeeklyLabourPaymentCalculationService
                     }
 
                     /*
-                     * Every Additional Work session is retained because each
-                     * session can carry OT for a different project.
+                     * Historical Attendance Correction rows can exist as a
+                     * second Regular/Present detail solely to carry OT. Keep
+                     * that OT in payroll without creating another payable day.
+                     * Only the in-memory calculation copy is reclassified;
+                     * source attendance data is never changed here.
+                     */
+                    if ($allowedCorrectionOtOnlyCase) {
+                        foreach ($correctionOtOnlyRegular as $otOnlyDetail) {
+                            $otOnlyContribution = clone $otOnlyDetail;
+
+                            if ($otOnlyContribution->relationLoaded('attendance')) {
+                                $attendance = clone $otOnlyContribution->attendance;
+                                $attendance->attendance_type = 'additional_work';
+                                $otOnlyContribution->setRelation(
+                                    'attendance',
+                                    $attendance
+                                );
+                            }
+
+                            $result->push($otOnlyContribution);
+                        }
+                    }
+
+                    /*
+                     * Every genuine Additional Work session is retained because
+                     * each session can carry OT for a different project.
                      */
                     foreach ($additionalDetails as $additionalDetail) {
                         $result->push($additionalDetail);
