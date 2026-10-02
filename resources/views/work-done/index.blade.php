@@ -630,288 +630,78 @@
         @endif
     </div>
 
-    {{-- Register --}}
-    <div class="hidden overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
-
-        <div class="border-b border-gray-200 px-5 py-4">
-            <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h2 class="text-lg font-bold text-gray-800">
-                        Work Execution Register
-                    </h2>
-
-                    <p class="text-sm text-gray-500">
-                        One register row represents one Project + Date + Engineer header.
-                    </p>
-                </div>
-
-                <div class="text-sm text-gray-500">
-                    Showing
-                    <span class="font-semibold text-gray-700">
-                        {{ $workDoneHeaders->firstItem() ?? 0 }}–{{ $workDoneHeaders->lastItem() ?? 0 }}
-                    </span>
-                    of
-                    <span class="font-semibold text-gray-700">
-                        {{ $workDoneHeaders->total() }}
-                    </span>
-                </div>
+    {{-- Compact desktop register: details belong in View, not the index. --}}
+    <div class="hidden min-w-0 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm lg:block">
+        <div class="flex items-center justify-between gap-3 border-b border-gray-200 px-4 py-3">
+            <div>
+                <h2 class="text-base font-bold text-gray-800">Work Execution Register</h2>
+                <p class="text-xs text-gray-500">One row per Project + Date + Engineer. Open View for activity details.</p>
             </div>
+            <span class="shrink-0 text-xs text-gray-500">{{ $workDoneHeaders->firstItem() ?? 0 }}–{{ $workDoneHeaders->lastItem() ?? 0 }} of {{ $workDoneHeaders->total() }}</span>
         </div>
-
-        <div class="overflow-x-auto">
-
-            <table class="min-w-[1450px] w-full text-sm">
-
-                <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
-                    <tr>
-                        <th class="w-14 px-4 py-3 text-center">#</th>
-                        <th class="px-4 py-3 text-left">Date</th>
-                        <th class="px-4 py-3 text-left">Project</th>
-                        <th class="px-4 py-3 text-left">Engineer</th>
-                        <th class="px-4 py-3 text-center">Activities</th>
-                        <th class="px-4 py-3 text-center">Materials</th>
-                        <th class="px-4 py-3 text-center">Photos</th>
-                        <th class="px-4 py-3 text-left">DPR Link</th>
-                        <th class="px-4 py-3 text-left">Daily Status</th>
-                        <th class="px-4 py-3 text-left">Remarks</th>
-                        <th class="w-32 px-4 py-3 text-center">Actions</th>
+        <table class="w-full table-fixed text-xs xl:text-sm">
+            <thead class="bg-gray-50 text-[11px] font-semibold uppercase text-gray-600">
+                <tr>
+                    <th class="w-[5%] px-2 py-3 text-center">#</th>
+                    <th class="w-[13%] px-2 py-3 text-left">Date</th>
+                    <th class="w-[23%] px-2 py-3 text-left">Project</th>
+                    <th class="w-[17%] px-2 py-3 text-left">Engineer</th>
+                    <th class="w-[10%] px-2 py-3 text-center">Activities</th>
+                    <th class="w-[12%] px-2 py-3 text-center">DPR</th>
+                    <th class="w-[10%] px-2 py-3 text-center">Status</th>
+                    <th class="w-[10%] px-2 py-3 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                @forelse($workDoneHeaders as $index => $header)
+                    @php
+                        $activityCount = $header->items->count();
+                        $linkedCount = $header->items->whereNotNull('dpr_id')->count();
+                        $canEditHeader = $activityCount > $linkedCount;
+                        $canDeleteHeader = $linkedCount === 0;
+                    @endphp
+                    <tr class="align-middle hover:bg-blue-50/40">
+                        <td class="px-2 py-3 text-center text-gray-500">{{ ($workDoneHeaders->firstItem() ?? 1) + $index }}</td>
+                        <td class="whitespace-nowrap px-2 py-3 font-medium text-gray-800">{{ $header->work_date?->format('d/m/Y') ?? '-' }}</td>
+                        <td class="min-w-0 px-2 py-3"><div class="truncate font-semibold text-gray-800" title="{{ $header->project?->project_name ?? '-' }}">{{ $header->project?->project_name ?? '-' }}</div></td>
+                        <td class="min-w-0 px-2 py-3"><div class="truncate text-gray-700" title="{{ $header->engineer?->name ?? '-' }}">{{ $header->engineer?->name ?? '-' }}</div></td>
+                        <td class="px-2 py-3 text-center"><span class="inline-flex min-w-7 justify-center rounded-full bg-blue-100 px-2 py-1 font-semibold text-blue-800">{{ $activityCount }}</span></td>
+                        <td class="px-2 py-3 text-center">
+                            @if($activityCount === 0)
+                                <span class="text-gray-400">—</span>
+                            @elseif($linkedCount === $activityCount)
+                                <span class="rounded bg-green-100 px-1.5 py-1 text-[11px] font-medium text-green-800" title="All activities linked to DPR">Linked</span>
+                            @elseif($linkedCount > 0)
+                                <span class="rounded bg-amber-100 px-1.5 py-1 text-[11px] font-medium text-amber-800" title="{{ $linkedCount }} of {{ $activityCount }} activities linked">{{ $linkedCount }}/{{ $activityCount }}</span>
+                            @else
+                                <span class="rounded bg-yellow-100 px-1.5 py-1 text-[11px] font-medium text-yellow-800">Unlinked</span>
+                            @endif
+                        </td>
+                        <td class="px-2 py-3 text-center"><span class="rounded bg-slate-100 px-1.5 py-1 text-[11px] font-medium text-slate-700">{{ $header->status ?: 'Draft' }}</span></td>
+                        <td class="px-2 py-3">
+                            <div class="flex flex-wrap items-center justify-center gap-1">
+                                <a href="{{ route('work-done.show', $header) }}" class="rounded bg-[#0F2A52] px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-700">View</a>
+                                @if($canEditHeader)
+                                    <a href="{{ route('work-done.edit', $header) }}" class="rounded bg-amber-500 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-600">Edit</a>
+                                @endif
+                                @if($canDeleteHeader)
+                                    <form method="POST" action="{{ route('work-done.destroy', $header) }}" class="inline">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" onclick="return confirm('Delete this Daily Work Execution entry and all its Work Activities?')" class="rounded bg-red-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700" title="Delete work execution">Del</button>
+                                    </form>
+                                @endif
+                            </div>
+                        </td>
                     </tr>
-                </thead>
-
-                <tbody class="divide-y divide-gray-200">
-
-                    @forelse($workDoneHeaders as $index => $header)
-
-                        @php
-                            $activityCount = $header->items->count();
-
-                            $materialCount = $header->items->sum(
-                                fn ($item) => $item->materialConsumptions->count()
-                            );
-
-                            $photoCount = $header->items->sum(
-                                fn ($item) => $item->photos->count()
-                            );
-
-                            $linkedCount = $header->items
-                                ->whereNotNull('dpr_id')
-                                ->count();
-
-                            $unlinkedCount = $activityCount - $linkedCount;
-
-                            $allLinked = $activityCount > 0 && $linkedCount === $activityCount;
-
-                            $hasLinked = $linkedCount > 0;
-
-                            $canEditHeader = $unlinkedCount > 0;
-                            $canDeleteHeader = ! $hasLinked;
-                        @endphp
-
-                        <tr class="align-top hover:bg-gray-50">
-
-                            <td class="px-4 py-4 text-center text-gray-500">
-                                {{ ($workDoneHeaders->firstItem() ?? 1) + $index }}
-                            </td>
-
-                            <td class="whitespace-nowrap px-4 py-4">
-                                <div class="font-semibold text-gray-800">
-                                    {{ $header->work_date?->format('d/m/Y') ?? '-' }}
-                                </div>
-
-                                <div class="mt-1 text-xs text-gray-500">
-                                    {{ $header->work_date?->format('l') ?? '' }}
-                                </div>
-                            </td>
-
-                            <td class="px-4 py-4">
-                                <div class="font-semibold text-gray-800">
-                                    {{ $header->project?->project_name ?? '-' }}
-                                </div>
-
-                                @if($header->project?->project_code)
-                                    <div class="mt-1 text-xs text-gray-500">
-                                        {{ $header->project->project_code }}
-                                    </div>
-                                @endif
-                            </td>
-
-                            <td class="px-4 py-4">
-                                {{ $header->engineer?->name ?? '-' }}
-                            </td>
-
-                            <td class="px-4 py-4 text-center">
-                                <span class="inline-flex min-w-9 items-center justify-center rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-800">
-                                    {{ $activityCount }}
-                                </span>
-                            </td>
-
-                            <td class="px-4 py-4 text-center">
-                                <span class="font-semibold text-gray-800">
-                                    {{ $materialCount }}
-                                </span>
-                            </td>
-
-                            <td class="px-4 py-4 text-center">
-                                <span class="font-semibold text-gray-800">
-                                    {{ $photoCount }}
-                                </span>
-                            </td>
-
-                            <td class="px-4 py-4">
-                                @if($activityCount === 0)
-                                    <span class="inline-flex rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
-                                        No Activities
-                                    </span>
-                                @elseif($allLinked)
-                                    <span class="inline-flex rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">
-                                        All Linked · {{ $linkedCount }}/{{ $activityCount }}
-                                    </span>
-                                @elseif($hasLinked)
-                                    <div class="space-y-1">
-                                        <span class="inline-flex rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
-                                            Partially Linked · {{ $linkedCount }}/{{ $activityCount }}
-                                        </span>
-
-                                        <div class="text-xs text-gray-500">
-                                            {{ $unlinkedCount }} activity{{ $unlinkedCount === 1 ? '' : 'ies' }} pending DPR link
-                                        </div>
-                                    </div>
-                                @else
-                                    <span class="inline-flex rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-800">
-                                        Not Linked
-                                    </span>
-                                @endif
-                            </td>
-
-                            <td class="px-4 py-4">
-                                <span class="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    {{ $header->status ?: 'Draft' }}
-                                </span>
-                            </td>
-
-                            <td class="max-w-xs px-4 py-4">
-                                @if($header->remarks)
-                                    <div class="line-clamp-2 text-gray-700"
-                                         title="{{ $header->remarks }}">
-                                        {{ $header->remarks }}
-                                    </div>
-                                @else
-                                    <span class="text-gray-400">—</span>
-                                @endif
-                            </td>
-
-                            <td class="px-4 py-4">
-                                <div class="flex flex-col gap-2">
-
-                                    <a href="{{ route('work-done.show', $header) }}"
-                                       class="rounded-lg bg-slate-700 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-slate-800">
-                                        View
-                                    </a>
-
-                                    @if($canEditHeader)
-                                        <a href="{{ route('work-done.edit', $header) }}"
-                                           class="rounded-lg bg-amber-500 px-3 py-2 text-center text-xs font-semibold text-white hover:bg-amber-600">
-                                            Edit
-                                        </a>
-                                    @endif
-
-                                    @if($canDeleteHeader)
-                                        <form method="POST"
-                                              action="{{ route('work-done.destroy', $header) }}">
-                                            @csrf
-                                            @method('DELETE')
-
-                                            <button type="submit"
-                                                    onclick="return confirm('Delete this Daily Work Execution entry and all its Work Activities?')"
-                                                    class="w-full rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700">
-                                                Delete
-                                            </button>
-                                        </form>
-                                    @endif
-
-                                </div>
-                            </td>
-
-                        </tr>
-
-                        {{-- Activity Preview --}}
-                        @if($header->items->isNotEmpty())
-                            <tr class="bg-gray-50/60">
-                                <td></td>
-
-                                <td colspan="10"
-                                    class="px-4 py-3">
-
-                                    <div class="flex flex-wrap gap-2">
-
-                                        @foreach($header->items->take(6) as $item)
-                                            <div class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm">
-
-                                                <div class="font-semibold text-gray-800">
-                                                    {{ $item->activity_name ?? 'Activity' }}
-                                                </div>
-
-                                                <div class="mt-1 text-gray-500">
-                                                    @if($item->location_path)
-                                                        {{ $item->location_path }} ·
-                                                    @endif
-
-                                                    {{ rtrim(rtrim(number_format((float) $item->quantity_completed, 3, '.', ''), '0'), '.') }}
-                                                    {{ $item->unit ?? '' }}
-                                                </div>
-
-                                            </div>
-                                        @endforeach
-
-                                        @if($header->items->count() > 6)
-                                            <div class="flex items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm">
-                                                +{{ $header->items->count() - 6 }} more
-                                            </div>
-                                        @endif
-
-                                    </div>
-
-                                </td>
-                            </tr>
-                        @endif
-
-                    @empty
-
-                        <tr>
-                            <td colspan="11"
-                                class="px-6 py-14 text-center">
-
-                                <div class="mx-auto max-w-md">
-                                    <div class="text-lg font-semibold text-gray-700">
-                                        No Daily Work Execution records found
-                                    </div>
-
-                                    <p class="mt-2 text-sm text-gray-500">
-                                        Adjust the filters or create the first Work Execution entry.
-                                    </p>
-
-                                    <a href="{{ route('work-done.create') }}"
-                                       class="mt-4 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-                                        + Add Work Execution
-                                    </a>
-                                </div>
-
-                            </td>
-                        </tr>
-
-                    @endforelse
-
-                </tbody>
-            </table>
-
-        </div>
-
+                @empty
+                    <tr><td colspan="8" class="px-4 py-12 text-center text-gray-500">No Daily Work Execution records found. Adjust filters or create an entry.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
         @if($workDoneHeaders->hasPages())
-            <div class="border-t border-gray-200 px-5 py-4">
-                {{ $workDoneHeaders->links() }}
-            </div>
+            <div class="border-t border-gray-200 px-4 py-3">{{ $workDoneHeaders->links() }}</div>
         @endif
-
     </div>
 </div>
 

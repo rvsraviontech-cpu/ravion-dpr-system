@@ -3,28 +3,15 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ProjectFloor;
 
 class ProjectBlock extends Model
 {
     protected $fillable = [
-        'project_id',
-        'name',
-        'code',
-        'type',
-        'is_active',
-        'remarks',
+        'project_id', 'name', 'code', 'type', 'spatial_block_type_id',
+        'identifier', 'is_active', 'remarks',
     ];
 
-    public function project()
-    {
-        return $this->belongsTo(Project::class);
-    }
-    public function floors()
-{
-    return $this->hasMany(
-        ProjectFloor::class,
-        'project_block_id'
-    );
-}
+    public function project() { return $this->belongsTo(Project::class); }
+    public function floors() { return $this->hasMany(ProjectFloor::class, 'project_block_id'); }
+    public function spatialBlockType() { return $this->belongsTo(SpatialBlockType::class); }
 }

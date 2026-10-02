@@ -10,6 +10,7 @@ class WorkDoneItemLabour extends Model
     protected $fillable = [
         'work_done_item_id',
         'designation_role_id',
+        'labour_group_id',
         'quantity',
         'remarks',
         'sort_order',

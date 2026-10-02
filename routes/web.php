@@ -16,6 +16,7 @@ use App\Http\Controllers\MachineryToolController;
 use App\Http\Controllers\WeeklyPlanController;
 use App\Http\Controllers\ActivityMappingController;
 use App\Http\Controllers\ProjectLocationController;
+use App\Http\Controllers\ProjectStructureMasterController;
 use App\Http\Controllers\LocationBlockMasterController;
 use App\Http\Controllers\LocationFloorMasterController;
 use App\Http\Controllers\LocationUnitMasterController;
@@ -72,6 +73,7 @@ use App\Http\Controllers\MaterialTypeController;
 use App\Http\Controllers\MaterialGradeController;
 use App\Http\Controllers\DprWorkItemController;
 use App\Http\Controllers\WorkDoneController;
+use App\Http\Controllers\WorkActivitySearchController;
 use App\Http\Controllers\LabourGroupController;
 use App\Http\Controllers\WeeklyAttendanceController;
 use App\Http\Controllers\DepartmentController;
@@ -86,6 +88,9 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\MaterialDispatchController;
 use App\Http\Controllers\MaterialDispatchReceiptController;
 use App\Http\Controllers\MaterialReceivedPurchaseOrderController;
+use App\Http\Controllers\ProjectRoomDesignerController;
+use App\Http\Controllers\IntelligentRoomSetupController;
+
 
 
 
@@ -240,6 +245,21 @@ Route::get(
     ->name('reports.labour-wages.pdf')
     ->middleware('permission:reports.labour');
 
+    // Intelligent Room Setup — preview and additive generation only.
+    Route::get('/project-locations/rooms/{projectRoom}/quick-setup', [IntelligentRoomSetupController::class, 'show'])
+        ->name('project-locations.rooms.quick-setup')->middleware('permission:location_masters.manage');
+    Route::post('/project-locations/rooms/{projectRoom}/quick-setup/preview', [IntelligentRoomSetupController::class, 'preview'])
+        ->name('project-locations.rooms.quick-setup.preview')->middleware('permission:location_masters.manage');
+    Route::post('/project-locations/rooms/{projectRoom}/quick-setup/generate', [IntelligentRoomSetupController::class, 'generate'])
+        ->name('project-locations.rooms.quick-setup.generate')->middleware('permission:location_masters.manage');
+
+    Route::get('/project-locations/rooms/{projectRoom}/designer', [ProjectRoomDesignerController::class, 'show'])->name('project-locations.rooms.designer');
+Route::put('/project-locations/rooms/{projectRoom}/designer/geometry', [ProjectRoomDesignerController::class, 'saveGeometry'])->name('project-locations.rooms.designer.geometry');
+Route::post('/project-locations/rooms/{projectRoom}/designer/walls', [ProjectRoomDesignerController::class, 'saveWall'])->name('project-locations.rooms.designer.wall');
+
+
+Route::post('/project-locations/rooms/{projectRoom}/designer/openings', [ProjectRoomDesignerController::class, 'saveOpening'])->name('project-locations.rooms.designer.opening');
+ Route::post('/project-locations/rooms/{projectRoom}/designer/zones', [ProjectRoomDesignerController::class, 'saveZone'])->name('project-locations.rooms.designer.zone');
     /*
     |--------------------------------------------------------------------------
     | Dashboards
@@ -528,6 +548,34 @@ Route::prefix('work-done')
     ->name('work-done.')
     ->group(function () {
 
+    /*
+|--------------------------------------------------------------------------
+| Canonical Work Execution Catalogue
+|--------------------------------------------------------------------------
+| Operational catalogue data only.
+| These routes inherit the existing auth middleware.
+*/
+
+Route::get(
+    '/work-packages',
+    [WorkActivitySearchController::class, 'packages']
+)->name('work-packages');
+
+Route::get(
+    '/work-sections',
+    [WorkActivitySearchController::class, 'sections']
+)->name('work-sections');
+
+Route::get(
+    '/work-activities',
+    [WorkActivitySearchController::class, 'activities']
+)->name('work-activities');
+
+Route::get(
+    '/search-activities',
+    [WorkActivitySearchController::class, 'search']
+)->name('search-activities');
+
         Route::get(
             '/available-materials',
             [WorkDoneController::class, 'availableMaterials']
@@ -567,7 +615,11 @@ Route::prefix('work-done')
             '/{workDone}',
             [WorkDoneController::class, 'destroy']
         )->name('destroy');
+
+        Route::get('/available-labour', [WorkDoneController::class, 'availableLabour'])->name('available-labour');
     });
+
+    
 
 
 
@@ -578,7 +630,8 @@ Route::prefix('work-done')
     */
 
     Route::resource('projects', ProjectController::class)
-        ->middleware('permission:projects.view');
+    ->except(['destroy'])
+    ->middleware('permission:projects.view');
 
     Route::get('/project-progress', [ProjectController::class, 'progress'])
         ->middleware('permission:projects.view');
@@ -1525,6 +1578,13 @@ Route::get(
         ->name('project-locations.subspaces.toggle-status')
         ->middleware('permission:location_masters.manage');
 
+
+
+    /* Project Structure Masters */
+    Route::get('/project-structure-masters', [ProjectStructureMasterController::class, 'index'])->name('project-structure-masters.index')->middleware('permission:location_masters.view');
+    Route::post('/project-structure-masters/{master}', [ProjectStructureMasterController::class, 'store'])->name('project-structure-masters.store')->middleware('permission:location_masters.manage');
+    Route::put('/project-structure-masters/{master}/{id}', [ProjectStructureMasterController::class, 'update'])->name('project-structure-masters.update')->middleware('permission:location_masters.manage');
+    Route::patch('/project-structure-masters/{master}/{id}/toggle-status', [ProjectStructureMasterController::class, 'toggle'])->name('project-structure-masters.toggle')->middleware('permission:location_masters.manage');
 
     /*
     |--------------------------------------------------------------------------

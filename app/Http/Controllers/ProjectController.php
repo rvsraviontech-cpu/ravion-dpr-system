@@ -6,6 +6,8 @@ use App\Helpers\AuditHelper;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ProjectController extends Controller
 {
@@ -54,7 +56,10 @@ class ProjectController extends Controller
 
     public function index(Request $request)
     {
+        $this->requirePermission('projects.view');
+
         $projects = Project::with(['assignedPmo', 'users'])
+            ->when(! $request->user()->hasAllProjectAccess(), fn ($q) => $q->whereHas('users', fn ($u) => $u->where('users.id', $request->user()->id)))
             ->when($request->search, function ($query) use ($request) {
                 $query->where(function ($q) use ($request) {
                     $q->where('project_code', 'like', '%' . $request->search . '%')
@@ -76,6 +81,7 @@ class ProjectController extends Controller
 
     public function create()
     {
+        $this->requirePermission('projects.manage');
         return view('projects.create', array_merge(
             $this->formData(),
             [
@@ -86,13 +92,16 @@ class ProjectController extends Controller
 
     public function store(Request $request)
     {
+        $this->requirePermission('projects.manage');
         $validated = $this->validateProject($request);
 
         $validated['division_code'] = 'RH';
 
-        $project = Project::create($validated);
-
-        $project->users()->sync($request->engineers ?? []);
+        $project = DB::transaction(function () use ($validated, $request) {
+            $project = Project::create($validated);
+            $project->users()->sync($request->input('engineers', []));
+            return $project;
+        });
 
         AuditHelper::log(
             'Projects',
@@ -102,7 +111,7 @@ class ProjectController extends Controller
             'Project created: ' . $project->project_name,
             null,
             [
-                'project' => $project->toArray(),
+                'project' => $this->auditProject($project),
                 'engineers' => $project->users()->pluck('users.id')->toArray(),
             ]
         );
@@ -113,6 +122,8 @@ class ProjectController extends Controller
 
     public function edit($id)
     {
+        $this->requirePermission('projects.manage');
+        $this->requireProjectAccess((int) $id);
         $project = Project::with('users')->findOrFail($id);
 
         return view('projects.edit', array_merge(
@@ -126,10 +137,12 @@ class ProjectController extends Controller
 
     public function update(Request $request, $id)
     {
+        $this->requirePermission('projects.manage');
+        $this->requireProjectAccess((int) $id);
         $project = Project::with('users')->findOrFail($id);
 
         $oldValues = [
-            'project' => $project->toArray(),
+            'project' => $this->auditProject($project),
             'engineers' => $project->users()->pluck('users.id')->toArray(),
         ];
 
@@ -137,12 +150,13 @@ class ProjectController extends Controller
 
         $validated['division_code'] = 'RH';
 
-        $project->update($validated);
-
-        $project->users()->sync($request->engineers ?? []);
+        DB::transaction(function () use ($project, $validated, $request) {
+            $project->update($validated);
+            $project->users()->sync($request->input('engineers', []));
+        });
 
         $newValues = [
-            'project' => $project->fresh()->toArray(),
+            'project' => $this->auditProject($project->fresh()),
             'engineers' => $project->users()->pluck('users.id')->toArray(),
         ];
 
@@ -162,29 +176,49 @@ class ProjectController extends Controller
 
     public function destroy($id)
     {
-        $project = Project::findOrFail($id);
-
-        AuditHelper::log(
-            'Projects',
-            'Deleted',
-            'Project',
-            $project->id,
-            'Project deleted: ' . $project->project_name,
-            $project->toArray(),
-            null
-        );
-
-        $project->delete();
-
-        return redirect('/projects')
-            ->with('success', 'Project deleted successfully.');
+        $this->requirePermission('projects.manage');
+        // Hard deletion is deliberately disabled: existing FK cascades can remove
+        // structure and historical operational data.
+        abort(403, 'Project deletion is disabled. Use an appropriate project status instead.');
     }
 
     public function progress()
     {
-        $projects = Project::with(['users', 'dprs.workItems'])->get();
+        $this->requirePermission('projects.view');
+        $user = request()->user();
+        $projects = Project::with(['users', 'dprs.workItems'])
+            ->when(! $user->hasAllProjectAccess(), fn ($q) => $q->whereHas('users', fn ($u) => $u->where('users.id', $user->id)))
+            ->get();
 
         return view('projects.progress', compact('projects'));
+    }
+
+    private function requirePermission(string $name): void
+    {
+        abort_unless(auth()->user()?->hasPermission($name), 403);
+    }
+
+    private function requireProjectAccess(int $projectId): void
+    {
+        abort_unless(auth()->user()?->hasProjectAccess($projectId), 403);
+    }
+
+    private function canManageCommercial(Request $request): bool
+    {
+        return $request->user()->hasPermission('projects.manage')
+            && in_array($request->user()->role?->name, ['Admin', 'CEO', 'PMO', 'DGM'], true);
+    }
+
+    private function canManageOdoo(Request $request): bool
+    {
+        return $request->user()->hasPermission('projects.manage')
+            && in_array($request->user()->role?->name, ['Admin', 'CEO'], true);
+    }
+
+    private function auditProject(Project $project): array
+    {
+        // Do not place commercial secrets in general-purpose audit payloads.
+        return collect($project->toArray())->except(['contract_value', 'odoo_analytic_account_code'])->all();
     }
 
     private function formData(): array
@@ -208,40 +242,40 @@ class ProjectController extends Controller
 
     private function validateProject(Request $request, $projectId = null): array
     {
-        return $request->validate([
-            'project_code' => [
-                'required',
-                'string',
-                'max:100',
-                'unique:projects,project_code,' . $projectId,
-            ],
+        // A forged payload must never change commercial data or bypass roles.
+        abort_if(! $this->canManageCommercial($request) && $request->exists('contract_value'), 403);
+        abort_if(! $this->canManageOdoo($request) && $request->exists('odoo_analytic_account_code'), 403);
 
+        $rules = [
+            'project_code' => ['required', 'string', 'max:100', Rule::unique('projects', 'project_code')->ignore($projectId)],
             'project_name' => 'required|string|max:255',
-            'division_code' => 'nullable|string|max:20',
-
             'client_name' => 'nullable|string|max:255',
             'client_mobile' => 'nullable|string|max:30',
             'client_email' => 'nullable|email|max:255',
             'client_address' => 'nullable|string',
-
             'location' => 'nullable|string|max:255',
             'google_map_link' => 'nullable|string',
-
             'project_type' => 'nullable|string|max:150',
             'structure_type' => 'nullable|string|max:150',
-
-            'contract_value' => 'nullable|numeric|min:0',
-            'assigned_pmo_id' => 'nullable|exists:users,id',
-
+            'assigned_pmo_id' => ['nullable', Rule::exists('users', 'id')->where(fn ($q) => $q->whereIn('role_id', DB::table('roles')->whereIn('name', ['PMO', 'DGM'])->select('id')))],
             'start_date' => 'nullable|date',
             'target_completion_date' => 'nullable|date|after_or_equal:start_date',
-
-            'status' => 'required|string|max:100',
-            'odoo_analytic_account_code' => 'nullable|string|max:150',
+            'status' => ['required', Rule::in($this->projectStatuses)],
             'remarks' => 'nullable|string',
-            'latitude' => 'nullable|numeric',
-            'longitude' => 'nullable|numeric',
-        ]);
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'engineers' => 'sometimes|array',
+            'engineers.*' => ['integer', 'distinct', Rule::exists('users', 'id')->where(fn ($q) => $q->whereIn('role_id', DB::table('roles')->where('name', 'Engineer')->select('id')))],
+        ];
+        if ($this->canManageCommercial($request)) {
+            $rules['contract_value'] = 'nullable|numeric|min:0';
+        }
+        if ($this->canManageOdoo($request)) {
+            $rules['odoo_analytic_account_code'] = 'nullable|string|max:150';
+        }
+        $validated = $request->validate($rules);
+        unset($validated['engineers']);
+        return $validated;
     }
 
     private function generateProjectCode(): string

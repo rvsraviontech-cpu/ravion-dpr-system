@@ -209,6 +209,18 @@
 
             this.initActivityCard(card);
             this.renumberActivities(container);
+
+            // The repeater owns collapse state: close previous cards immediately
+            // after appending the new card, before scrolling to it.
+            Array.from(cards).forEach((entry) => {
+                const body = entry.querySelector('[data-ref-activity-body]');
+                const toggle = entry.querySelector('[data-ref-toggle-activity]');
+                if (!body) return;
+                const isNew = entry === card;
+                body.classList.toggle('hidden', !isNew);
+                if (toggle) toggle.textContent = isNew ? 'Collapse' : 'Expand';
+            });
+
             this.renderCachedMaterialsIntoCard(card);
             this.refreshMaterialDuplicateState();
             this.refreshSummary();

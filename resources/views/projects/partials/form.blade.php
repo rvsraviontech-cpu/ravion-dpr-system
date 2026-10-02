@@ -62,6 +62,7 @@
                     Project Structure
                 </button>
 
+                @if(auth()->user()->hasPermission('projects.manage') && in_array(auth()->user()->role?->name, ['Admin', 'CEO', 'PMO', 'DGM'], true))
                 <button type="button"
                         @click="tab = 'commercial'"
                         :class="tab === 'commercial'
@@ -70,6 +71,7 @@
                         class="px-5 py-2 rounded-t-md border-t border-l border-r text-sm font-semibold transition">
                     Commercial
                 </button>
+                @endif
 
                 <button type="button"
                         @click="tab = 'remarks'"

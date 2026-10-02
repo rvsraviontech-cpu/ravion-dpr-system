@@ -1,141 +1,19 @@
 @extends('layouts.app')
-
 @section('content')
-
-<h1 class="text-3xl font-bold mb-6">
-    Edit Project Room / Space
-</h1>
-
-@if($errors->any())
-    <div class="bg-red-100 text-red-800 p-4 rounded mb-4">
-        @foreach($errors->all() as $error)
-            <p>{{ $error }}</p>
-        @endforeach
-    </div>
-@endif
-
-<div class="bg-white p-6 rounded shadow">
-
-    <form method="POST"
-          action="{{ route('project-locations.rooms.update', $projectRoom) }}">
-
-        @csrf
-        @method('PUT')
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-            <div>
-                <label class="block font-semibold mb-1">Block / Building</label>
-                <select name="project_block_id"
-                        class="border p-2 rounded w-full"
-                        required>
-                    @foreach($blocks as $block)
-                        <option value="{{ $block->id }}"
-                            {{ $projectRoom->project_block_id == $block->id ? 'selected' : '' }}>
-                            {{ $block->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-semibold mb-1">Floor</label>
-                <select name="project_floor_id"
-                        class="border p-2 rounded w-full"
-                        required>
-                    @foreach($floors as $floor)
-                        <option value="{{ $floor->id }}"
-                            {{ $projectRoom->project_floor_id == $floor->id ? 'selected' : '' }}>
-                            {{ $floor->block?->name }} - {{ $floor->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-semibold mb-1">Unit</label>
-                <select name="project_unit_id"
-                        class="border p-2 rounded w-full"
-                        required>
-                    @foreach($units as $unit)
-                        <option value="{{ $unit->id }}"
-                            {{ $projectRoom->project_unit_id == $unit->id ? 'selected' : '' }}>
-                            {{ $unit->floor?->name }} - {{ $unit->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-semibold mb-1">Room Master</label>
-                <select name="name"
-                        class="border p-2 rounded w-full"
-                        required>
-                    @foreach($roomMasters as $master)
-                        <option value="{{ $master->name }}"
-                            {{ $projectRoom->name == $master->name ? 'selected' : '' }}>
-                            {{ $master->name }}
-                            @if($master->room_type)
-                                ({{ $master->room_type }})
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-semibold mb-1">Room Type</label>
-                <select name="room_type"
-                        class="border p-2 rounded w-full">
-                    <option value="">Select Room Type</option>
-                    @foreach($roomMasters as $master)
-                        @if($master->room_type)
-                            <option value="{{ $master->room_type }}"
-                                {{ $projectRoom->room_type == $master->room_type ? 'selected' : '' }}>
-                                {{ $master->room_type }}
-                            </option>
-                        @endif
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="block font-semibold mb-1">Status</label>
-                <select name="is_active"
-                        class="border p-2 rounded w-full">
-                    <option value="1" {{ $projectRoom->is_active ? 'selected' : '' }}>
-                        Active
-                    </option>
-                    <option value="0" {{ !$projectRoom->is_active ? 'selected' : '' }}>
-                        Inactive
-                    </option>
-                </select>
-            </div>
-
-            <div class="md:col-span-2">
-                <label class="block font-semibold mb-1">Remarks</label>
-                <input type="text"
-                       name="remarks"
-                       value="{{ old('remarks', $projectRoom->remarks) }}"
-                       class="border p-2 rounded w-full">
-            </div>
-
-        </div>
-
-        <div class="mt-6 flex gap-3">
-            <button type="submit"
-                    class="bg-blue-600 text-white px-4 py-2 rounded">
-                Update
-            </button>
-
-            <a href="{{ route('project-locations.index', ['project_id' => $projectRoom->project_id]) }}"
-               class="bg-gray-500 text-white px-4 py-2 rounded">
-                Back
-            </a>
-        </div>
-
-    </form>
-
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-5" x-data="{ category:'{{ $projectRoom->spatialSpaceType?->spatial_space_category_id ?? '' }}', type:'{{ old('spatial_space_type_id',$projectRoom->spatial_space_type_id) }}', types:@js($spaceTypes->map(fn($v)=>['id'=>$v->id,'name'=>$v->name,'category_id'=>$v->spatial_space_category_id])->values()), subtypes:@js($spaceSubtypes->map(fn($v)=>['id'=>$v->id,'name'=>$v->name,'type_id'=>$v->spatial_space_type_id])->values()) }">
+ <div class="flex flex-wrap justify-between items-center gap-3"><div><p class="text-xs uppercase tracking-widest text-slate-500">Project Setup / Room</p><h1 class="text-2xl font-bold">{{ $projectRoom->name }}</h1><p class="text-sm text-slate-500">{{ $projectRoom->floor?->block?->name }} / {{ $projectRoom->floor?->name }} / {{ $projectRoom->unit?->name ?? 'Floor Common Space' }}</p></div><a class="border bg-white rounded-lg px-4 py-2 text-sm" href="{{ $projectRoom->project_unit_id ? route('project-locations.units.edit',$projectRoom->project_unit_id) : route('project-locations.index',['project_id'=>$projectRoom->project_id]) }}">← Back</a></div>
+ <a href="{{ route('project-locations.rooms.designer', $projectRoom) }}" class="bg-blue-700 text-white px-4 py-2 rounded inline-block">Room Designer — Measurements & Walls</a>
+ @if(session('success'))<div class="bg-emerald-50 text-emerald-800 border rounded-lg p-3 text-sm">{{ session('success') }}</div>@endif
+ @if($errors->any())<div class="bg-red-50 text-red-800 border rounded-lg p-3 text-sm">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
+ <form method="POST" action="{{ route('project-locations.rooms.update',$projectRoom) }}" class="bg-white border rounded-xl shadow-sm p-5 grid md:grid-cols-2 gap-4">@csrf @method('PUT')
+ <div class="md:col-span-2"><h2 class="font-bold">Room Classification</h2><p class="text-xs text-slate-500">For legacy rooms, leaving the master selection blank preserves the original name and type.</p></div>
+ <div><label class="text-xs font-semibold">Space Category (filter)</label><select x-model="category" @change="type=''" class="w-full border-slate-300 rounded-lg text-sm"><option value="">All categories</option>@foreach($spaceCategories as $v)<option value="{{ $v->id }}">{{ $v->name }}</option>@endforeach</select></div>
+ <div><label class="text-xs font-semibold">Space Type Master</label><select x-model="type" name="spatial_space_type_id" class="w-full border-slate-300 rounded-lg text-sm"><option value="">Keep existing classification (legacy)</option><template x-for="v in types.filter(i=>!category||String(i.category_id)===String(category))" :key="v.id"><option :value="v.id" x-text="v.name"></option></template></select></div>
+ <div><label class="text-xs font-semibold">Space Subtype</label><select name="spatial_space_subtype_id" class="w-full border-slate-300 rounded-lg text-sm"><option value="">None / default</option>@if($projectRoom->spatial_space_subtype_id)<option value="{{ $projectRoom->spatial_space_subtype_id }}" selected>{{ $projectRoom->spatialSpaceSubtype?->name ?? 'Existing subtype' }}</option>@endif<template x-for="v in subtypes.filter(i=>type&&String(i.type_id)===String(type))" :key="v.id"><option :value="v.id" x-text="v.name"></option></template></select></div>
+ <div><label class="text-xs font-semibold">Identifier (optional)</label><input name="identifier" value="{{ old('identifier',$projectRoom->identifier) }}" class="w-full border-slate-300 rounded-lg text-sm" placeholder="1 / A / East"></div>
+ <div><label class="text-xs font-semibold">Status</label><select name="is_active" class="w-full border-slate-300 rounded-lg text-sm"><option value="1" @selected(old('is_active',(int)$projectRoom->is_active)==1)>Active</option><option value="0" @selected(old('is_active',(int)$projectRoom->is_active)==0)>Inactive</option></select></div>
+ <div><label class="text-xs font-semibold">Remarks</label><input name="remarks" value="{{ old('remarks',$projectRoom->remarks) }}" class="w-full border-slate-300 rounded-lg text-sm"></div>
+ <div class="md:col-span-2 flex justify-between items-center gap-3"><p class="text-xs text-slate-500">Room ID {{ $projectRoom->id }} · {{ $projectRoom->subspaces()->count() }} existing elements. Geometry, walls and openings remain linked.</p><button class="bg-blue-600 text-white rounded-lg px-5 py-2 text-sm font-semibold">Save Room</button></div></form>
+ <div class="border rounded-xl p-4 bg-slate-50 text-sm text-slate-600">Measurements, walls, openings and contextual measurement zones will be managed in the next room-designer step. No geometry records are changed here.</div>
 </div>
-
 @endsection

@@ -16,6 +16,7 @@ class WorkDoneItem extends Model
         'activity_division_id',
         'activity_id',
         'activity_mapping_id',
+        'work_activity_id',
         'contractor_id',
 
         'project_block_id',
@@ -77,6 +78,14 @@ class WorkDoneItem extends Model
         return $this->belongsTo(
             ActivityMapping::class,
             'activity_mapping_id'
+        );
+    }
+
+    public function workActivity(): BelongsTo
+    {
+        return $this->belongsTo(
+            WorkActivity::class,
+            'work_activity_id'
         );
     }
 
@@ -173,7 +182,8 @@ class WorkDoneItem extends Model
 
     public function getActivityNameAttribute(): ?string
     {
-        return $this->activityMapping?->activity_name
+        return $this->workActivity?->name
+            ?? $this->activityMapping?->activity_name
             ?? $this->activity?->activity_name;
     }
 

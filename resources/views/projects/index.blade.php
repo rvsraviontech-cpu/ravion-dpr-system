@@ -8,10 +8,12 @@
         <p class="text-xs text-gray-500">Project Master v2.0</p>
     </div>
 
+    @if(auth()->user()->hasPermission('projects.manage'))
     <a href="{{ route('projects.create') }}"
        class="bg-blue-600 text-white px-3 py-2 rounded text-xs">
         + Create Project
     </a>
+    @endif
 </div>
 
 @if(session('success'))
@@ -105,21 +107,12 @@
 
                     <td class="px-3 py-2">
                         <div class="flex gap-2">
-                            <a href="{{ route('projects.edit', $project->id) }}"
-                               class="bg-yellow-500 text-white px-2 py-1 rounded">
-                                Edit
-                            </a>
-
-                            <form action="{{ route('projects.destroy', $project->id) }}"
-                                  method="POST"
-                                  onsubmit="return confirm('Delete this project?')">
-                                @csrf
-                                @method('DELETE')
-
-                                <button class="bg-red-600 text-white px-2 py-1 rounded">
-                                    Delete
-                                </button>
-                            </form>
+                            @if(auth()->user()->hasPermission('projects.manage') && auth()->user()->hasProjectAccess($project->id))
+                                <a href="{{ route('projects.edit', $project->id) }}"
+                                   class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</a>
+                            @else
+                                <span class="text-gray-400">View only</span>
+                            @endif
                         </div>
                     </td>
                 </tr>

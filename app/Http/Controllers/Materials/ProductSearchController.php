@@ -213,10 +213,6 @@ class ProductSearchController extends Controller
                     WHEN LOWER(material_types.material_type_name) LIKE ?
                         THEN 3
 
-                    /* Bible canonical catalogue */
-                    WHEN material_types.catalogue_source_code = ?
-                        THEN 4
-
                     ELSE 20
                 END
                 ",
@@ -227,17 +223,35 @@ class ProductSearchController extends Controller
                     $compactPhrase,
                     $compactPhrase,
                     $normalized.'%',
-                    self::BIBLE_SOURCE,
                 ]
+            );
+
+            /*
+             * Within the same relevance level, prefer the finalized
+             * classified catalogue while preserving approved historical
+             * products as an operational fallback.
+             */
+            $query->orderByRaw(
+                "CASE
+                    WHEN material_types.material_type_code LIKE 'RV-PROD3-%' THEN 0
+                    WHEN material_types.material_product_group_id IS NOT NULL
+                     AND material_types.material_product_type_id IS NOT NULL THEN 1
+                    ELSE 2
+                 END"
             );
         } else {
             /*
              * General browsing:
-             * Bible catalogue first, then other approved records.
+             * finalized catalogue first, then other classified approved
+             * products, then preserved unclassified approved fallback.
              */
             $query->orderByRaw(
-                'CASE WHEN material_types.catalogue_source_code = ? THEN 0 ELSE 1 END',
-                [self::BIBLE_SOURCE]
+                "CASE
+                    WHEN material_types.material_type_code LIKE 'RV-PROD3-%' THEN 0
+                    WHEN material_types.material_product_group_id IS NOT NULL
+                     AND material_types.material_product_type_id IS NOT NULL THEN 1
+                    ELSE 2
+                 END"
             );
         }
 
@@ -638,7 +652,7 @@ class ProductSearchController extends Controller
          * 600 x 600 -> 600x600
          */
         $prepared = preg_replace(
-            '/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/iu',
+            '/(\d+(?:\.\d+)?)\s*[x├ù]\s*(\d+(?:\.\d+)?)/iu',
             '$1x$2',
             $prepared
         ) ?? $prepared;
@@ -742,7 +756,7 @@ class ProductSearchController extends Controller
         ) ?? $search;
 
         $search = preg_replace(
-            '/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)/iu',
+            '/(\d+(?:\.\d+)?)\s*[x├ù]\s*(\d+(?:\.\d+)?)/iu',
             '$1x$2',
             $search
         ) ?? $search;

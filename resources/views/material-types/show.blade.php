@@ -234,8 +234,8 @@
 
     {{-- Brand Associations --}}
     <div class="mt-5 rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
+        <div class="flex flex-col gap-3 border-b border-gray-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="min-w-0">
                 <h2 class="font-bold text-gray-900">Brand Associations</h2>
                 <p class="mt-1 text-xs text-gray-500">
                     Canonical Brand Master associations available for this Product. Mapping status is independent of the global Brand status.
@@ -244,61 +244,12 @@
 
             @if(auth()->user()?->hasPermission('materials.manage'))
                 @if($availableBrands->isNotEmpty())
-                    <details>
-                        <summary class="cursor-pointer list-none rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">
-                            Assign Brand
-                        </summary>
-                        <div class="mt-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                            <form method="POST" action="{{ route('material-types.brands.store', $materialType) }}"
-                                  class="grid grid-cols-1 gap-4 md:grid-cols-12">
-                                @csrf
-                                <div class="md:col-span-5">
-                                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Brand</label>
-                                    <select name="brand_master_id" required
-                                            class="w-full rounded-lg border-gray-300 text-sm focus:border-sky-500 focus:ring-sky-500">
-                                        <option value="">Select Brand</option>
-                                        @foreach($availableBrands as $brand)
-    <option value="{{ $brand->id }}" @selected((string) old('brand_master_id') === (string) $brand->id)>
-        {{ $brand->brand_name }} — {{ $brand->segment?->segment_name ?? 'Legacy / Unclassified' }}
-    </option>
-@endforeach
-                                    </select>
-                                    @error('brand_master_id')
-                                        <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div class="md:col-span-2">
-                                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Sort Order</label>
-                                    <input type="number" min="0" name="sort_order" value="{{ old('sort_order', 0) }}"
-                                           class="w-full rounded-lg border-gray-300 text-sm">
-                                </div>
-
-                                <div class="flex items-end md:col-span-2">
-                                    <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
-                                        <input type="hidden" name="is_preferred" value="0">
-                                        <input type="checkbox" name="is_preferred" value="1" @checked(old('is_preferred'))
-                                               class="rounded border-gray-300 text-sky-600 focus:ring-sky-500">
-                                        Preferred
-                                    </label>
-                                </div>
-
-                                <div class="md:col-span-12">
-                                    <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Remarks</label>
-                                    <textarea name="remarks" rows="2" maxlength="2000"
-                                              class="w-full rounded-lg border-gray-300 text-sm"
-                                              placeholder="Optional mapping remarks">{{ old('remarks') }}</textarea>
-                                </div>
-
-                                <div class="md:col-span-12">
-                                    <button type="submit"
-                                            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700">
-                                        Save Brand Association
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </details>
+                    <a href="#assign-brand-form"
+                       onclick="document.getElementById('assign-brand-form').hidden = !document.getElementById('assign-brand-form').hidden; return false;"
+                       class="inline-flex shrink-0 items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white"
+                       style="background-color: #10212F; color: #ffffff;">
+                        Assign Brand
+                    </a>
                 @else
                     <span class="rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-500">
                         All active Brands are already associated
@@ -306,6 +257,119 @@
                 @endif
             @endif
         </div>
+
+        @if(auth()->user()?->hasPermission('materials.manage') && $availableBrands->isNotEmpty())
+            <div id="assign-brand-form" class="border-b border-gray-200 bg-gray-50 px-4 py-4" hidden>
+                <form method="POST" action="{{ route('material-types.brands.store', $materialType) }}"
+                      class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
+                    @csrf
+                    {{-- Segment is a dropdown filter only; the submitted association remains Brand-to-Product. --}}
+                    <div class="min-w-0 sm:col-span-1 lg:col-span-3">
+                        <label for="assign-brand-segment" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Brand Segment</label>
+                        <select id="assign-brand-segment"
+                                class="w-full rounded-lg border-gray-300 text-sm focus:border-sky-500 focus:ring-sky-500">
+                            <option value="">Select Brand Segment</option>
+                            @foreach($availableBrands->filter(fn ($brand) => $brand->brand_segment_id !== null)->groupBy('brand_segment_id') as $segmentId => $segmentBrands)
+                                <option value="{{ $segmentId }}" @selected((string) old('brand_master_id') !== '' && (string) $availableBrands->firstWhere('id', old('brand_master_id'))?->brand_segment_id === (string) $segmentId)>
+                                    {{ $segmentBrands->first()?->segment?->segment_name ?? 'Unnamed Segment' }}
+                                </option>
+                            @endforeach
+                            @if($availableBrands->contains(fn ($brand) => $brand->brand_segment_id === null))
+                                <option value="legacy" @selected((string) old('brand_master_id') !== '' && $availableBrands->firstWhere('id', old('brand_master_id'))?->brand_segment_id === null && $availableBrands->firstWhere('id', old('brand_master_id')) !== null)>
+                                    Legacy / Unclassified
+                                </option>
+                            @endif
+                        </select>
+                    </div>
+
+                    <div class="min-w-0 sm:col-span-1 lg:col-span-6">
+                        <label for="assign-brand-select" class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Brand</label>
+                        <select id="assign-brand-select" name="brand_master_id" required
+                                class="w-full rounded-lg border-gray-300 text-sm focus:border-sky-500 focus:ring-sky-500">
+                            <option value="">Select Brand</option>
+                            @foreach($availableBrands as $brand)
+                                <option value="{{ $brand->id }}"
+                                        data-brand-segment="{{ $brand->brand_segment_id ?? 'legacy' }}"
+                                        @selected((string) old('brand_master_id') === (string) $brand->id)>
+                                    {{ $brand->brand_name }} — {{ $brand->segment?->segment_name ?? 'Legacy / Unclassified' }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <p id="assign-brand-help" class="mt-1 text-xs text-gray-500" aria-live="polite">Select a Brand Segment to view available Brands.</p>
+                        @error('brand_master_id')
+                            <p class="mt-1 text-xs font-medium text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="min-w-0 lg:col-span-2">
+                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Sort Order</label>
+                        <input type="number" min="0" name="sort_order" value="{{ old('sort_order', 0) }}"
+                               class="w-full rounded-lg border-gray-300 text-sm">
+                    </div>
+
+                    <div class="flex items-end lg:col-span-1">
+                        <label class="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+                            <input type="hidden" name="is_preferred" value="0">
+                            <input type="checkbox" name="is_preferred" value="1" @checked(old('is_preferred'))
+                                   class="rounded border-gray-300 text-sky-600 focus:ring-sky-500">
+                            Preferred
+                        </label>
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-12">
+                        <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Remarks</label>
+                        <textarea name="remarks" rows="2" maxlength="2000"
+                                  class="w-full rounded-lg border-gray-300 text-sm"
+                                  placeholder="Optional mapping remarks">{{ old('remarks') }}</textarea>
+                    </div>
+
+                    <div class="sm:col-span-2 lg:col-span-12">
+                        <button type="submit"
+                                class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white"
+                                style="background-color: #10212F; color: #ffffff;">
+                            Save Brand Association
+                        </button>
+                    </div>
+                </form>
+            </div>
+        @endif
+
+        @if(auth()->user()?->hasPermission('materials.manage') && $availableBrands->isNotEmpty())
+            <script>
+                (() => {
+                    const segment = document.getElementById('assign-brand-segment');
+                    const brand = document.getElementById('assign-brand-select');
+                    const help = document.getElementById('assign-brand-help');
+                    if (!segment || !brand || !help) return;
+
+                    function filterBrands(resetSelection = false) {
+                        const selectedSegment = segment.value;
+                        if (resetSelection) brand.value = '';
+                        let count = 0;
+                        for (const option of brand.options) {
+                            if (!option.value) continue;
+                            const visible = selectedSegment !== '' && option.dataset.brandSegment === selectedSegment;
+                            option.hidden = !visible;
+                            option.disabled = !visible;
+                            if (visible) count++;
+                        }
+                        if (!selectedSegment) {
+                            brand.value = '';
+                            brand.disabled = true;
+                            help.textContent = 'Select a Brand Segment to view available Brands.';
+                        } else {
+                            brand.disabled = count === 0;
+                            help.textContent = count === 0
+                                ? 'No available Brands in this segment.'
+                                : `${count} available Brand${count === 1 ? '' : 's'} in this segment.`;
+                        }
+                    }
+
+                    segment.addEventListener('change', () => filterBrands(true));
+                    filterBrands();
+                })();
+            </script>
+        @endif
 
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">
@@ -388,7 +452,8 @@
                                                                   class="w-full rounded-lg border-gray-300 text-sm">{{ $mapping->remarks }}</textarea>
                                                     </div>
                                                     <button type="submit"
-                                                            class="w-full rounded-lg bg-sky-600 px-3 py-2 text-xs font-semibold text-white hover:bg-sky-700">
+                                                            class="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white"
+                                                             style="background-color: #10212F; color: #ffffff;">
                                                         Update Association
                                                     </button>
                                                 </form>

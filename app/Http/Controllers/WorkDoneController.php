@@ -9,6 +9,11 @@ use App\Models\ActivityMapping;
 use App\Models\Contractor;
 use App\Models\DprWorkPhoto;
 use App\Models\MaterialConsumed;
+use App\Services\MaterialInventoryService;
+use App\Models\LabourAttendanceDetail;
+use App\Models\WorkDoneItemLabour;
+use App\Models\LabourGroup;
+use App\Models\DesignationRole;
 use App\Models\Project;
 use App\Models\ProjectBlock;
 use App\Models\ProjectFloor;
@@ -17,6 +22,7 @@ use App\Models\ProjectSubspace;
 use App\Models\ProjectUnit;
 use App\Models\WorkDoneHeader;
 use App\Models\WorkDoneItem;
+use App\Models\WorkActivity;
 use App\Models\WorkStage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -65,6 +71,7 @@ class WorkDoneController extends Controller
                         'activityDivision',
                         'activity',
                         'activityMapping',
+                        'workActivity',
                         'contractor',
                         'block',
                         'floor',
@@ -158,6 +165,15 @@ class WorkDoneController extends Controller
                         fn (Builder $mappingQuery) =>
                             $mappingQuery->where(
                                 'activity_name',
+                                'like',
+                                "%{$search}%"
+                            )
+                    )
+                    ->orWhereHas(
+                        'items.workActivity',
+                        fn (Builder $activityQuery) =>
+                            $activityQuery->where(
+                                'name',
                                 'like',
                                 "%{$search}%"
                             )
@@ -292,14 +308,7 @@ class WorkDoneController extends Controller
                                     + 1
                             )
                         );
-$this->linkMaterialConsumptions(
-                            workItem: $workItem,
-                            materialConsumedIds:
-                                $workData['material_consumed_ids'] ?? [],
-                            projectId: $projectId,
-                            workDate: $workDate,
-                            engineerId: auth()->id()
-                        );
+                        $this->saveReportedResources($workItem, $workData, $projectId, $workDate);
 
                         $this->storeWorkPhotos(
                             request: $request,
@@ -359,10 +368,36 @@ $this->linkMaterialConsumptions(
 
         $this->ensureHeaderAccess($workDone);
 
-        return view(
-            'work-done.show',
-            compact('workDone')
-        );
+        $itemIds = $workDone->items->pluck('id')->all();
+
+        $reportedMaterials = DB::table('work_done_reported_materials as r')
+            ->leftJoin('material_types as mt', 'mt.id', '=', 'r.material_type_id')
+            ->leftJoin('brand_masters as bm', 'bm.id', '=', 'r.brand_master_id')
+            ->leftJoin('material_specifications as ms', 'ms.id', '=', 'r.material_specification_id')
+            ->leftJoin('material_grades as mg', 'mg.id', '=', 'r.material_grade_id')
+            ->leftJoin('unit_masters as um', 'um.id', '=', 'r.unit_master_id')
+            ->whereIn('r.work_done_item_id', $itemIds)
+            ->orderBy('r.sort_order')
+            ->select('r.*', 'mt.material_type_name as material_name', 'bm.brand_name as brand_name',
+                'ms.specification_name as specification_name', 'mg.grade_name as grade_name', 'um.unit_name as unit_name')
+            ->get()->groupBy('work_done_item_id');
+
+        $reportedLabours = DB::table('work_done_item_labours as wl')
+            ->leftJoin('labour_groups as lg', 'lg.id', '=', 'wl.labour_group_id')
+            ->leftJoin('designation_roles as dr', 'dr.id', '=', 'wl.designation_role_id')
+            ->whereIn('wl.work_done_item_id', $itemIds)
+            ->orderBy('wl.sort_order')
+            ->select('wl.*', 'lg.name as labour_group_name', 'dr.name as designation_name')
+            ->get()->groupBy('work_done_item_id');
+
+        $reportedMachinery = DB::table('work_done_item_machinery')
+            ->whereIn('work_done_item_id', $itemIds)
+            ->orderBy('sort_order')
+            ->get()->groupBy('work_done_item_id');
+
+        return view('work-done.show', compact(
+            'workDone', 'reportedMaterials', 'reportedLabours', 'reportedMachinery'
+        ));
     }
 
     /**
@@ -416,6 +451,12 @@ $this->linkMaterialConsumptions(
         $workDate = $validated['work_date'];
 
         $this->ensureProjectAccess($projectId);
+
+        if ($projectId !== (int) $workDone->project_id || $workDate !== $workDone->work_date?->format('Y-m-d')) {
+            throw ValidationException::withMessages([
+                'project_id' => 'Project and Work Date cannot be changed while editing a saved daily execution record.',
+            ]);
+        }
 
         $this->validateWorks(
             works: $validated['works'],
@@ -529,15 +570,7 @@ $this->linkMaterialConsumptions(
                                 )
                             );
                         }
-$this->linkMaterialConsumptions(
-                            workItem: $workItem,
-                            materialConsumedIds:
-                                $workData['material_consumed_ids'] ?? [],
-                            projectId: $projectId,
-                            workDate: $workDate,
-                            engineerId: $workDone->user_id,
-                            allowCurrentlyLinkedToItem: true
-                        );
+                        $this->saveReportedResources($workItem, $workData, $projectId, $workDate);
 
                         $removePhotoIds = collect(
                             $workData['remove_photo_ids'] ?? []
@@ -687,138 +720,111 @@ $this->linkMaterialConsumptions(
      * Returns standalone Material Consumed headers for the same project/date/
      * engineer which are not assigned to another Work Activity.
      */
-    public function availableMaterials(
-        Request $request
-    ): JsonResponse {
-        $validated = $request->validate([
-            'project_id' => [
-                'required',
-                'integer',
-                'exists:projects,id',
-            ],
-
-            'work_date' => [
-                'required',
-                'date',
-            ],
-
-            'work_done_item_id' => [
-                'nullable',
-                'integer',
-                'exists:work_done_items,id',
-            ],
-        ]);
-
-        $projectId = (int) $validated['project_id'];
-        $workDate = $validated['work_date'];
-
+    public function availableMaterials(Request $request, MaterialInventoryService $inventory): JsonResponse
+    {
+        $input = $request->validate(['project_id' => ['required','integer','exists:projects,id']]);
+        $projectId = (int) $input['project_id'];
         $this->ensureProjectAccess($projectId);
-
-        $query = MaterialConsumed::query()
-            ->with([
-                'items.materialType',
-                'items.brand',
-                'items.specification',
-                'items.grade',
-                'items.unit',
-                'project',
-                'engineer',
-            ])
-            ->where(
-                'project_id',
-                $projectId
-            )
-            ->whereDate(
-                'consumed_date',
-                $workDate
-            );
-
-        if ($this->isEngineer()) {
-            $query->where(
-                'user_id',
-                auth()->id()
-            );
-        }
-
-        $workDoneItemId =
-            $validated['work_done_item_id']
-            ?? null;
-
-        $query->where(
-            function (Builder $builder) use (
-                $workDoneItemId
-            ) {
-                $builder->whereNull(
-                    'work_done_item_id'
-                );
-
-                if ($workDoneItemId) {
-                    $builder->orWhere(
-                        'work_done_item_id',
-                        $workDoneItemId
-                    );
-                }
-            }
-        );
-
-        $materials = $query
-            ->orderByDesc('consumed_time')
-            ->orderByDesc('id')
-            ->get()
-            ->map(function (MaterialConsumed $consumed) {
-                $items = $consumed->items
-                    ->map(function ($item) {
-                        return [
-                            'id' => $item->id,
-                            'name' => $item->display_name,
-                            'quantity' =>
-                                (float) $item->quantity_consumed,
-                            'wastage' =>
-                                (float) $item->wastage_quantity,
-                            'unit' =>
-                                $item->unit?->unit_name,
-                        ];
-                    })
-                    ->values();
-
-                return [
-                    'id' => $consumed->id,
-                    'consumed_date' =>
-                        $consumed->consumed_date
-                            ?->format('Y-m-d'),
-                    'consumed_time' =>
-                        $consumed->consumed_time,
-                    'status' =>
-                        $consumed->status,
-                    'items' =>
-                        $items,
-                    'display_text' =>
-                        $items
-                            ->map(
-                                fn ($item) =>
-                                    trim(
-                                        $item['name']
-                                        . ' — '
-                                        . $this->formatQuantity(
-                                            $item['quantity']
-                                        )
-                                        . ' '
-                                        . ($item['unit'] ?? '')
-                                    )
-                            )
-                            ->implode(', '),
-                ];
-            })
-            ->values();
-
-        return response()->json([
-            'data' => $materials,
-        ]);
+        return response()->json(['data' => $inventory->availableForConsumption($projectId)->values()]);
     }
 
     /**
      * Validation for header + repeating Work Activity cards.
      */
+    /**
+     * Operational attendance lookup: no wage/rate/OT monetary fields leave this endpoint.
+     */
+    public function availableLabour(Request $request): JsonResponse
+    {
+        $input = $request->validate([
+            'project_id' => ['required','integer','exists:projects,id'],
+            'work_date' => ['required','date'],
+        ]);
+        $this->ensureProjectAccess((int) $input['project_id']);
+        return response()->json(['data' => $this->attendanceGroupCounts((int) $input['project_id'], $input['work_date'])]);
+    }
+
+    private function attendanceGroupCounts(int $projectId, string $date): array
+    {
+        return LabourAttendanceDetail::query()
+            ->join('labour_attendances as a', 'a.id', '=', 'labour_attendance_details.labour_attendance_id')
+            ->join('attendance_statuses as s', 's.id', '=', 'labour_attendance_details.attendance_status_id')
+            ->join('labours as l', 'l.id', '=', 'labour_attendance_details.labour_id')
+            ->join('labour_groups as g', 'g.id', '=', 'l.labour_group_id')
+            ->where('a.project_id', $projectId)->whereDate('a.attendance_date', $date)
+            ->whereRaw('LOWER(a.status) = ?', ['approved'])
+            ->where('a.is_active', 1)->whereNull('a.deleted_at')
+            ->where('labour_attendance_details.is_active', 1)
+            ->whereNull('labour_attendance_details.deleted_at')
+            ->where('s.counts_as_present', 1)
+            ->where('l.is_active', 1)->whereNull('l.deleted_at')
+            ->selectRaw('g.id as id, g.name as name, COUNT(DISTINCT l.id) as available')
+            ->groupBy('g.id', 'g.name')->orderBy('g.name')->get()
+            ->map(fn ($r) => ['id'=>(int)$r->id,'name'=>$r->name,'available'=>(int)$r->available])->all();
+    }
+
+    /** Reported usage only. No MaterialConsumed writes, reservations or inventory changes. */
+    private function saveReportedResources(WorkDoneItem $item, array $work, int $projectId, string $workDate): void
+    {
+        if (array_key_exists('materials_used', $work)) {
+            $inventory = app(MaterialInventoryService::class)->availableForConsumption($projectId)->keyBy('stock_key');
+            $totals = [];
+            foreach ($work['materials_used'] as $i => $row) {
+                $key = $row['stock_key'];
+                $stock = $inventory->get($key);
+                if (!$stock) {
+                    throw ValidationException::withMessages(["works.materials_used.{$i}.stock_key" => 'This material is not currently available in project inventory. Receive it in Material Tracking first.']);
+                }
+                $totals[$key] = ($totals[$key] ?? 0) + (float)$row['quantity'];
+                if ($totals[$key] > (float)$stock['available_qty'] + 0.000001) {
+                    throw ValidationException::withMessages(["works.materials_used.{$i}.quantity" => 'Reported quantity exceeds currently available project inventory for ' . $stock['material_type_name'] . '.']);
+                }
+            }
+            DB::table('work_done_reported_materials')->where('work_done_item_id', $item->id)->delete();
+            foreach (array_values($work['materials_used']) as $i => $row) {
+                $stock = $inventory->get($row['stock_key']);
+                DB::table('work_done_reported_materials')->insert([
+                    'work_done_item_id'=>$item->id, 'stock_key'=>$stock['stock_key'],
+                    'material_type_id'=>$stock['material_type_id'], 'brand_master_id'=>$stock['brand_master_id'],
+                    'material_specification_id'=>$stock['material_specification_id'], 'material_grade_id'=>$stock['material_grade_id'],
+                    'unit_master_id'=>$stock['unit_master_id'], 'quantity_reported'=>$row['quantity'],
+                    'sort_order'=>$i+1, 'created_at'=>now(), 'updated_at'=>now(),
+                ]);
+            }
+        }
+        if (array_key_exists('machinery_used', $work)) {
+            DB::table('work_done_item_machinery')->where('work_done_item_id', $item->id)->delete();
+            foreach (array_values($work['machinery_used']) as $i => $machine) {
+                DB::table('work_done_item_machinery')->insert([
+                    'work_done_item_id' => $item->id,
+                    'equipment_name' => trim($machine['equipment_name']),
+                    'quantity' => (int) $machine['quantity'],
+                    'operating_hours' => $machine['operating_hours'] ?? null,
+                    'sort_order' => $i + 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+        if (array_key_exists('labours', $work)) {
+            $available = collect($this->attendanceGroupCounts($projectId, $workDate))->keyBy('id');
+            $totals = [];
+            foreach ($work['labours'] as $i => $row) {
+                $groupId = (int)$row['labour_group_id'];
+                $totals[$groupId] = ($totals[$groupId] ?? 0) + (int)$row['quantity'];
+                $group = $available->get($groupId);
+                if ($group && $totals[$groupId] > $group['available']) {
+                    throw ValidationException::withMessages(["works.labours.{$i}.quantity" =>
+                        ($group['name'] ?? 'Selected labour group') . ': ' . $totals[$groupId] . ' entered, but only ' . ($group['available'] ?? 0) . ' are present in approved attendance.']);
+                }
+            }
+            $item->labours()->delete();
+            foreach (array_values($work['labours']) as $i => $row) {
+                $item->labours()->create(['labour_group_id'=>$row['labour_group_id'], 'quantity'=>$row['quantity'], 'sort_order'=>$i+1]);
+            }
+        }
+    }
+
     private function validatePayload(
         Request $request,
         bool $updating = false
@@ -867,9 +873,15 @@ $this->linkMaterialConsumptions(
             ],
 
             'works.*.activity_id' => [
-                'required',
+                'required_without:works.*.work_activity_id',
                 'integer',
                 'exists:activities,id',
+            ],
+
+            'works.*.work_activity_id' => [
+                'required_without:works.*.activity_id',
+                'integer',
+                'exists:work_activities,id',
             ],
 
             'works.*.activity_mapping_id' => [
@@ -958,6 +970,18 @@ $this->linkMaterialConsumptions(
                 'exists:material_consumeds,id',
             ],
 
+            'works.*.labours' => ['nullable', 'array', 'max:100'],
+            'works.*.labours.*.labour_group_id' => ['required', 'integer', 'exists:labour_groups,id'],
+
+            'works.*.labours.*.quantity' => ['required', 'integer', 'min:1', 'max:1000'],
+            'works.*.machinery_used' => ['sometimes', 'array', 'max:100'],
+            'works.*.machinery_used.*.equipment_name' => ['required', 'string', 'max:200'],
+            'works.*.machinery_used.*.quantity' => ['required', 'integer', 'min:1', 'max:10000'],
+            'works.*.machinery_used.*.operating_hours' => ['nullable', 'numeric', 'min:0', 'max:24'],
+            'works.*.materials_used' => ['sometimes', 'array', 'max:100'],
+            'works.*.materials_used.*.stock_key' => ['required', 'string', 'max:255'],
+            'works.*.materials_used.*.quantity' => ['required', 'numeric', 'gt:0'],
+
             'works.*.photos' => [
                 'nullable',
                 'array',
@@ -1028,6 +1052,19 @@ $this->linkMaterialConsumptions(
 
         foreach ($works as $index => $work) {
             $prefix = "works.{$index}";
+
+            if (! empty($work['work_activity_id'])) {
+                $canonicalActivity = WorkActivity::query()
+                    ->find($work['work_activity_id']);
+
+                if (! $canonicalActivity
+                    || ! $canonicalActivity->is_active
+                    || ! $canonicalActivity->is_selectable) {
+                    $errors["{$prefix}.work_activity_id"][] =
+                        'Select an active Work Activity from the Work Execution Master.';
+                }
+            }
+
 
             if (
                 ! empty($work['id'])
@@ -1161,6 +1198,7 @@ $this->linkMaterialConsumptions(
                 if (
                     $mapping
                     && ! empty($mapping->activity_id)
+                    && ! empty($work['activity_id'])
                     && (int) $mapping->activity_id
                         !== (int) $work['activity_id']
                 ) {
@@ -1266,7 +1304,14 @@ $this->linkMaterialConsumptions(
                 ?? null,
 
             'activity_id' =>
-                (int) $workData['activity_id'],
+                ! empty($workData['activity_id'])
+                    ? (int) $workData['activity_id']
+                    : null,
+
+            'work_activity_id' =>
+                ! empty($workData['work_activity_id'])
+                    ? (int) $workData['work_activity_id']
+                    : null,
 
             'activity_mapping_id' =>
                 $workData['activity_mapping_id']
@@ -1435,6 +1480,7 @@ $this->linkMaterialConsumptions(
             'header.engineer',
             'activity',
             'activityMapping',
+            'workActivity',
         ]);
 
         $projectName =
@@ -1762,6 +1808,7 @@ $this->linkMaterialConsumptions(
             'items.workStage',
             'items.activityDivision',
             'items.activity',
+            'items.workActivity',
             'items.activityMapping.division',
             'items.contractor',
 
@@ -1870,6 +1917,9 @@ $this->linkMaterialConsumptions(
 
                             'activity_id' =>
                                 $item->activity_id,
+
+                            'work_activity_id' =>
+                                $item->work_activity_id,
 
                             'activity_name' =>
                                 $item->activity_name,

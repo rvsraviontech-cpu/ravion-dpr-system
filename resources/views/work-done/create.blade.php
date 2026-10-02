@@ -1,6 +1,22 @@
 @extends('layouts.app')
 
 @section('content')
+<style>
+/* Work Done resource entries: explicit CSS because dynamic JS classes are not scanned by Vite/Tailwind. */
+.rwd-entry-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:end;gap:8px}
+.rwd-entry-row>label{min-width:0;display:block}
+.rwd-entry-row>label>input,.rwd-entry-row>label>select{display:block;width:100%;min-width:0;margin-top:4px}
+.rwd-entry-row>button{min-height:38px;white-space:nowrap}
+.rwd-machine-filters{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.rwd-machine-filters>label{min-width:0}
+.rwd-machine-filters>label>input,.rwd-machine-filters>label>select{display:block;width:100%;min-width:0;margin-top:4px}
+@media(min-width:768px){
+.rwd-entry-three{grid-template-columns:minmax(0,1fr) 155px 145px}
+.rwd-entry-machinery{grid-template-columns:minmax(0,1fr) 100px 135px 155px}
+.rwd-machine-filters{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.2fr)}
+}
+</style>
+
 
 @php
     $inputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-base text-gray-800 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 sm:py-2 sm:text-sm';
@@ -17,6 +33,7 @@
             'work_stage_id' => '',
             'activity_division_id' => '',
             'activity_id' => '',
+            'work_activity_id' => '',
             'activity_mapping_id' => '',
             'contractor_id' => '',
             'project_block_id' => '',
@@ -29,7 +46,9 @@
             'progress_percentage' => '',
             'execution_status' => 'In Progress',
             'remarks' => '',
-            'material_consumed_ids' => [],
+            'materials_used' => [],
+            'machinery_used' => [],
+            'labours' => [],
             'photos' => [],
         ],
     ]))->values();
@@ -84,7 +103,8 @@
           action="{{ route('work-done.store') }}"
           enctype="multipart/form-data"
           data-ref-work-done-form
-          data-ref-materials-url="{{ route('work-done.available-materials') }}">
+          data-ref-materials-url="{{ route('work-done.available-materials') }}"
+          data-ref-labour-url="{{ route('work-done.available-labour') }}">
 
         @csrf
 
@@ -172,7 +192,7 @@
 
             <x-rds.repeater
                 title="Work Activities"
-                subtitle="Each card represents one activity and can have its own location, material consumption, remarks and photos."
+                subtitle="Each activity records location, quantity, labour, equipment, reported materials, remarks and photos."
                 add-label="+ Add Another Work Activity"
                 container-id="work-activity-container"
                 template-id="work-activity-template"
@@ -199,14 +219,32 @@
                             <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4" x-data="{ moreDetails: false }">
 
                                 <x-rds.section-title
-                                    title="Work Activity"
-                                    subtitle="Define the construction activity, output and execution status."
+                                    title="Work Execution"
+                                    subtitle="Select the work activity, then enter completed quantity, unit, contractor and execution progress."
                                     icon="⚙️"
                                 />
 
+                                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 sm:p-4" data-canonical-picker>
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <span class="text-sm font-bold text-slate-800">Work Execution Master <span class="text-red-500">*</span></span>
+                                        <span class="text-xs text-slate-500">Search by activity name or browse categories</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                        <div class="">
+                                            <label class="{{ $labelClass }}">Search work activity</label>
+                                            <input type="search" autocomplete="off" data-canonical-search class="{{ $inputClass }}" placeholder="e.g. Internal Material Shifting, brick masonry, slab concrete">
+                                            <div data-canonical-results class="hidden mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-md" role="listbox"></div>
+                                        </div>
+                                        <div><label class="{{ $labelClass }}">Work Package</label><select data-canonical-package class="{{ $inputClass }}"><option value="">All packages</option></select></div>
+                                        <div><label class="{{ $labelClass }}">Work Section</label><select data-canonical-section class="{{ $inputClass }}"><option value="">All sections</option></select></div>
+                                        <div><label class="{{ $labelClass }}">Work Activity</label><select data-canonical-activity class="{{ $inputClass }}"><option value="">Choose an activity</option></select></div>
+                                    </div>
+                                    <input type="hidden" name="works[{{ $workIndex }}][work_activity_id]" value="{{ $work['work_activity_id'] ?? '' }}" data-canonical-id>
+                                    <p data-canonical-selection class="mt-2 text-xs font-semibold text-slate-600">No canonical activity selected.</p>
+                                </div>
                                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-                                    <div class="hidden lg:block" x-show="moreDetails">
+                                    <div class="hidden" x-show="false">
                                         <label class="{{ $labelClass }}">
                                             Work Stage
                                         </label>
@@ -224,14 +262,14 @@
                                         </select>
                                     </div>
 
-                                    <div>
+                                    <div class="hidden">
                                         <label class="{{ $labelClass }}">
                                             Activity Division
                                         </label>
 
                                         <select name="works[{{ $workIndex }}][activity_division_id]"
                                                 class="{{ $inputClass }}"
-                                                data-ref-activity-division-field>
+                                                data-ref-legacy-division-field>
                                             <option value="">Select Division</option>
 
                                             @foreach($activityDivisions as $division)
@@ -243,14 +281,14 @@
                                         </select>
                                     </div>
 
-                                    <div class="md:col-span-2 hidden lg:block" x-show="moreDetails">
+                                    <div class="hidden" x-show="false">
                                         <label class="{{ $labelClass }}">
                                             Activity Mapping
                                         </label>
 
                                         <select name="works[{{ $workIndex }}][activity_mapping_id]"
                                                 class="{{ $inputClass }}"
-                                                data-ref-activity-mapping-field>
+                                                data-ref-legacy-mapping-field>
 
                                             <option value="">Select Mapping (Optional)</option>
 
@@ -269,15 +307,14 @@
                                         </select>
                                     </div>
 
-                                    <div class="md:col-span-2">
+                                    <div class="hidden">
                                         <label class="{{ $labelClass }}">
                                             Activity <span class="text-red-500">*</span>
                                         </label>
 
                                         <select name="works[{{ $workIndex }}][activity_id]"
                                                 class="{{ $inputClass }}"
-                                                data-ref-activity-field
-                                                required>
+                                                data-ref-legacy-activity-field>
 
                                             <option value="">Select Activity</option>
 
@@ -311,12 +348,28 @@
                                             Unit
                                         </label>
 
-                                        <input type="text"
-                                               name="works[{{ $workIndex }}][unit]"
-                                               value="{{ $work['unit'] ?? '' }}"
-                                               class="{{ $inputClass }} bg-gray-100"
-                                               data-ref-unit-field
-                                               readonly>
+                                        <select name="works[{{ $workIndex }}][unit]" class="{{ $inputClass }}" data-ref-canonical-unit-field>
+                                                <option value="">Select reporting unit</option>
+                                                <option value="Sqft" {{ (string) ($work['unit'] ?? '') === 'Sqft' ? 'selected' : '' }}>Sqft</option>
+                                                <option value="Sqm" {{ (string) ($work['unit'] ?? '') === 'Sqm' ? 'selected' : '' }}>Sqm</option>
+                                                <option value="Cum" {{ (string) ($work['unit'] ?? '') === 'Cum' ? 'selected' : '' }}>Cum</option>
+                                                <option value="Cuft" {{ (string) ($work['unit'] ?? '') === 'Cuft' ? 'selected' : '' }}>Cuft</option>
+                                                <option value="Rft" {{ (string) ($work['unit'] ?? '') === 'Rft' ? 'selected' : '' }}>Rft</option>
+                                                <option value="Rm" {{ (string) ($work['unit'] ?? '') === 'Rm' ? 'selected' : '' }}>Rm</option>
+                                                <option value="Nos" {{ (string) ($work['unit'] ?? '') === 'Nos' ? 'selected' : '' }}>Nos</option>
+                                                <option value="Bags" {{ (string) ($work['unit'] ?? '') === 'Bags' ? 'selected' : '' }}>Bags</option>
+                                                <option value="Kg" {{ (string) ($work['unit'] ?? '') === 'Kg' ? 'selected' : '' }}>Kg</option>
+                                                <option value="MT" {{ (string) ($work['unit'] ?? '') === 'MT' ? 'selected' : '' }}>MT</option>
+                                                <option value="Ltr" {{ (string) ($work['unit'] ?? '') === 'Ltr' ? 'selected' : '' }}>Ltr</option>
+                                                <option value="Load" {{ (string) ($work['unit'] ?? '') === 'Load' ? 'selected' : '' }}>Load</option>
+                                                <option value="Hours" {{ (string) ($work['unit'] ?? '') === 'Hours' ? 'selected' : '' }}>Hours</option>
+                                                <option value="Days" {{ (string) ($work['unit'] ?? '') === 'Days' ? 'selected' : '' }}>Days</option>
+                                                <option value="Set" {{ (string) ($work['unit'] ?? '') === 'Set' ? 'selected' : '' }}>Set</option>
+                                                <option value="Pair" {{ (string) ($work['unit'] ?? '') === 'Pair' ? 'selected' : '' }}>Pair</option>
+                                                @if(!empty($work['unit']) && !in_array($work['unit'], ['Sqft','Sqm','Cum','Cuft','Rft','Rm','Nos','Bags','Kg','MT','Ltr','Load','Hours','Days','Set','Pair'], true))
+                                                    <option value="{{ $work['unit'] }}" selected>{{ $work['unit'] }}</option>
+                                                @endif
+                                            </select>
                                     </div>
 
                                     <div>
@@ -356,9 +409,9 @@
                                         </select>
                                     </div>
 
-                                    <div class="hidden lg:block" x-show="moreDetails">
+                                    <div class="">
                                         <label class="{{ $labelClass }}">
-                                            Overall Progress %
+                                            Execution Progress %
                                         </label>
 
                                         <input type="number"
@@ -382,11 +435,21 @@
                                 </button>
                             </div>
 
-                            <x-rds.material-selector
-                                :index="$workIndex"
-                                :selected-ids="$work['material_consumed_ids'] ?? []"
-                            />
 
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4" data-ref-reported-materials>
+                                <div class="flex items-center justify-between gap-2"><div><h3 class="font-bold text-slate-800">📦 Materials Used</h3><p class="text-xs text-slate-500">Information only. Only positive-stock materials. Add entries to the table below; no stock deduction.</p></div></div>
+                                <div data-ref-reported-material-rows class="mt-3 space-y-2"></div>
+                                <p data-ref-reported-material-message class="mt-2 text-xs text-slate-500">Select a project to load available inventory.</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4" data-ref-resource-panel>
+                                <div class="flex items-center justify-between gap-2"><div><h3 class="font-bold text-slate-800">👷 Labour Used</h3><p class="text-xs text-slate-500">Enter labour type and deployed count. If attendance is not yet marked, reporting is still allowed.</p></div></div>
+                                <div data-ref-labour-rows class="mt-3 space-y-2"></div>
+                                <p data-ref-labour-message class="mt-2 text-xs text-slate-500">Attendance is optional for reporting; present counts display when available.</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4" data-ref-machinery-panel>
+                                <div><h3 class="font-bold text-slate-800">🚜 Machinery &amp; Equipment Used</h3><p class="text-xs text-slate-500">Record equipment used on this activity; no rates or costs.</p></div>
+                                <div data-ref-machinery-rows class="mt-3"></div>
+                            </div>
                             <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
 
                                 <x-rds.section-title
@@ -432,14 +495,32 @@
                             <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4" x-data="{ moreDetails: false }">
 
                                 <x-rds.section-title
-                                    title="Work Activity"
-                                    subtitle="Define the construction activity, output and execution status."
+                                    title="Work Execution"
+                                    subtitle="Select the work activity, then enter completed quantity, unit, contractor and execution progress."
                                     icon="⚙️"
                                 />
 
+                                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 sm:p-4" data-canonical-picker>
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                        <span class="text-sm font-bold text-slate-800">Work Execution Master <span class="text-red-500">*</span></span>
+                                        <span class="text-xs text-slate-500">Search by activity name or browse categories</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                        <div class="">
+                                            <label class="{{ $labelClass }}">Search work activity</label>
+                                            <input type="search" autocomplete="off" data-canonical-search class="{{ $inputClass }}" placeholder="e.g. Internal Material Shifting, brick masonry, slab concrete">
+                                            <div data-canonical-results class="hidden mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-md" role="listbox"></div>
+                                        </div>
+                                        <div><label class="{{ $labelClass }}">Work Package</label><select data-canonical-package class="{{ $inputClass }}"><option value="">All packages</option></select></div>
+                                        <div><label class="{{ $labelClass }}">Work Section</label><select data-canonical-section class="{{ $inputClass }}"><option value="">All sections</option></select></div>
+                                        <div><label class="{{ $labelClass }}">Work Activity</label><select data-canonical-activity class="{{ $inputClass }}"><option value="">Choose an activity</option></select></div>
+                                    </div>
+                                    <input type="hidden" name="works[__INDEX__][work_activity_id]" value="" data-canonical-id>
+                                    <p data-canonical-selection class="mt-2 text-xs font-semibold text-slate-600">No canonical activity selected.</p>
+                                </div>
                                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
-                                    <div class="hidden lg:block" x-show="moreDetails">
+                                    <div class="hidden" x-show="false">
                                         <label class="{{ $labelClass }}">Work Stage</label>
 
                                         <select name="works[__INDEX__][work_stage_id]"
@@ -451,12 +532,12 @@
                                         </select>
                                     </div>
 
-                                    <div>
+                                    <div class="hidden">
                                         <label class="{{ $labelClass }}">Activity Division</label>
 
                                         <select name="works[__INDEX__][activity_division_id]"
                                                 class="{{ $inputClass }}"
-                                                data-ref-activity-division-field>
+                                                data-ref-legacy-division-field>
                                             <option value="">Select Division</option>
                                             @foreach($activityDivisions as $division)
                                                 <option value="{{ $division->id }}">
@@ -466,12 +547,12 @@
                                         </select>
                                     </div>
 
-                                    <div class="md:col-span-2 hidden lg:block" x-show="moreDetails">
+                                    <div class="hidden" x-show="false">
                                         <label class="{{ $labelClass }}">Activity Mapping</label>
 
                                         <select name="works[__INDEX__][activity_mapping_id]"
                                                 class="{{ $inputClass }}"
-                                                data-ref-activity-mapping-field>
+                                                data-ref-legacy-mapping-field>
                                             <option value="">Select Mapping (Optional)</option>
                                             @foreach($activityMappings as $mapping)
                                                 <option value="{{ $mapping->id }}"
@@ -487,15 +568,14 @@
                                         </select>
                                     </div>
 
-                                    <div class="md:col-span-2">
+                                    <div class="hidden">
                                         <label class="{{ $labelClass }}">
                                             Activity <span class="text-red-500">*</span>
                                         </label>
 
                                         <select name="works[__INDEX__][activity_id]"
                                                 class="{{ $inputClass }}"
-                                                data-ref-activity-field
-                                                required>
+                                                data-ref-legacy-activity-field>
                                             <option value="">Select Activity</option>
                                             @foreach($activities as $activity)
                                                 <option value="{{ $activity->id }}"
@@ -523,11 +603,25 @@
                                     <div>
                                         <label class="{{ $labelClass }}">Unit</label>
 
-                                        <input type="text"
-                                               name="works[__INDEX__][unit]"
-                                               class="{{ $inputClass }} bg-gray-100"
-                                               data-ref-unit-field
-                                               readonly>
+                                        <select name="works[__INDEX__][unit]" class="{{ $inputClass }}" data-ref-canonical-unit-field>
+                                                <option value="">Select reporting unit</option>
+                                                <option value="Sqft">Sqft</option>
+                                                <option value="Sqm">Sqm</option>
+                                                <option value="Cum">Cum</option>
+                                                <option value="Cuft">Cuft</option>
+                                                <option value="Rft">Rft</option>
+                                                <option value="Rm">Rm</option>
+                                                <option value="Nos">Nos</option>
+                                                <option value="Bags">Bags</option>
+                                                <option value="Kg">Kg</option>
+                                                <option value="MT">MT</option>
+                                                <option value="Ltr">Ltr</option>
+                                                <option value="Load">Load</option>
+                                                <option value="Hours">Hours</option>
+                                                <option value="Days">Days</option>
+                                                <option value="Set">Set</option>
+                                                <option value="Pair">Pair</option>
+                                            </select>
                                     </div>
 
                                     <div>
@@ -562,8 +656,8 @@
                                         </select>
                                     </div>
 
-                                    <div class="hidden lg:block" x-show="moreDetails">
-                                        <label class="{{ $labelClass }}">Overall Progress %</label>
+                                    <div class="">
+                                        <label class="{{ $labelClass }}">Execution Progress %</label>
 
                                         <input type="number"
                                                min="0"
@@ -585,10 +679,21 @@
                                 </button>
                             </div>
 
-                            <x-rds.material-selector
-                                index="__INDEX__"
-                            />
 
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4" data-ref-reported-materials>
+                                <div class="flex items-center justify-between gap-2"><div><h3 class="font-bold text-slate-800">📦 Materials Used</h3><p class="text-xs text-slate-500">Information only. Only positive-stock materials. Add entries to the table below; no stock deduction.</p></div></div>
+                                <div data-ref-reported-material-rows class="mt-3 space-y-2"></div>
+                                <p data-ref-reported-material-message class="mt-2 text-xs text-slate-500">Select a project to load available inventory.</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4" data-ref-resource-panel>
+                                <div class="flex items-center justify-between gap-2"><div><h3 class="font-bold text-slate-800">👷 Labour Used</h3><p class="text-xs text-slate-500">Enter labour type and deployed count. If attendance is not yet marked, reporting is still allowed.</p></div></div>
+                                <div data-ref-labour-rows class="mt-3 space-y-2"></div>
+                                <p data-ref-labour-message class="mt-2 text-xs text-slate-500">Attendance is optional for reporting; present counts display when available.</p>
+                            </div>
+                            <div class="rounded-lg border border-slate-200 bg-white p-3 sm:p-4" data-ref-machinery-panel>
+                                <div><h3 class="font-bold text-slate-800">🚜 Machinery &amp; Equipment Used</h3><p class="text-xs text-slate-500">Record equipment used on this activity; no rates or costs.</p></div>
+                                <div data-ref-machinery-rows class="mt-3"></div>
+                            </div>
                             <div class="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
 
                                 <x-rds.section-title
@@ -633,6 +738,55 @@
     </form>
 </div>
 
-<script src="{{ asset('js/ravion-execution.js') }}?v=20260817-activity-filter-2"></script>
+<script src="{{ asset('js/ravion-execution.js') }}?v=20260928-canonical-stage1-2"></script>
+<script src="{{ asset('js/ravion-work-canonical.js') }}?v=20260928-canonical-stage1-2"></script>
+
+
+<script>
+// Create-screen collapse guard: runs independently of cached external scripts.
+// The existing repeater still owns activity creation, indexing and materials.
+(() => {
+  const form = document.querySelector('[data-ref-work-done-form]');
+  if (!form) return;
+  const collapse = container => {
+    const cards = [...container.querySelectorAll('[data-ref-activity-card]')];
+    if (cards.length < 2) return;
+    cards.forEach((card, i) => {
+      const body = card.querySelector('[data-ref-activity-body]');
+      const toggle = card.querySelector('[data-ref-toggle-activity]');
+      if (!body) return;
+      const open = i === cards.length - 1;
+      body.classList.toggle('hidden', !open);
+      if (toggle) toggle.textContent = open ? 'Collapse' : 'Expand';
+    });
+    cards[cards.length - 1].scrollIntoView({behavior:'smooth',block:'start'});
+  };
+  form.addEventListener('click', e => {
+    const button = e.target.closest('[data-ref-add-activity]');
+    if (!button) return;
+    const container = document.getElementById(button.dataset.refContainerId);
+    if (!container) return;
+    const before = container.querySelectorAll('[data-ref-activity-card]').length;
+    // Repeater and validation handlers execute first; only collapse if a card was actually added.
+    setTimeout(() => {
+      if (container.querySelectorAll('[data-ref-activity-card]').length > before) collapse(container);
+    }, 50);
+  }, true);
+})();
+</script>
+
+@php
+    $labourGroupOptions = \App\Models\LabourGroup::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+    $labourRoleOptions = \App\Models\DesignationRole::query()->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+    $labourContractorOptions = $contractors->map(fn ($c) => ['id' => $c->id, 'name' => $c->contractor_name])->values();
+@endphp
+<script>
+window.RAVION_WORK_LABOUR = {
+    groups: @json($labourGroupOptions),
+    roles: @json($labourRoleOptions),
+    contractors: @json($labourContractorOptions),
+};
+</script>
+<script src="{{ asset('js/ravion-work-resources.js') }}?v=20260929-v4"></script>
 
 @endsection
