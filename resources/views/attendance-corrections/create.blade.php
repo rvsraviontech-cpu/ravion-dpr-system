@@ -734,6 +734,12 @@
                                         $oldRow['line_reason']
                                         ?? $savedCorrectionRow?->line_reason
                                         ?? ''
+                                    ),
+
+                                    initialShouldSubmit: @js(
+                                        $savedCorrectionRow !== null
+                                        || filled($oldRow['line_reason'] ?? null)
+                                        || (($oldRow['action_type'] ?? null) === 'remove')
                                     )
                                 })"
                                 x-on:logout-all-present.window="
@@ -759,7 +765,7 @@
 
                                     <input
                                         type="hidden"
-                                        name="details[{{ $rowIndex }}][action_type]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][action_type]' : null"
                                         x-model="actionType"
                                     >
 
@@ -790,25 +796,25 @@
 
                                     <input
                                         type="hidden"
-                                        name="details[{{ $rowIndex }}][labour_attendance_detail_id]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][labour_attendance_detail_id]' : null"
                                         value="{{ $detail->id }}"
                                     >
 
                                     <input
                                         type="hidden"
-                                        name="details[{{ $rowIndex }}][labour_id]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][labour_id]' : null"
                                         value="{{ $detail->labour_id }}"
                                     >
 
                                     <input
                                         type="hidden"
-                                        name="details[{{ $rowIndex }}][new_attendance_status_id]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_attendance_status_id]' : null"
                                         x-model="statusId"
                                     >
 
                                     <input
                                         type="hidden"
-                                        name="details[{{ $rowIndex }}][new_remarks]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_remarks]' : null"
                                         value="{{ $oldRow['new_remarks']
                                             ?? $savedCorrectionRow?->new_remarks
                                             ?? $detail->remarks }}"
@@ -862,8 +868,9 @@
 
                                 <td class="px-3 py-4">
                                     <select
-                                        name="details[{{ $rowIndex }}][new_working_status_id]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_working_status_id]' : null"
                                         x-bind:disabled="actionType === 'remove'"
+                                        x-on:change="markChanged"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-400"
                                     >
                                         <option value="">Select Status</option>
@@ -889,8 +896,9 @@
                                 <td class="px-3 py-4">
                                     <input
                                         type="time"
-                                        name="details[{{ $rowIndex }}][new_check_in_time]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_check_in_time]' : null"
                                         x-model="checkIn"
+                                        x-on:change="markChanged"
                                         x-bind:disabled="actionType === 'remove'"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     >
@@ -899,8 +907,9 @@
                                 <td class="px-3 py-4">
                                     <input
                                         type="time"
-                                        name="details[{{ $rowIndex }}][new_check_out_time]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_check_out_time]' : null"
                                         x-model="checkOut"
+                                        x-on:change="markChanged"
                                         x-bind:disabled="actionType === 'remove'"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
                                     >
@@ -909,8 +918,9 @@
                                 <td class="px-3 py-4">
                                     <input
                                         type="number"
-                                        name="details[{{ $rowIndex }}][new_normal_hours]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_normal_hours]' : null"
                                         x-model="normalHours"
+                                        x-on:input="markChanged"
                                         x-bind:disabled="actionType === 'remove'"
                                         min="0"
                                         max="24"
@@ -923,10 +933,10 @@
                                 <td class="px-3 py-4">
                                     <input
                                         type="number"
-                                        name="details[{{ $rowIndex }}][new_ot_hours]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_ot_hours]' : null"
                                         x-model="otHours"
                                         x-bind:disabled="actionType === 'remove'"
-                                        x-on:input="syncOtAmountFromHours()"
+                                        x-on:input="markChanged(); syncOtAmountFromHours()"
                                         min="0"
                                         max="24"
                                         step="0.01"
@@ -947,10 +957,10 @@
                                 <td class="px-3 py-4">
                                     <input
                                         type="number"
-                                        name="details[{{ $rowIndex }}][new_ot_amount]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][new_ot_amount]' : null"
                                         x-model="otAmount"
                                         x-bind:disabled="actionType === 'remove'"
-                                        x-on:input="syncOtHoursFromAmount()"
+                                        x-on:input="markChanged(); syncOtHoursFromAmount()"
                                         min="0"
                                         step="0.01"
                                         class="block w-full rounded-lg border border-gray-300 px-2 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -959,8 +969,9 @@
 
                                 <td class="px-3 py-4">
                                     <textarea
-                                        name="details[{{ $rowIndex }}][line_reason]"
+                                        x-bind:name="shouldSubmit ? 'details[{{ $rowIndex }}][line_reason]' : null"
                                         x-model="lineReason"
+                                        x-on:input="markChanged"
                                         rows="2"
                                         maxlength="2000"
                                         placeholder="Required only when this row is changed"
@@ -1394,6 +1405,10 @@
 <script>
     function attendanceExistingRow(config) {
         return {
+            shouldSubmit: Boolean(
+                config.initialShouldSubmit ?? false
+            ),
+
             actionType: String(
                 config.initialActionType ?? 'modify'
             ),
@@ -1459,7 +1474,13 @@
                     );
             },
 
+            markChanged() {
+                this.shouldSubmit = true;
+            },
+
             toggleRemove() {
+                this.markChanged();
+
                 this.actionType =
                     this.actionType === 'remove'
                         ? 'modify'
@@ -1475,6 +1496,7 @@
             },
 
             setPresent() {
+                this.markChanged();
                 if (this.actionType === 'remove') {
                     return;
                 }
@@ -1487,6 +1509,7 @@
             },
 
             setAbsent() {
+                this.markChanged();
                 if (this.actionType === 'remove') {
                     return;
                 }
@@ -1523,6 +1546,7 @@
             },
 
             applyMoreStatus() {
+                this.markChanged();
                 if (this.actionType === 'remove') {
                     return;
                 }
@@ -1542,6 +1566,7 @@
                     return;
                 }
 
+                this.markChanged();
                 this.checkOut = logoutTime;
 
                 const result = this.calculateHours(
