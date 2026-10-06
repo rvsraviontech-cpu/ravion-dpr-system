@@ -167,9 +167,17 @@ class User extends Authenticatable
      * Determine whether the user has access to all projects.
      */
     public function hasAllProjectAccess(): bool
-    {
-        return $this->project_access_scope === 'all';
+{
+    $roleName = $this->relationLoaded('role')
+        ? $this->role?->name
+        : $this->role()->value('name');
+
+    if (in_array($roleName, ['Admin', 'CEO'], true)) {
+        return true;
     }
+
+    return $this->project_access_scope === 'all';
+}
 
     /**
      * Determine whether the user has access to a project.
