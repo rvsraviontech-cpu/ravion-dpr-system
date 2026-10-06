@@ -7,11 +7,11 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900">
-                Add Machinery / Equipment Type
+                Edit Machinery / Equipment Type
             </h1>
 
             <p class="text-sm text-gray-500 mt-1">
-                Create a reusable machinery or equipment master.
+                {{ $machineryTool->code }} — {{ $machineryTool->machine_name }}
             </p>
         </div>
 
@@ -25,13 +25,16 @@
 
     <form
         method="POST"
-        action="{{ route('machinery-tools.store') }}"
+        action="{{ route('machinery-tools.update', $machineryTool) }}"
         class="bg-white border border-gray-200 rounded-xl shadow-sm"
     >
         @csrf
+        @method('PUT')
 
         <div class="p-6">
-            @include('machinery-tools._form')
+            @include('machinery-tools._form', [
+                'machineryTool' => $machineryTool
+            ])
         </div>
 
         <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-end gap-3">
@@ -47,7 +50,7 @@
                 type="submit"
                 class="px-5 py-2.5 rounded-lg bg-[#0F2A52] text-white text-sm font-semibold hover:opacity-90"
             >
-                Save Equipment Type
+                Update Equipment Type
             </button>
 
         </div>

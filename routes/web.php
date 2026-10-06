@@ -33,6 +33,7 @@ use App\Http\Controllers\MaterialRequirementController;
 use App\Http\Controllers\MaterialShortageReportController;
 use App\Http\Controllers\TomorrowPlanController;
 use App\Http\Controllers\SiteIssueController;
+use App\Http\Controllers\SitePhotoController;
 use App\Http\Controllers\PlanVsActualController;
 use App\Http\Controllers\MonthlyPlanController;
 use App\Http\Controllers\MaterialVerificationController;
@@ -90,6 +91,10 @@ use App\Http\Controllers\MaterialDispatchReceiptController;
 use App\Http\Controllers\MaterialReceivedPurchaseOrderController;
 use App\Http\Controllers\ProjectRoomDesignerController;
 use App\Http\Controllers\IntelligentRoomSetupController;
+use App\Http\Controllers\MachineryEquipmentController;
+use App\Http\Controllers\MachineryEquipmentAllocationController;
+use App\Http\Controllers\MachineryDailyUsageController;
+
 
 
 
@@ -716,6 +721,171 @@ Route::middleware([
 
     Route::resource('machinery-tools', MachineryToolController::class)
         ->middleware('permission:machinery_tools.view');
+
+        Route::resource('machinery-equipment', MachineryEquipmentController::class);
+
+        /*
+|--------------------------------------------------------------------------
+| Machinery & Equipment Allocations / Transfers
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('machinery-equipment-allocations')
+    ->name('machinery-equipment-allocations.')
+    ->group(function () {
+
+        Route::get(
+            '/',
+            [MachineryEquipmentAllocationController::class, 'index']
+        )->name('index');
+
+        Route::get(
+            '/create',
+            [MachineryEquipmentAllocationController::class, 'create']
+        )->name('create');
+
+        /*
+         * AJAX endpoint used by the movement form.
+         *
+         * Keep this before /{machineryEquipmentAllocation}.
+         */
+        Route::get(
+            '/equipment/{machineryEquipment}/availability',
+            [
+                MachineryEquipmentAllocationController::class,
+                'equipmentAvailability',
+            ]
+        )->name('equipment-availability');
+
+        Route::post(
+            '/',
+            [MachineryEquipmentAllocationController::class, 'store']
+        )->name('store');
+
+        Route::get(
+            '/{machineryEquipmentAllocation}',
+            [MachineryEquipmentAllocationController::class, 'show']
+        )->name('show');
+
+        Route::post(
+            '/{machineryEquipmentAllocation}/dispatch',
+            [MachineryEquipmentAllocationController::class, 'dispatch']
+        )->name('dispatch');
+
+        Route::post(
+            '/{machineryEquipmentAllocation}/receive',
+            [MachineryEquipmentAllocationController::class, 'receive']
+        )->name('receive');
+
+        Route::post(
+            '/{machineryEquipmentAllocation}/cancel',
+            [MachineryEquipmentAllocationController::class, 'cancel']
+        )->name('cancel');
+    });
+
+    /*
+|--------------------------------------------------------------------------
+| Machinery & Equipment — Daily Usage
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('machinery-daily-usages')
+    ->name('machinery-daily-usages.')
+    ->controller(MachineryDailyUsageController::class)
+    ->group(function () {
+
+        /*
+        |--------------------------------------------------------------------------
+        | AJAX / Dynamic Data
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/project/{project}/equipment',
+            'projectEquipment'
+        )->name('project-equipment');
+
+        Route::get(
+            '/project/{project}/equipment/{machineryEquipment}',
+            'equipmentDetails'
+        )->name('equipment-details');
+
+        Route::get(
+            '/project/{project}/structure',
+            'projectStructure'
+        )->name('project-structure');
+
+        Route::get(
+            '/project/{project}/blocks/{block}/floors',
+            'floors'
+        )->name('floors');
+
+        Route::get(
+            '/project/{project}/floors/{floor}/units',
+            'units'
+        )->name('units');
+
+        Route::get(
+            '/project/{project}/units/{unit}/rooms',
+            'rooms'
+        )->name('rooms');
+
+        Route::get(
+            '/project/{project}/rooms/{room}/subspaces',
+            'subspaces'
+        )->name('subspaces');
+
+        Route::get(
+            '/project/{project}/work-done-items',
+            'workDoneItems'
+        )->name('work-done-items');
+
+        /*
+        |--------------------------------------------------------------------------
+        | CRUD
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/',
+            'index'
+        )->name('index');
+
+        Route::get(
+            '/create',
+            'create'
+        )->name('create');
+
+        Route::post(
+            '/',
+            'store'
+        )->name('store');
+
+        Route::get(
+            '/{machineryDailyUsage}',
+            'show'
+        )->name('show');
+
+        Route::get(
+            '/{machineryDailyUsage}/edit',
+            'edit'
+        )->name('edit');
+
+        Route::put(
+            '/{machineryDailyUsage}',
+            'update'
+        )->name('update');
+
+        Route::post(
+            '/{machineryDailyUsage}/cancel',
+            'cancel'
+        )->name('cancel');
+    });
+
+    Route::post(
+    'machinery-daily-usages/{machineryDailyUsage}/verify',
+    [MachineryDailyUsageController::class, 'verify']
+)->name('machinery-daily-usages.verify');
 
         Route::middleware([
     'permission:attendance_register.view',
@@ -1836,6 +2006,29 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
         ->middleware('permission:site_issues.view');
 
 
+
+        /*
+|--------------------------------------------------------------------------
+| Site Photos
+|--------------------------------------------------------------------------
+|
+| Independent daily Site Photo reporting.
+| Engineers record visual site evidence here instead of uploading
+| general site photos directly into the DPR.
+|
+*/
+
+Route::resource(
+    'site-photos',
+    SitePhotoController::class
+)->parameters([
+    'site-photos' => 'sitePhoto',
+]);
+
+Route::delete(
+    '/site-photos/{sitePhoto}/photos/{photo}',
+    [SitePhotoController::class, 'destroyPhoto']
+)->name('site-photos.photos.destroy');
     /*
     |--------------------------------------------------------------------------
     | PMO & Verification

@@ -231,24 +231,27 @@
                 </a>
             @endif
 
-            @if(Route::has('labour-attendance-corrections.index'))
+            @if(
+                Route::has('labour-attendance-register.index')
+                && auth()->user()?->hasPermission('attendance_register.view')
+            )
                 <a
-                    href="{{ route('labour-attendance-corrections.index') }}"
+                    href="{{ route('labour-attendance-register.index') }}"
                     class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
                 >
                     <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M3 12a9 9 0 109-9M3 3v6h6M12 7v5l4 2"/>
+                                  d="M9 12h6m-6 4h6M9 8h6M5 4h14a2 2 0 012 2v14H3V6a2 2 0 012-2z"/>
                         </svg>
                     </div>
 
                     <p class="mt-3 text-sm font-bold text-gray-900">
-                        Corrections
+                        Attendance Register
                     </p>
 
                     <p class="mt-1 text-xs text-gray-500">
-                        Attendance corrections
+                        View recorded attendance
                     </p>
                 </a>
             @endif
@@ -393,9 +396,12 @@
                 </a>
             @endif
 
-            @if(Route::has('machinery-tools.index'))
+            @if(
+                Route::has('machinery-daily-usages.create')
+                && auth()->user()?->hasPermission('machinery_daily_usages.create')
+            )
                 <a
-                    href="{{ route('machinery-tools.index') }}"
+                    href="{{ route('machinery-daily-usages.create') }}"
                     class="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
                 >
                     <div class="flex items-center gap-3">
@@ -412,7 +418,36 @@
                             </p>
 
                             <p class="text-xs text-gray-500">
-                                View site machinery and tools
+                                Record daily equipment usage
+                            </p>
+                        </div>
+                    </div>
+
+                    <span class="text-gray-400">›</span>
+                </a>
+            @elseif(
+                Route::has('machinery-daily-usages.index')
+                && auth()->user()?->hasPermission('machinery_daily_usages.view')
+            )
+                <a
+                    href="{{ route('machinery-daily-usages.index') }}"
+                    class="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+                >
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-700">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M14.7 6.3a4 4 0 01-5 5L4 17v3h3l5.7-5.7a4 4 0 005-5z"/>
+                            </svg>
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-bold text-gray-900">
+                                Machinery & Equipment
+                            </p>
+
+                            <p class="text-xs text-gray-500">
+                                View daily equipment usage
                             </p>
                         </div>
                     </div>
@@ -421,9 +456,12 @@
                 </a>
             @endif
 
-            @if(Route::has('dpr-photos.index'))
+            @if(
+                Route::has('site-photos.create')
+                && auth()->user()?->hasPermission('site_photos.create')
+            )
                 <a
-                    href="{{ route('dpr-photos.index') }}"
+                    href="{{ route('site-photos.create') }}"
                     class="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
                 >
                     <div class="flex items-center gap-3">
@@ -440,16 +478,19 @@
                             </p>
 
                             <p class="text-xs text-gray-500">
-                                Capture site progress
+                                Capture standalone site progress photos
                             </p>
                         </div>
                     </div>
 
                     <span class="text-gray-400">›</span>
                 </a>
-            @else
+            @elseif(
+                Route::has('site-photos.index')
+                && auth()->user()?->hasPermission('site_photos.view')
+            )
                 <a
-                    href="{{ Route::has('dprs.create') ? route('dprs.create') : '#' }}"
+                    href="{{ route('site-photos.index') }}"
                     class="flex items-center justify-between rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
                 >
                     <div class="flex items-center gap-3">
@@ -466,7 +507,7 @@
                             </p>
 
                             <p class="text-xs text-gray-500">
-                                Available inside Create DPR
+                                View standalone site progress photos
                             </p>
                         </div>
                     </div>
@@ -718,6 +759,12 @@
                     Material Received
                 </a>
 
+                @if(Route::has('incoming-materials.index') && auth()->user()?->hasPermission('incoming_materials.view'))
+                    <a href="{{ route('incoming-materials.index') }}" class="bg-gray-100 px-4 py-3 rounded text-center">
+                        Incoming Materials from HO
+                    </a>
+                @endif
+
                 <a href="{{ route('material-consumed.create') }}" class="bg-gray-100 px-4 py-3 rounded text-center">
                     Material Consumed
                 </a>
@@ -733,6 +780,18 @@
                 <a href="{{ route('tomorrow-plans.create') }}" class="bg-gray-100 px-4 py-3 rounded text-center">
                     Tomorrow Plan
                 </a>
+
+                @if(Route::has('machinery-daily-usages.create') && auth()->user()?->hasPermission('machinery_daily_usages.create'))
+                    <a href="{{ route('machinery-daily-usages.create') }}" class="bg-gray-100 px-4 py-3 rounded text-center">
+                        Machinery Daily Log
+                    </a>
+                @endif
+
+                @if(Route::has('site-photos.create') && auth()->user()?->hasPermission('site_photos.create'))
+                    <a href="{{ route('site-photos.create') }}" class="bg-gray-100 px-4 py-3 rounded text-center">
+                        Site Photos
+                    </a>
+                @endif
 
             </div>
 

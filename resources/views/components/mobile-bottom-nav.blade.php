@@ -238,7 +238,7 @@
 
             <div class="space-y-2">
 
-                @if(Route::has('labour-attendances.index'))
+                @if(Route::has('labour-attendances.index') && auth()->user()?->hasPermission('labour_attendances.view'))
                     <a
                         href="{{ route('labour-attendances.index') }}"
                         class="
@@ -268,7 +268,7 @@
                     </a>
                 @endif
 
-                @if(Route::has('labour-attendance-corrections.index'))
+                @if(Route::has('labour-attendance-corrections.index') && auth()->user()?->hasPermission('attendance_corrections.view'))
                     <a
                         href="{{ route('labour-attendance-corrections.index') }}"
                         class="
@@ -298,7 +298,7 @@
                     </a>
                 @endif
 
-                @if(Route::has('labour-attendance-register.index'))
+                @if(Route::has('labour-attendance-register.index') && auth()->user()?->hasPermission('attendance_register.view'))
                     <a
                         href="{{ route('labour-attendance-register.index') }}"
                         class="
@@ -404,7 +404,7 @@
 
             <div class="space-y-2">
 
-                @if(Route::has('material-received.index'))
+                @if(Route::has('material-received.index') && auth()->user()?->hasPermission('material_received.view'))
                     <a
                         href="{{ route('material-received.index') }}"
                         class="
@@ -434,7 +434,37 @@
                     </a>
                 @endif
 
-                @if(Route::has('material-consumed.index'))
+                @if(Route::has('incoming-materials.index') && auth()->user()?->hasPermission('incoming_materials.view'))
+                    <a
+                        href="{{ route('incoming-materials.index') }}"
+                        class="
+                            flex
+                            items-center
+                            justify-between
+                            rounded-xl
+                            border
+                            border-gray-200
+                            px-4
+                            py-4
+                        "
+                    >
+                        <div>
+                            <div class="font-semibold text-gray-900">
+                                Incoming Materials from HO
+                            </div>
+
+                            <div class="text-xs text-gray-500 mt-1">
+                                Receive materials dispatched from Head Office
+                            </div>
+                        </div>
+
+                        <span class="text-gray-400">
+                            ›
+                        </span>
+                    </a>
+                @endif
+
+                @if(Route::has('material-consumed.index') && auth()->user()?->hasPermission('material_consumed.view'))
                     <a
                         href="{{ route('material-consumed.index') }}"
                         class="
@@ -464,7 +494,7 @@
                     </a>
                 @endif
 
-                @if(Route::has('material-requirements.index'))
+                @if(Route::has('material-requirements.index') && auth()->user()?->hasPermission('material_required.view'))
                     <a
                         href="{{ route('material-requirements.index') }}"
                         class="

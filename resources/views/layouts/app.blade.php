@@ -209,30 +209,36 @@
                     </a>
                 @endif
 
-                @if(Route::has('dpr-photos.index'))
+                @if(
+                    Route::has('site-photos.index')
+                    && auth()->user()?->hasPermission('site_photos.view')
+                )
                     <a
-                        href="{{ route('dpr-photos.index') }}"
+                        href="{{ route('site-photos.index') }}"
                         class="rounded-xl border border-gray-200 p-4"
                     >
                         <div class="font-semibold text-gray-900">
                             Site Photos
                         </div>
                         <div class="text-xs text-gray-500 mt-1">
-                            Capture site progress
+                            Capture & view site progress
                         </div>
                     </a>
                 @endif
 
-                @if(Route::has('machinery-tools.index'))
+                @if(
+                    Route::has('machinery-daily-usages.index')
+                    && auth()->user()?->hasPermission('machinery_daily_usages.view')
+                )
                     <a
-                        href="{{ route('machinery-tools.index') }}"
+                        href="{{ route('machinery-daily-usages.index') }}"
                         class="rounded-xl border border-gray-200 p-4"
                     >
                         <div class="font-semibold text-gray-900">
-                            Machinery
+                            Machinery & Equipment
                         </div>
                         <div class="text-xs text-gray-500 mt-1">
-                            Equipment usage
+                            Daily equipment usage
                         </div>
                     </a>
                 @endif
