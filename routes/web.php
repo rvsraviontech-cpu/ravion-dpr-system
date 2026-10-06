@@ -356,13 +356,8 @@ Route::get('/material-types/{material_type}/edit', [MaterialTypeController::clas
     ->name('material-types.edit')
     ->middleware('permission:materials.manage');
 
-Route::put('/material-types/{material_type}', [MaterialTypeController::class, 'update'])
-    ->name('material-types.update')
-    ->middleware('permission:materials.manage');
-
-Route::patch('/material-types/{material_type}', [MaterialTypeController::class, 'update'])
-    ->name('material-types.update')
-    ->middleware('permission:materials.manage');
+Route::match(['put', 'patch'], '/material-types/{material_type}', [MaterialTypeController::class, 'update'])
+    ->name('material-types.update');
 
 Route::delete('/material-types/{material_type}', [MaterialTypeController::class, 'destroy'])
     ->name('material-types.destroy')
