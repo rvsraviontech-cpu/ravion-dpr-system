@@ -145,6 +145,17 @@
         return rtrim(rtrim(number_format((float) $value, 3, '.', ''), '0'), '.');
     };
 
+    // Vendor-facing specification: Material Bible variant F + G, plus any PO specification.
+    $vendorSpecification = function ($item) {
+        $variant = $item->materialVariant;
+        $parts = array_filter([
+            trim((string) ($variant?->variant_name ?? '')),
+            trim((string) ($variant?->size_dimension ?? '')),
+            trim((string) ($item->specification_text ?? '')),
+        ], fn ($value) => $value !== '');
+        return collect($parts)->unique()->implode(' · ') ?: '-';
+    };
+
     $paymentTerms = trim((string) ($purchaseOrder->payment_terms ?? ''));
 
     // Do not print meaningless default terms such as "0 days".
@@ -241,7 +252,7 @@
                     <strong>{{ $item->product_name }}</strong>
                 </td>
 
-                <td>{{ $item->specification_text ?: '-' }}</td>
+                <td>{{ $vendorSpecification($item) }}</td>
 
                 <td>{{ $item->brand_name ?: '-' }}</td>
 

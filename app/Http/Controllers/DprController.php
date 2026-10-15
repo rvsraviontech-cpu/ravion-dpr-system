@@ -10,7 +10,6 @@ use App\Models\LabourAttendance;
 use App\Models\MaterialConsumed;
 use App\Models\MaterialReceived;
 use App\Models\MaterialRequirement;
-use App\Models\MachineryTool;
 use App\Models\Project;
 use App\Models\SiteIssue;
 use App\Models\TomorrowPlan;
@@ -26,6 +25,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use App\Models\MachineryDailyUsage;
+use App\Models\SitePhotoEntry;
 
 class DprController extends Controller
 {
@@ -236,10 +237,6 @@ class DprController extends Controller
                 'projects' =>
                     $this->availableProjects(),
 
-                'machineries' =>
-                    MachineryTool::query()
-                        ->orderBy('machine_name')
-                        ->get(),
             ]
         );
     }
@@ -342,6 +339,11 @@ class DprController extends Controller
 
                 'tomorrow_plans' =>
                     $data['tomorrowPlans']->count(),
+                    'machinery_daily_usages' =>
+    $data['machineryDailyUsages']->count(),
+
+'site_photo_entries' =>
+    $data['sitePhotoEntries']->count(),
             ],
 
             'labour_attendances' =>
@@ -405,16 +407,188 @@ class DprController extends Controller
                     ->values(),
 
             'tomorrow_plans' =>
-                $data['tomorrowPlans']
-                    ->map(
-                        fn (TomorrowPlan $plan): array =>
-                            $this->tomorrowPlanPayload(
-                                $plan
-                            )
-                    )
-                    ->values(),
+    $data['tomorrowPlans']
+        ->map(
+            fn (TomorrowPlan $plan): array =>
+                $this->tomorrowPlanPayload(
+                    $plan
+                )
+        )
+        ->values(),
+
+'machinery_daily_usages' =>
+    $data['machineryDailyUsages']
+        ->map(
+            fn (MachineryDailyUsage $usage): array =>
+                $this->machineryDailyUsagePayload(
+                    $usage
+                )
+        )
+        ->values(),
+
+'site_photo_entries' =>
+    $data['sitePhotoEntries']
+        ->map(
+            fn (SitePhotoEntry $entry): array =>
+                $this->sitePhotoEntryPayload(
+                    $entry
+                )
+        )
+        ->values(),
         ]);
     }
+
+    private function machineryDailyUsagePayload(
+    MachineryDailyUsage $usage
+): array {
+    $location = collect([
+        $usage->projectBlock?->name,
+        $usage->projectFloor?->name,
+        $usage->projectUnit?->name,
+        $usage->projectRoom?->name,
+        $usage->projectSubspace?->name,
+    ])
+        ->filter()
+        ->implode(' → ');
+
+    $equipmentName =
+        $usage->equipment?->equipment_name
+        ?? $usage->equipment?->name
+        ?? $usage->equipment?->equipment_code
+        ?? $usage->equipment?->machineryTool?->machine_name
+        ?? 'Machinery / Equipment';
+
+    return [
+        'id' =>
+            $usage->id,
+
+        'equipment' =>
+            $equipmentName,
+
+        'equipment_code' =>
+            $usage->equipment?->equipment_code,
+
+        'quantity' =>
+            $this->quantity(
+                $usage->quantity_used
+            ),
+
+        'unit' =>
+            $usage->unit,
+
+        'shift' =>
+            $usage->shift,
+
+        'start_time' =>
+            $usage->start_time,
+
+        'end_time' =>
+            $usage->end_time,
+
+        'site_hours' =>
+            $this->quantity(
+                $usage->site_hours
+            ),
+
+        'operating_hours' =>
+            $this->quantity(
+                $usage->final_operating_hours
+            ),
+
+        'idle_hours' =>
+            $this->quantity(
+                $usage->idle_hours
+            ),
+
+        'breakdown_hours' =>
+            $this->quantity(
+                $usage->breakdown_hours
+            ),
+
+        'working_condition' =>
+            $usage->working_condition,
+
+        'operator' =>
+            $usage->operatorUser?->name
+            ?? $usage->operator_name,
+
+        'activity' =>
+            $usage->workActivity?->name
+            ?? $usage->workActivity?->activity_name,
+
+        'location' =>
+            $location ?: '-',
+
+        'status' =>
+            $usage->status,
+
+        'remarks' =>
+            $usage->remarks,
+    ];
+}
+
+private function sitePhotoEntryPayload(
+    SitePhotoEntry $entry
+): array {
+    $location = collect([
+        $entry->block?->name,
+        $entry->floor?->name,
+        $entry->unit?->name,
+        $entry->room?->name,
+        $entry->subspace?->name,
+    ])
+        ->filter()
+        ->implode(' → ');
+
+    return [
+        'id' =>
+            $entry->id,
+
+        'title' =>
+            $entry->title
+            ?: "Site Photo Entry #{$entry->id}",
+
+        'category' =>
+            $entry->category,
+
+        'status' =>
+            $entry->status,
+
+        'activity' =>
+            $entry->workActivity?->name
+            ?? $entry->workActivity?->activity_name,
+
+        'location' =>
+            $location ?: '-',
+
+        'photo_count' =>
+            $entry->photos->count(),
+
+        'photos' =>
+            $entry->photos
+                ->map(
+                    fn ($photo): array => [
+                        'id' =>
+                            $photo->id,
+
+                        'photo_type' =>
+                            $photo->photo_type,
+
+                        'caption' =>
+                            $photo->caption,
+
+                        'url' =>
+                            Storage::disk('public')
+                                ->url($photo->file_path),
+                    ]
+                )
+                ->values()
+                ->all(),
+
+        'remarks' =>
+            $entry->remarks,
+    ];
+}
 
     /**
      * Create ONLY the DPR header and link selected standalone execution rows.
@@ -524,55 +698,28 @@ class DprController extends Controller
                 'exists:tomorrow_plans,id',
             ],
 
-            'machinery' => [
+            'machinery_daily_usage_ids' => [
                 'nullable',
                 'array',
-                'max:50',
             ],
 
-            'machinery.*.machinery_tool_id' => [
-                'nullable',
+            'machinery_daily_usage_ids.*' => [
                 'integer',
-                'exists:machinery_tools,id',
+                'distinct',
+                'exists:machinery_daily_usages,id',
             ],
 
-            'machinery.*.quantity' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:9999',
-            ],
-
-            'machinery.*.usage_hours' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:24',
-            ],
-
-            'machinery.*.working_condition' => [
-                'nullable',
-                'string',
-                'in:Working,Breakdown,Idle',
-            ],
-
-            'machinery.*.remarks' => [
-                'nullable',
-                'string',
-                'max:1000',
-            ],
-
-            'photos' => [
+            'site_photo_entry_ids' => [
                 'nullable',
                 'array',
-                'max:20',
             ],
 
-            'photos.*' => [
-                'image',
-                'mimes:jpg,jpeg,png,webp',
-                'max:10240',
+            'site_photo_entry_ids.*' => [
+                'integer',
+                'distinct',
+                'exists:site_photo_entries,id',
             ],
+
         ]);
 
         $projectId =
@@ -659,6 +806,18 @@ class DprController extends Controller
                     $validated['tomorrow_plan_ids']
                     ?? []
                 ),
+
+            'machineryDailyUsages' =>
+                $this->selectedIds(
+                    $validated['machinery_daily_usage_ids']
+                    ?? []
+                ),
+
+            'sitePhotoEntries' =>
+                $this->selectedIds(
+                    $validated['site_photo_entry_ids']
+                    ?? []
+                ),
         ];
 
         $this->assertSelectionsEligible(
@@ -666,27 +825,16 @@ class DprController extends Controller
             eligible: $eligible
         );
 
-        $machineryRows = collect(
-            $validated['machinery'] ?? []
-        )
-            ->filter(
-                fn (array $row): bool =>
-                    ! empty($row['machinery_tool_id'])
-            )
-            ->values();
-
         if (
             collect($selected)
                 ->every(
                     fn (Collection $ids): bool =>
                         $ids->isEmpty()
                 )
-            && $machineryRows->isEmpty()
-            && ! $request->hasFile('photos')
         ) {
             throw ValidationException::withMessages([
                 'project_id' => [
-                    'Select at least one execution record, add Machinery / Equipment, or upload a DPR photo before submitting.',
+                    'Select at least one execution record before submitting the DPR.',
                 ],
             ]);
         }
@@ -697,9 +845,7 @@ class DprController extends Controller
                 $projectId,
                 $dprDate,
                 $engineerId,
-                $selected,
-                $machineryRows,
-                $request
+                $selected
             ): Dpr {
                 $dpr = Dpr::create([
                     'project_id' =>
@@ -811,47 +957,25 @@ class DprController extends Controller
                             $dpr->id,
                     ]);
 
-                foreach ($machineryRows as $row) {
-                    DprMachineryTool::create([
+                MachineryDailyUsage::query()
+                    ->whereIn(
+                        'id',
+                        $selected['machineryDailyUsages']
+                    )
+                    ->update([
                         'dpr_id' =>
                             $dpr->id,
-
-                        'machinery_tool_id' =>
-                            (int) $row['machinery_tool_id'],
-
-                        'quantity' =>
-                            (int) ($row['quantity'] ?? 1),
-
-                        'usage_hours' =>
-                            (float) ($row['usage_hours'] ?? 0),
-
-                        'working_condition' =>
-                            $row['working_condition']
-                            ?? 'Working',
-
-                        'remarks' =>
-                            $this->nullableTrim(
-                                $row['remarks'] ?? null
-                            ),
                     ]);
-                }
 
-                if ($request->hasFile('photos')) {
-                    foreach ($request->file('photos') as $photo) {
-                        $path = $photo->store(
-                            'dpr_photos',
-                            'public'
-                        );
-
-                        DprPhoto::create([
-                            'dpr_id' =>
-                                $dpr->id,
-
-                            'photo_path' =>
-                                $path,
-                        ]);
-                    }
-                }
+                SitePhotoEntry::query()
+                    ->whereIn(
+                        'id',
+                        $selected['sitePhotoEntries']
+                    )
+                    ->update([
+                        'dpr_id' =>
+                            $dpr->id,
+                    ]);
 
                 AuditHelper::log(
                     'DPR',
@@ -911,13 +1035,15 @@ class DprController extends Controller
                                 'tomorrowPlans'
                             ]->all(),
 
-                        'machinery_count' =>
-                            $machineryRows->count(),
+                        'linked_machinery_daily_usage_ids' =>
+                            $selected[
+                                'machineryDailyUsages'
+                            ]->all(),
 
-                        'dpr_photo_count' =>
-                            $request->hasFile('photos')
-                                ? count($request->file('photos'))
-                                : 0,
+                        'linked_site_photo_entry_ids' =>
+                            $selected[
+                                'sitePhotoEntries'
+                            ]->all(),
                     ]
                 );
 
@@ -1357,6 +1483,26 @@ class DprController extends Controller
                             null,
                     ]);
 
+                MachineryDailyUsage::query()
+                    ->where(
+                        'dpr_id',
+                        $dpr->id
+                    )
+                    ->update([
+                        'dpr_id' =>
+                            null,
+                    ]);
+
+                SitePhotoEntry::query()
+                    ->where(
+                        'dpr_id',
+                        $dpr->id
+                    )
+                    ->update([
+                        'dpr_id' =>
+                            null,
+                    ]);
+
                 $photoPaths = DprPhoto::query()
                     ->where(
                         'dpr_id',
@@ -1489,61 +1635,75 @@ class DprController extends Controller
     */
 
     private function executionCollections(
-        int $projectId,
-        string $dprDate,
-        int $engineerId
-    ): array {
-        return [
-            'labourAttendances' =>
-                $this->eligibleLabourAttendances(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
+    int $projectId,
+    string $dprDate,
+    int $engineerId
+): array {
+    return [
+        'labourAttendances' =>
+            $this->eligibleLabourAttendances(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
 
-            'workDoneItems' =>
-                $this->eligibleWorkDoneItems(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
+        'workDoneItems' =>
+            $this->eligibleWorkDoneItems(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
 
-            'materialReceived' =>
-                $this->eligibleMaterialReceived(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
+        'materialReceived' =>
+            $this->eligibleMaterialReceived(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
 
-            'materialConsumed' =>
-                $this->eligibleMaterialConsumed(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
+        'materialConsumed' =>
+            $this->eligibleMaterialConsumed(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
 
-            'materialRequirements' =>
-                $this->eligibleMaterialRequirements(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
+        'materialRequirements' =>
+            $this->eligibleMaterialRequirements(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
 
-            'siteIssues' =>
-                $this->eligibleSiteIssues(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
+        'siteIssues' =>
+            $this->eligibleSiteIssues(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
 
-            'tomorrowPlans' =>
-                $this->eligibleTomorrowPlans(
-                    $projectId,
-                    $dprDate,
-                    $engineerId
-                ),
-        ];
-    }
+        'tomorrowPlans' =>
+            $this->eligibleTomorrowPlans(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
+
+        'machineryDailyUsages' =>
+            $this->eligibleMachineryDailyUsages(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
+
+        'sitePhotoEntries' =>
+            $this->eligibleSitePhotoEntries(
+                $projectId,
+                $dprDate,
+                $engineerId
+            ),
+    ];
+}
 
     private function eligibleLabourAttendances(
         int $projectId,
@@ -1800,6 +1960,91 @@ class DprController extends Controller
             ->get();
     }
 
+    private function eligibleMachineryDailyUsages(
+    int $projectId,
+    string $dprDate,
+    int $engineerId
+): Collection {
+    return MachineryDailyUsage::query()
+        ->with([
+            'project',
+            'equipment.machineryTool',
+            'operatorUser',
+            'workDoneItem',
+            'workActivity',
+            'projectBlock',
+            'projectFloor',
+            'projectUnit',
+            'projectRoom',
+            'projectSubspace',
+        ])
+        ->whereNull('dpr_id')
+        ->where(
+            'project_id',
+            $projectId
+        )
+        ->whereDate(
+            'usage_date',
+            $dprDate
+        )
+        ->where(
+            'created_by',
+            $engineerId
+        )
+        ->where(
+            'status',
+            '!=',
+            MachineryDailyUsage::STATUS_CANCELLED
+        )
+        ->orderBy('start_time')
+        ->orderBy('id')
+        ->get();
+}
+
+private function eligibleSitePhotoEntries(
+    int $projectId,
+    string $dprDate,
+    int $engineerId
+): Collection {
+    return SitePhotoEntry::query()
+        ->with([
+            'project',
+            'reporter',
+            'block',
+            'floor',
+            'unit',
+            'room',
+            'subspace',
+            'workPackage',
+            'workSection',
+            'workActivity',
+            'contractor',
+            'photos',
+        ])
+        ->whereNull('dpr_id')
+        ->where(
+            'project_id',
+            $projectId
+        )
+        ->whereDate(
+            'photo_date',
+            $dprDate
+        )
+        ->where(
+            'reported_by',
+            $engineerId
+        )
+        ->whereIn(
+            'status',
+            [
+                SitePhotoEntry::STATUS_DRAFT,
+                SitePhotoEntry::STATUS_SUBMITTED,
+            ]
+        )
+        ->orderBy('id')
+        ->get();
+}
+
     /*
     |--------------------------------------------------------------------------
     | Selection Safety
@@ -1848,6 +2093,12 @@ class DprController extends Controller
 
             'tomorrowPlans' =>
                 'Tomorrow Plan',
+
+            'machineryDailyUsages' =>
+                'Machinery / Equipment Usage',
+
+            'sitePhotoEntries' =>
+                'Site Photos',
         ];
 
         $errors = [];
@@ -2334,6 +2585,23 @@ class DprController extends Controller
                 'tomorrowPlans.projectUnit',
                 'tomorrowPlans.room',
                 'tomorrowPlans.subspace',
+
+                'machineryDailyUsages.equipment.machineryTool',
+                'machineryDailyUsages.operatorUser',
+                'machineryDailyUsages.workActivity',
+                'machineryDailyUsages.projectBlock',
+                'machineryDailyUsages.projectFloor',
+                'machineryDailyUsages.projectUnit',
+                'machineryDailyUsages.projectRoom',
+                'machineryDailyUsages.projectSubspace',
+
+                'sitePhotoEntries.block',
+                'sitePhotoEntries.floor',
+                'sitePhotoEntries.unit',
+                'sitePhotoEntries.room',
+                'sitePhotoEntries.subspace',
+                'sitePhotoEntries.workActivity',
+                'sitePhotoEntries.photos',
 
                 /*
                  * Legacy DPR relationships:

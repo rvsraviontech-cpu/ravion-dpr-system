@@ -77,11 +77,13 @@ class MaterialReceivedController extends Controller
 
                 'items.pendingClassification.unit',
                 'items.materialType.unit',
+                    'items.materialVariant',
                 'items.brand',
                 'items.specification',
                 'items.grade',
                 'items.unit',
             'items.purchaseOrderItem',
+            'items.materialVariant',
             'items.purchaseOrderItemAllocation',
 
                 'photos.materialReceivedItem.materialType',
@@ -309,6 +311,7 @@ class MaterialReceivedController extends Controller
                     'project',
                     'vendor',
                     'items.materialType.unit',
+                    'items.materialVariant',
                     'items.brand',
                     'items.materialSpecification',
                     'items.materialGrade',
@@ -515,6 +518,7 @@ class MaterialReceivedController extends Controller
                         $createdItems[$index] =
                             $materialReceived->items()->create([
 
+                                'material_variant_id' => $entryMode === 'existing' ? $this->receiptVariantId($validated, $item) : null,
                                 'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
                                 'purchase_order_item_allocation_id' => $item['purchase_order_item_allocation_id'] ?? null,
 
@@ -694,7 +698,8 @@ class MaterialReceivedController extends Controller
                 [
                     'selectedPurchaseOrder' => $materialReceived->purchase_order_id
                         ? PurchaseOrder::query()->with([
-                            'project', 'vendor', 'items.materialType.unit', 'items.brand',
+                            'project', 'vendor', 'items.materialType.unit',
+                    'items.materialVariant', 'items.brand',
                             'items.materialSpecification', 'items.materialGrade', 'items.unit',
                             'items.allocations.materialRequirementItem',
                         ])->find($materialReceived->purchase_order_id)
@@ -940,6 +945,7 @@ class MaterialReceivedController extends Controller
                         $createdItems[$index] =
                             $materialReceived->items()->create([
 
+                                'material_variant_id' => $entryMode === 'existing' ? $this->receiptVariantId($validated, $item) : null,
                                 'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
                                 'purchase_order_item_allocation_id' => $item['purchase_order_item_allocation_id'] ?? null,
 
@@ -1545,6 +1551,7 @@ class MaterialReceivedController extends Controller
                 'in:existing,temporary',
             ],
 
+            'items.*.material_variant_id' => ['nullable', 'integer', 'exists:material_variants,id'],
             'items.*.purchase_order_item_id' => ['nullable', 'integer', 'exists:purchase_order_items,id'],
             'items.*.purchase_order_item_allocation_id' => ['nullable', 'integer', 'exists:purchase_order_item_allocations,id'],
 
@@ -1792,6 +1799,23 @@ class MaterialReceivedController extends Controller
         }
     }
 
+    private function receiptVariantId(array $validated, array $item): ?int
+    {
+        if (($validated['receipt_source'] ?? 'DIRECT') === 'PO') {
+            $poItem = PurchaseOrderItem::query()->findOrFail((int) ($item['purchase_order_item_id'] ?? 0));
+            return $poItem->material_variant_id ? (int) $poItem->material_variant_id : null;
+        }
+
+        if (empty($item['material_variant_id'])) {
+            return null;
+        }
+        $variant = \App\Models\MaterialVariant::query()->find((int) $item['material_variant_id']);
+        if (! $variant || (int) $variant->material_type_id !== (int) ($item['material_type_id'] ?? 0)) {
+            throw ValidationException::withMessages(['items' => 'The selected Material Bible variant does not belong to this product.']);
+        }
+        return (int) $variant->id;
+    }
+
     private function validatePurchaseOrderReceiptDraft(array $validated): void
     {
         if (($validated['receipt_source'] ?? 'DIRECT') !== 'PO') {
@@ -1834,6 +1858,12 @@ class MaterialReceivedController extends Controller
             if (! $allocation) {
                 throw ValidationException::withMessages([
                     "items.{$index}.purchase_order_item_allocation_id" => 'This receipt row is not linked to a valid PO allocation.',
+                ]);
+            }
+
+            if (! empty($item['material_variant_id']) && (int) $item['material_variant_id'] !== (int) $poItem->material_variant_id) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.material_variant_id" => 'The variant must match the Purchase Order item.',
                 ]);
             }
 
@@ -2062,11 +2092,13 @@ class MaterialReceivedController extends Controller
 
             'items.pendingClassification.unit',
             'items.materialType.unit',
+                    'items.materialVariant',
             'items.brand',
             'items.specification',
             'items.grade',
             'items.unit',
             'items.purchaseOrderItem',
+            'items.materialVariant',
             'items.purchaseOrderItemAllocation',
             'items.photos.uploader',
 

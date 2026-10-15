@@ -24,7 +24,7 @@ class PurchaseOrderController extends Controller
     public function index(Request $request): View
     {
         $query = PurchaseOrder::query()
-            ->with(['project', 'vendor'])
+            ->with(['project', 'vendor', 'items'])
             ->latest('po_date')
             ->latest('id');
 
@@ -51,8 +51,40 @@ class PurchaseOrderController extends Controller
             $query->where('project_id', $request->integer('project_id'));
         }
 
+        // Pending procurement is calculated from approved MR item allocations,
+        // excluding cancelled/rejected POs, just like the Create PO endpoint.
+        $pendingRows = MaterialRequirementItem::query()
+            ->with(['materialRequirement.project', 'materialType', 'materialVariant', 'unit'])
+            ->whereHas('materialRequirement', function (Builder $builder) use ($request) {
+                $builder->where('status', 'Approved');
+                if ($request->filled('project_id')) {
+                    $builder->where('project_id', $request->integer('project_id'));
+                }
+            })
+            ->addSelect(['material_requirement_items.*'])
+            ->addSelect([
+                'already_ordered_quantity' => PurchaseOrderItemAllocation::query()
+                    ->selectRaw('COALESCE(SUM(purchase_order_item_allocations.allocated_quantity), 0)')
+                    ->join('purchase_order_items', 'purchase_order_items.id', '=', 'purchase_order_item_allocations.purchase_order_item_id')
+                    ->join('purchase_orders', 'purchase_orders.id', '=', 'purchase_order_items.purchase_order_id')
+                    ->whereColumn('purchase_order_item_allocations.material_requirement_item_id', 'material_requirement_items.id')
+                    ->whereNotIn('purchase_orders.status', [PurchaseOrder::STATUS_REJECTED, PurchaseOrder::STATUS_CANCELLED]),
+            ])
+            ->orderBy('material_requirement_items.material_requirement_id')
+            ->orderBy('material_requirement_items.sort_order')
+            ->get()
+            ->map(function (MaterialRequirementItem $item) {
+                $item->pending_to_order = max(0, round((float) $item->required_quantity - (float) $item->already_ordered_quantity, 3));
+                return $item;
+            })
+            ->filter(fn (MaterialRequirementItem $item) => $item->pending_to_order > 0.0005);
+
+        $pendingRequirements = $pendingRows->groupBy('material_requirement_id');
+
         return view('purchase-orders.index', [
             'purchaseOrders' => $query->paginate(10)->withQueryString(),
+            'pendingRequirements' => $pendingRequirements,
+            'pendingItemCount' => $pendingRows->count(),
             'statuses' => PurchaseOrder::statuses(),
             'vendors' => Vendor::query()
                 ->where('is_active', true)
@@ -72,6 +104,7 @@ class PurchaseOrderController extends Controller
                 ->orderBy('project_name')
                 ->get(['id', 'project_name', 'location']),
             'selectedProjectId' => $request->integer('project_id') ?: null,
+            'selectedRequirementId' => $request->integer('material_requirement_id') ?: null,
         ]);
     }
 
@@ -90,6 +123,7 @@ class PurchaseOrderController extends Controller
             ->with([
                 'materialRequirement.project',
                 'materialType',
+                'materialVariant',
                 'brand',
                 'unit',
             ])
@@ -163,6 +197,9 @@ class PurchaseOrderController extends Controller
                     'project_id' => $item->materialRequirement?->project_id,
                     'project_name' => $item->materialRequirement?->project?->project_name,
                     'material_type_id' => $item->material_type_id,
+                    'material_variant_id' => $item->material_variant_id,
+                    'variant_sub_item' => $item->materialVariant?->variant_name,
+                    'variant_size_specification' => $item->materialVariant?->size_dimension,
                     'product_name' => $item->materialType?->material_type_name,
                     'product_code' => $item->materialType?->material_type_code,
                     'catalogue_code' => $item->materialType?->catalogue_source_code,
@@ -215,7 +252,7 @@ class PurchaseOrderController extends Controller
             $vendor = Vendor::query()->lockForUpdate()->findOrFail($validated['vendor_id']);
 
             $requirementItems = MaterialRequirementItem::query()
-                ->with(['materialRequirement.project', 'materialType', 'unit'])
+                ->with(['materialRequirement.project', 'materialType', 'materialVariant', 'unit'])
                 ->whereIn('id', collect($validated['items'])->pluck('material_requirement_item_id'))
                 ->lockForUpdate()
                 ->get()
@@ -331,6 +368,7 @@ class PurchaseOrderController extends Controller
 
                 $poItem = $po->items()->create([
                     'material_type_id' => $requirementItem->material_type_id,
+                    'material_variant_id' => $requirementItem->material_variant_id,
                     'material_specification_id' => $requirementItem->material_specification_id,
                     'material_grade_id' => $requirementItem->material_grade_id,
                     'brand_master_id' => $brand?->id,

@@ -11,6 +11,7 @@ class PurchaseOrderItem extends Model
     protected $fillable = [
         'purchase_order_id',
         'material_type_id',
+        'material_variant_id',
         'material_specification_id',
         'material_grade_id',
         'brand_master_id',
@@ -62,6 +63,11 @@ class PurchaseOrderItem extends Model
     public function materialType(): BelongsTo
     {
         return $this->belongsTo(MaterialType::class);
+    }
+
+    public function materialVariant(): BelongsTo
+    {
+        return $this->belongsTo(MaterialVariant::class, 'material_variant_id');
     }
 
     public function materialSpecification(): BelongsTo

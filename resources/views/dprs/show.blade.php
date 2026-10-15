@@ -171,8 +171,8 @@
                 ['label' => 'Consumed', 'value' => $dpr->materialConsumptions->count()],
                 ['label' => 'Required', 'value' => $dpr->materialRequirements->count()],
                 ['label' => 'Issues', 'value' => $dpr->siteIssues->count()],
-                ['label' => 'Machinery', 'value' => $dpr->machineryTools->count()],
-                ['label' => 'Photos', 'value' => $dpr->photos->count()],
+                ['label' => 'Machinery', 'value' => $dpr->machineryDailyUsages->count() + $dpr->machineryTools->count()],
+                ['label' => 'Photos', 'value' => $dpr->sitePhotoEntries->sum(fn ($entry) => $entry->photos->count()) + $dpr->photos->count()],
             ];
         @endphp
 
@@ -778,16 +778,132 @@
     <div id="dpr-machinery" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
-            title="Machinery / Equipment Used"
-            subtitle="Machinery and equipment recorded directly in the DPR."
+            title="Machinery & Equipment Used"
+            subtitle="Operational machinery usage linked from the Daily Machinery Log."
             icon="🚜"
         />
 
-        @if($dpr->machineryTools->isNotEmpty())
+        @if($dpr->machineryDailyUsages->isNotEmpty())
+
+            <div class="space-y-4">
+                @foreach($dpr->machineryDailyUsages as $usage)
+
+                    @php
+                        $machineryLocation = collect([
+                            $usage->projectBlock?->name,
+                            $usage->projectFloor?->name,
+                            $usage->projectUnit?->name,
+                            $usage->projectRoom?->name,
+                            $usage->projectSubspace?->name,
+                        ])->filter()->implode(' → ');
+
+                        $equipmentName =
+                            $usage->equipment?->equipment_name
+                            ?? $usage->equipment?->name
+                            ?? $usage->equipment?->equipment_code
+                            ?? $usage->equipment?->machineryTool?->machine_name
+                            ?? 'Machinery / Equipment';
+                    @endphp
+
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-5">
+
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">
+                                    {{ $equipmentName }}
+                                </h3>
+
+                                <div class="mt-1 text-sm text-gray-500">
+                                    {{ $usage->equipment?->equipment_code ?: 'No equipment code' }}
+                                    @if($usage->status)
+                                        · {{ ucfirst($usage->status) }}
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-gray-800">
+                                {{ $formatQty($usage->quantity_used) }} {{ $usage->unit ?: '' }}
+                            </div>
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-2 gap-4 md:grid-cols-4 xl:grid-cols-6">
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Site Hrs</div>
+                                <div class="mt-1 text-sm font-semibold text-gray-800">{{ $formatQty($usage->site_hours) }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Operating Hrs</div>
+                                <div class="mt-1 text-sm font-semibold text-gray-800">{{ $formatQty($usage->final_operating_hours) }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Idle Hrs</div>
+                                <div class="mt-1 text-sm font-semibold text-gray-800">{{ $formatQty($usage->idle_hours) }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Breakdown Hrs</div>
+                                <div class="mt-1 text-sm font-semibold text-gray-800">{{ $formatQty($usage->breakdown_hours) }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Condition</div>
+                                <div class="mt-1 text-sm text-gray-800">{{ $usage->working_condition ?: '-' }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Shift</div>
+                                <div class="mt-1 text-sm text-gray-800">{{ $usage->shift ? ucfirst($usage->shift) : '-' }}</div>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Operator</div>
+                                <div class="mt-1 text-sm text-gray-800">
+                                    {{ $usage->operatorUser?->name ?? $usage->operator_name ?? '-' }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Activity</div>
+                                <div class="mt-1 text-sm text-gray-800">
+                                    {{ $usage->workActivity?->name ?? $usage->workActivity?->activity_name ?? '-' }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="text-xs font-semibold uppercase text-gray-500">Location</div>
+                                <div class="mt-1 text-sm text-gray-800">
+                                    {{ $machineryLocation ?: '-' }}
+                                </div>
+                            </div>
+
+                        </div>
+
+                        @if($usage->remarks)
+                            <div class="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+                                <span class="font-semibold">Remarks:</span> {{ $usage->remarks }}
+                            </div>
+                        @endif
+
+                    </div>
+                @endforeach
+            </div>
+
+        @elseif($dpr->machineryTools->isNotEmpty())
+
+            {{-- Historical DPR compatibility --}}
+            <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Historical machinery records stored directly in this DPR.
+            </div>
 
             <div class="overflow-x-auto">
                 <table class="min-w-[800px] w-full text-sm">
-
                     <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600">
                         <tr>
                             <th class="px-4 py-3 text-left">Machine</th>
@@ -801,54 +917,127 @@
                     <tbody class="divide-y divide-gray-200">
                         @foreach($dpr->machineryTools as $machine)
                             <tr>
-                                <td class="px-4 py-3">
-                                    {{ $machine->machineryTool?->machine_name ?? '-' }}
-                                </td>
-
-                                <td class="px-4 py-3 text-right">
-                                    {{ $machine->quantity }}
-                                </td>
-
-                                <td class="px-4 py-3 text-right">
-                                    {{ $machine->usage_hours }}
-                                </td>
-
-                                <td class="px-4 py-3">
-                                    {{ $machine->working_condition }}
-                                </td>
-
-                                <td class="px-4 py-3">
-                                    {{ $machine->remarks ?: '-' }}
-                                </td>
+                                <td class="px-4 py-3">{{ $machine->machineryTool?->machine_name ?? '-' }}</td>
+                                <td class="px-4 py-3 text-right">{{ $machine->quantity }}</td>
+                                <td class="px-4 py-3 text-right">{{ $machine->usage_hours }}</td>
+                                <td class="px-4 py-3">{{ $machine->working_condition }}</td>
+                                <td class="px-4 py-3">{{ $machine->remarks ?: '-' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
-
                 </table>
             </div>
 
         @else
 
             <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
-                No Machinery / Equipment recorded.
+                No Machinery / Equipment linked.
             </div>
 
         @endif
     </div>
 
-    {{-- DPR Photos --}}
+    {{-- Site Photos --}}
     <div id="dpr-photos" class="mt-6 scroll-mt-20 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
 
         <x-rds.section-title
-            title="DPR Photos"
-            subtitle="General site progress photos uploaded with the DPR."
+            title="Site Photos"
+            subtitle="Site progress photos linked from the standalone Site Photos module."
             icon="📷"
         />
 
-        @if($dpr->photos->isNotEmpty())
+        @if($dpr->sitePhotoEntries->isNotEmpty())
+
+            <div class="space-y-5">
+                @foreach($dpr->sitePhotoEntries as $entry)
+
+                    @php
+                        $sitePhotoLocation = collect([
+                            $entry->block?->name,
+                            $entry->floor?->name,
+                            $entry->unit?->name,
+                            $entry->room?->name,
+                            $entry->subspace?->name,
+                        ])->filter()->implode(' → ');
+                    @endphp
+
+                    <div class="rounded-xl border border-gray-200 bg-gray-50 p-5">
+
+                        <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">
+                                    {{ $entry->title ?: 'Site Photo Entry #' . $entry->id }}
+                                </h3>
+
+                                <div class="mt-1 text-sm text-gray-500">
+                                    {{ $entry->category ?: 'Site Photo' }}
+                                    @if($entry->workActivity?->name || $entry->workActivity?->activity_name)
+                                        · {{ $entry->workActivity?->name ?? $entry->workActivity?->activity_name }}
+                                    @endif
+                                    @if($sitePhotoLocation)
+                                        · {{ $sitePhotoLocation }}
+                                    @endif
+                                    @if($entry->status)
+                                        · {{ $entry->status }}
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700">
+                                {{ $entry->photos->count() }} photo(s)
+                            </div>
+                        </div>
+
+                        @if($entry->remarks)
+                            <div class="mt-3 text-sm text-gray-700">
+                                {{ $entry->remarks }}
+                            </div>
+                        @endif
+
+                        @if($entry->photos->isNotEmpty())
+                            <div class="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+                                @foreach($entry->photos as $photo)
+                                    @php
+                                        $sitePhotoUrl = asset('storage/' . ltrim($photo->file_path, '/'));
+                                    @endphp
+
+                                    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                                        <a href="{{ $sitePhotoUrl }}"
+                                           target="_blank"
+                                           rel="noopener">
+                                            <img src="{{ $sitePhotoUrl }}"
+                                                 alt="{{ $photo->caption ?: ($photo->photo_type ?: 'Site Photo') }}"
+                                                 class="h-40 w-full bg-gray-100 object-cover sm:h-52">
+                                        </a>
+
+                                        <div class="p-3">
+                                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                {{ $photo->photo_type ?: 'Site Photo' }}
+                                            </div>
+
+                                            @if($photo->caption)
+                                                <div class="mt-1 text-sm text-gray-700">
+                                                    {{ $photo->caption }}
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                    </div>
+                @endforeach
+            </div>
+
+        @elseif($dpr->photos->isNotEmpty())
+
+            {{-- Historical DPR compatibility --}}
+            <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Historical photos uploaded directly with this DPR.
+            </div>
 
             <div class="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-
                 @foreach($dpr->photos as $photo)
                     <a href="{{ asset('storage/' . ltrim($photo->photo_path, '/')) }}"
                        target="_blank"
@@ -858,13 +1047,12 @@
                              class="h-40 w-full rounded-xl border border-gray-200 bg-gray-100 object-cover shadow-sm sm:h-56">
                     </a>
                 @endforeach
-
             </div>
 
         @else
 
             <div class="rounded-lg border border-dashed border-gray-300 px-5 py-8 text-center text-sm text-gray-500">
-                No DPR-level photos uploaded.
+                No Site Photos linked.
             </div>
 
         @endif

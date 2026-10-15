@@ -9,10 +9,11 @@ use App\Models\Project;
 use App\Models\ProjectBlock;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Carbon;
 
 class StockRegisterController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request)
     {
         $stock = [];
 
@@ -21,6 +22,7 @@ class StockRegisterController extends Controller
                 'project',
                 'block',
                 'items.materialType',
+                'items.materialVariant',
                 'items.brand',
                 'items.specification',
                 'items.grade',
@@ -34,6 +36,7 @@ class StockRegisterController extends Controller
                 'project',
                 'block',
                 'items.materialType',
+                'items.materialVariant',
                 'items.brand',
                 'items.specification',
                 'items.grade',
@@ -49,46 +52,6 @@ class StockRegisterController extends Controller
             }
         }
 
-        if ($request->filled('material_group')) {
-            $materialGroup = $request->string('material_group')->toString();
-
-            $received->whereHas(
-                'items.materialType',
-                fn ($query) => $query->where(
-                    'material_group',
-                    $materialGroup
-                )
-            );
-
-            $consumed->whereHas(
-                'items.materialType',
-                fn ($query) => $query->where(
-                    'material_group',
-                    $materialGroup
-                )
-            );
-        }
-
-        if ($request->filled('material_type_id')) {
-            $materialTypeId = $request->integer('material_type_id');
-
-            $received->whereHas(
-                'items',
-                fn ($query) => $query->where(
-                    'material_type_id',
-                    $materialTypeId
-                )
-            );
-
-            $consumed->whereHas(
-                'items',
-                fn ($query) => $query->where(
-                    'material_type_id',
-                    $materialTypeId
-                )
-            );
-        }
-
         foreach ($received->get() as $header) {
             if ($header->items->isNotEmpty()) {
                 foreach ($header->items as $item) {
@@ -102,7 +65,8 @@ class StockRegisterController extends Controller
                         $item->brand_master_id,
                         $item->material_specification_id,
                         $item->material_grade_id,
-                        $item->unit_master_id
+                        $item->unit_master_id,
+                        $item->material_variant_id ? (int) $item->material_variant_id : null
                     );
 
                     $this->initializeVariant(
@@ -171,7 +135,8 @@ class StockRegisterController extends Controller
                         $item->brand_master_id,
                         $item->material_specification_id,
                         $item->material_grade_id,
-                        $item->unit_master_id
+                        $item->unit_master_id,
+                        $item->material_variant_id ? (int) $item->material_variant_id : null
                     );
 
                     $this->initializeVariant(
@@ -233,80 +198,139 @@ class StockRegisterController extends Controller
             );
         }
 
-        $stockRows = collect($stock)
-            ->map(function (array $row): array {
-                $row['issued_qty'] =
-                    $row['consumed_qty'] + $row['wastage_qty'];
+        $allRows = collect($stock)->map(function (array $row): array {
+            $row['issued_qty'] = $row['consumed_qty'] + $row['wastage_qty'];
+            $row['balance_qty'] = $row['received_qty'] - $row['issued_qty'];
+            $row['material_label'] = $row['material_type_name'];
+            $row['specification_display'] = $row['specification_name'];
+            if (!empty($row['material_variant_id'])) {
+                $variant = $row['variant_name'] ?? '';
+                $row['material_label'] = $row['base_material_name'] ?? $row['material_type_name'];
+                $row['specification_display'] = trim(implode(' · ', array_filter([
+                    $variant, $row['variant_size'] ?? null,
+                    ($row['specification_name'] ?? '-') !== '-' ? $row['specification_name'] : null,
+                    ($row['grade_name'] ?? '-') !== '-' ? $row['grade_name'] : null,
+                    ($row['brand_name'] ?? '-') !== '-' ? $row['brand_name'] : null,
+                ]))) ?: '-';
+            } else {
+                $row['specification_display'] = trim(implode(' · ', array_filter([
+                    ($row['specification_name'] ?? '-') !== '-' ? $row['specification_name'] : null,
+                    ($row['grade_name'] ?? '-') !== '-' ? $row['grade_name'] : null,
+                    ($row['brand_name'] ?? '-') !== '-' ? $row['brand_name'] : null,
+                ]))) ?: '-';
+            }
+            return $row;
+        })->filter(fn (array $row) => $row['received_qty'] != 0 || $row['issued_qty'] != 0);
 
-                $row['balance_qty'] =
-                    $row['received_qty'] - $row['issued_qty'];
+        $request->validate([
+            'project_id' => ['nullable', 'integer'],
+            'material_item' => ['nullable', 'string', 'max:80'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'stock_status' => ['nullable', 'in:all,available,zero,negative'],
+            'export' => ['nullable', 'in:pdf,xlsx'],
+        ]);
 
-                return $row;
-            })
-            ->filter(
-                fn (array $row) =>
-                    $row['received_qty'] != 0
-                    || $row['issued_qty'] != 0
-            )
-            ->sortByDesc('latest_movement_at')
-            ->values();
+        // The project is a parent filter: only offer stock items belonging
+        // to the selected project, regardless of the current material filter.
+        // This also keeps the picker useful when the report has date/status filters.
+        $itemOptions = $allRows->map(fn ($row) => [
+            'key' => !empty($row['material_type_id']) ? 'type:'.$row['material_type_id'] : 'legacy:'.($row['legacy_material_id'] ?? 0),
+            'label' => $row['base_material_name'] ?? $row['material_type_name'],
+        ])->unique('key')->sortBy('label')->values();
 
-        $projects = Project::query()
-            ->where('status', 'Active')
-            ->orderBy('project_name')
-            ->get();
+        $stockRows = $allRows->filter(function (array $row) use ($request): bool {
+            if ($request->filled('material_item')) {
+                $key = !empty($row['material_type_id']) ? 'type:'.$row['material_type_id'] : 'legacy:'.($row['legacy_material_id'] ?? 0);
+                if ($key !== $request->input('material_item')) return false;
+            }
+            $balance = (float) $row['balance_qty'];
+            $status = $request->input('stock_status', 'all');
+            if ($status === 'available' && $balance <= 0) return false;
+            if ($status === 'zero' && $balance != 0) return false;
+            if ($status === 'negative' && $balance >= 0) return false;
+            $timestamp = (int) ($row['latest_movement_at'] ?? 0);
+            if ($request->filled('date_from') && $timestamp < strtotime($request->input('date_from').' 00:00:00')) return false;
+            if ($request->filled('date_to') && $timestamp > strtotime($request->input('date_to').' 23:59:59')) return false;
+            return true;
+        })->sort(function ($a, $b) {
+            $dateCompare = ($b['latest_movement_at'] ?? 0) <=> ($a['latest_movement_at'] ?? 0);
+            return $dateCompare ?: strcmp($a['variant_key'], $b['variant_key']);
+        })->values();
 
-        $projectBlocks = ProjectBlock::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        $projects = Project::query()->where('status', 'Active')->orderBy('project_name')->get();
+        $availableStockCount = $stockRows->filter(fn ($row) => (float) $row['balance_qty'] > 0)->count();
 
-        $materialTypes = MaterialType::query()
-            ->where('is_active', true)
-            ->orderBy('material_group')
-            ->orderBy('material_type_name')
-            ->get();
+        if ($request->input('export') === 'pdf') {
+            return $this->exportPdf($stockRows, $request);
+        }
+        if ($request->input('export') === 'xlsx') {
+            return $this->exportExcel($stockRows, $request);
+        }
 
-        $materialGroups = $materialTypes
-            ->pluck('material_group')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
-
-        return view(
-            'stock-register.index',
-            compact(
-                'stockRows',
-                'projects',
-                'projectBlocks',
-                'materialTypes',
-                'materialGroups'
-            )
-        );
+        return view('stock-register.index', compact('stockRows', 'projects', 'itemOptions', 'availableStockCount'));
     }
 
-    private function itemMatchesFilters(
-        Request $request,
-        $item
-    ): bool {
-        if (
-            $request->filled('material_group')
-            && $item->materialType?->material_group
-                !== $request->string('material_group')->toString()
-        ) {
-            return false;
-        }
+    private function itemMatchesFilters(Request $request, $item): bool
+    {
+        return true; // Filter material identity after aggregation; retain all movements for accurate balances.
+    }
 
-        if (
-            $request->filled('material_type_id')
-            && (int) $item->material_type_id
-                !== $request->integer('material_type_id')
-        ) {
-            return false;
+    private function exportPdf($rows, Request $request)
+    {
+        if (!class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+            abort(503, 'PDF export requires barryvdh/laravel-dompdf. Install it using composer require barryvdh/laravel-dompdf.');
         }
+        $groups = $rows->groupBy('project_name');
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('stock-register.export-pdf', [
+            'groups' => $groups,
+            'requestFilters' => $request->only('project_id','material_item','date_from','date_to','stock_status'),
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+        return $pdf->download('ravion-stock-register-'.now()->format('Ymd-His').'.pdf');
+    }
 
-        return true;
+    private function exportExcel($rows, Request $request)
+    {
+        if (!class_exists(\PhpOffice\PhpSpreadsheet\Spreadsheet::class)) {
+            abort(503, 'Excel export requires phpoffice/phpspreadsheet (usually installed with Laravel Excel).');
+        }
+        $workbook = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+        $sheet = $workbook->getActiveSheet();
+        $sheet->setTitle('Stock Register');
+        $sheet->mergeCells('A1:J1');
+        $sheet->setCellValue('A1', 'RAVION | STOCK REGISTER');
+        $sheet->mergeCells('A2:J2');
+        $sheet->setCellValue('A2', 'Generated '.now()->format('d M Y h:i A').' | Latest approved movement; current balances');
+        $headers = ['#','Date','Project','Material','Specification','Unit','Received','Consumed','Wastage','Available'];
+        $sheet->fromArray($headers, null, 'A4');
+        $sheet->getStyle('A1:J1')->getFont()->setBold(true)->setSize(17);
+        $sheet->getStyle('A4:J4')->getFont()->setBold(true);
+        $sheet->getStyle('A4:J4')->getFill()->setFillType('solid')->getStartColor()->setRGB('DCEAF6');
+        $line = 5;
+        foreach ($rows->groupBy('project_name') as $project => $projectRows) {
+            $sheet->mergeCells("A{$line}:J{$line}");
+            $sheet->setCellValue("A{$line}", 'PROJECT: '.$project);
+            $sheet->getStyle("A{$line}:J{$line}")->getFont()->setBold(true);
+            $sheet->getStyle("A{$line}:J{$line}")->getFill()->setFillType('solid')->getStartColor()->setRGB('EAF1F7');
+            $line++;
+            foreach ($projectRows as $row) {
+                $sheet->fromArray([
+                    $line - 4, $row['latest_movement_at'] ? date('d M Y', $row['latest_movement_at']) : '-',
+                    $row['project_name'], $row['material_label'], $row['specification_display'], $row['unit'],
+                    (float)$row['received_qty'],(float)$row['consumed_qty'],(float)$row['wastage_qty'],(float)$row['balance_qty'],
+                ], null, 'A'.$line);
+                $line++;
+            }
+        }
+        foreach (range('A','J') as $column) $sheet->getColumnDimension($column)->setAutoSize(true);
+        $sheet->freezePane('A5');
+        $sheet->getStyle('G5:J'.$line)->getNumberFormat()->setFormatCode('#,##0.###;[Red](#,##0.###)');
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($workbook);
+        $temporary = tempnam(sys_get_temp_dir(), 'ravion_stock_');
+        $writer->save($temporary);
+        $workbook->disconnectWorksheets();
+        return response()->download($temporary, 'ravion-stock-register-'.now()->format('Ymd-His').'.xlsx')->deleteFileAfterSend(true);
     }
 
     private function effectiveReceivedQuantity($item): float
@@ -328,19 +352,29 @@ class StockRegisterController extends Controller
         mixed $time,
         mixed $fallback
     ): void {
-        $dateValue = $date
-            ? (string) $date
-            : null;
+        // Eloquent date casts may stringify as "YYYY-MM-DD 00:00:00".
+        // Appending a separate time to that full datetime makes strtotime() fail.
+        // Parse the calendar date and transaction time independently.
+        $timestamp = 0;
 
-        $timeValue = $time
-            ? (string) $time
-            : '00:00:00';
-
-        $timestamp = $dateValue
-            ? strtotime($dateValue . ' ' . $timeValue)
-            : strtotime((string) $fallback);
-
-        $timestamp = $timestamp ?: 0;
+        try {
+            if ($date) {
+                $calendarDate = Carbon::parse($date)->format('Y-m-d');
+                $clockTime = $time
+                    ? Carbon::parse((string) $time)->format('H:i:s')
+                    : '00:00:00';
+                $timestamp = Carbon::parse($calendarDate . ' ' . $clockTime)->timestamp;
+            } elseif ($fallback) {
+                $timestamp = Carbon::parse($fallback)->timestamp;
+            }
+        } catch (\Throwable $exception) {
+            // Historical rows may have incomplete dates; use their update time.
+            try {
+                $timestamp = $fallback ? Carbon::parse($fallback)->timestamp : 0;
+            } catch (\Throwable $ignored) {
+                $timestamp = 0;
+            }
+        }
 
         if ($timestamp > ($row['latest_movement_at'] ?? 0)) {
             $row['latest_movement_at'] = $timestamp;
@@ -353,7 +387,8 @@ class StockRegisterController extends Controller
         ?int $brandId,
         ?int $specificationId,
         ?int $gradeId,
-        int $unitId
+        int $unitId,
+        ?int $materialVariantId = null
     ): string {
         return implode(':', [
             'new',
@@ -363,6 +398,7 @@ class StockRegisterController extends Controller
             $specificationId ?? 0,
             $gradeId ?? 0,
             $unitId,
+            $materialVariantId === null ? 'legacy' : 'v' . $materialVariantId,
         ]);
     }
 
@@ -399,8 +435,11 @@ class StockRegisterController extends Controller
             'block_name' =>
                 $header->block?->name ?? '-',
             'material_type_id' => $item->material_type_id,
-            'material_type_name' =>
-                $item->materialType?->material_type_name ?? '-',
+            'material_variant_id' => $item->material_variant_id,
+            'variant_name' => $item->materialVariant?->variant_name,
+            'variant_size' => $item->materialVariant?->size_dimension,
+            'base_material_name' => $item->materialType?->material_type_name ?? '-',
+            'material_type_name' => $item->materialType?->material_type_name ?? '-',
             'material_group' =>
                 $item->materialType?->material_group ?? '-',
             'brand_master_id' => $item->brand_master_id,
@@ -447,6 +486,7 @@ class StockRegisterController extends Controller
             'block_name' =>
                 $header->block?->name ?? '-',
             'material_type_id' => null,
+            'legacy_material_id' => $header->material_id,
             'material_type_name' =>
                 $material?->material_name ?? '-',
             'material_group' =>

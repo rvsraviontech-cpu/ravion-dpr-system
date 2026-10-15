@@ -112,6 +112,26 @@ class Dpr extends Model
             ->orderBy('id');
     }
 
+    public function machineryDailyUsages(): HasMany
+{
+    return $this->hasMany(
+        MachineryDailyUsage::class,
+        'dpr_id'
+    )
+        ->orderBy('usage_date')
+        ->orderBy('id');
+}
+
+public function sitePhotoEntries(): HasMany
+{
+    return $this->hasMany(
+        SitePhotoEntry::class,
+        'dpr_id'
+    )
+        ->orderBy('photo_date')
+        ->orderBy('id');
+}
+
     /*
     |--------------------------------------------------------------------------
     | Labour Attendance Integration
@@ -223,15 +243,17 @@ class Dpr extends Model
     }
 
     public function hasStandaloneExecutionData(): bool
-    {
-        return $this->workDoneItems()->exists()
-            || $this->materialReceipts()->exists()
-            || $this->materialConsumptions()->exists()
-            || $this->materialRequirements()->exists()
-            || $this->siteIssues()->exists()
-            || $this->tomorrowPlans()->exists()
-            || $this->labourAttendances()->exists();
-    }
+{
+    return $this->workDoneItems()->exists()
+        || $this->materialReceipts()->exists()
+        || $this->materialConsumptions()->exists()
+        || $this->materialRequirements()->exists()
+        || $this->siteIssues()->exists()
+        || $this->tomorrowPlans()->exists()
+        || $this->labourAttendances()->exists()
+        || $this->machineryDailyUsages()->exists()
+        || $this->sitePhotoEntries()->exists();
+}
 
     public function linkedAttendanceIds(): array
     {
@@ -373,41 +395,51 @@ class Dpr extends Model
     }
 
     public function getStandaloneExecutionCountAttribute(): int
-    {
-        $workDone = $this->relationLoaded('workDoneItems')
-            ? $this->workDoneItems->count()
-            : $this->workDoneItems()->count();
+{
+    $workDone = $this->relationLoaded('workDoneItems')
+        ? $this->workDoneItems->count()
+        : $this->workDoneItems()->count();
 
-        $received = $this->relationLoaded('materialReceipts')
-            ? $this->materialReceipts->count()
-            : $this->materialReceipts()->count();
+    $received = $this->relationLoaded('materialReceipts')
+        ? $this->materialReceipts->count()
+        : $this->materialReceipts()->count();
 
-        $consumed = $this->relationLoaded('materialConsumptions')
-            ? $this->materialConsumptions->count()
-            : $this->materialConsumptions()->count();
+    $consumed = $this->relationLoaded('materialConsumptions')
+        ? $this->materialConsumptions->count()
+        : $this->materialConsumptions()->count();
 
-        $required = $this->relationLoaded('materialRequirements')
-            ? $this->materialRequirements->count()
-            : $this->materialRequirements()->count();
+    $required = $this->relationLoaded('materialRequirements')
+        ? $this->materialRequirements->count()
+        : $this->materialRequirements()->count();
 
-        $issues = $this->relationLoaded('siteIssues')
-            ? $this->siteIssues->count()
-            : $this->siteIssues()->count();
+    $issues = $this->relationLoaded('siteIssues')
+        ? $this->siteIssues->count()
+        : $this->siteIssues()->count();
 
-        $plans = $this->relationLoaded('tomorrowPlans')
-            ? $this->tomorrowPlans->count()
-            : $this->tomorrowPlans()->count();
+    $plans = $this->relationLoaded('tomorrowPlans')
+        ? $this->tomorrowPlans->count()
+        : $this->tomorrowPlans()->count();
 
-        $attendance = $this->relationLoaded('labourAttendances')
-            ? $this->labourAttendances->count()
-            : $this->labourAttendances()->count();
+    $attendance = $this->relationLoaded('labourAttendances')
+        ? $this->labourAttendances->count()
+        : $this->labourAttendances()->count();
 
-        return $workDone
-            + $received
-            + $consumed
-            + $required
-            + $issues
-            + $plans
-            + $attendance;
-    }
+    $machinery = $this->relationLoaded('machineryDailyUsages')
+        ? $this->machineryDailyUsages->count()
+        : $this->machineryDailyUsages()->count();
+
+    $sitePhotos = $this->relationLoaded('sitePhotoEntries')
+        ? $this->sitePhotoEntries->count()
+        : $this->sitePhotoEntries()->count();
+
+    return $workDone
+        + $received
+        + $consumed
+        + $required
+        + $issues
+        + $plans
+        + $attendance
+        + $machinery
+        + $sitePhotos;
+}
 }

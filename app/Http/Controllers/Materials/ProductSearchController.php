@@ -8,6 +8,7 @@ use App\Models\MaterialVariant;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductSearchController extends Controller
 {
@@ -17,6 +18,7 @@ class ProductSearchController extends Controller
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
+            'product_master' => ['nullable', 'boolean'],
             'activity_division_id' => [
                 'nullable',
                 'integer',
@@ -47,6 +49,7 @@ class ProductSearchController extends Controller
 
         $search = trim((string) ($validated['q'] ?? ''));
         $limit = (int) ($validated['limit'] ?? 30);
+        $productMaster = (bool) ($validated['product_master'] ?? false);
 
         $normalized = $this->normalizeSearch($search);
         $concepts = $this->searchConcepts($normalized);
@@ -82,6 +85,21 @@ class ProductSearchController extends Controller
             ])
             ->where('material_types.is_active', true)
             ->where('material_types.is_legacy', false)
+            ->when($productMaster, function (Builder $q) {
+                $q->whereExists(function ($mapping) {
+                    $mapping->selectRaw('1')
+                        ->from('material_bible_product_mappings as bible_map')
+                        ->join('material_bible_sub_categories as bible_sub', 'bible_sub.id', '=', 'bible_map.material_bible_sub_category_id')
+                        ->join('material_bible_main_categories as bible_main', 'bible_main.id', '=', 'bible_sub.material_bible_main_category_id')
+                        ->join('material_bible_trades as bible_trade', 'bible_trade.id', '=', 'bible_main.material_bible_trade_id')
+                        ->whereColumn('bible_map.material_type_id', 'material_types.id')
+                        ->whereIn('bible_map.source_code', [self::BIBLE_SOURCE, 'RAVION_ERP_MANUAL'])
+                        ->where('bible_map.is_active', 1)
+                        ->where('bible_sub.is_active', 1)
+                        ->where('bible_main.is_active', 1)
+                        ->where('bible_trade.is_active', 1);
+                });
+            })
             ->whereIn('material_types.master_status', [
                 'Approved',
                 'CANONICAL',
@@ -231,6 +249,13 @@ class ProductSearchController extends Controller
              * classified catalogue while preserving approved historical
              * products as an operational fallback.
              */
+            if ($productMaster) {
+                $query->orderByRaw(
+                    "CASE WHEN material_types.catalogue_source_code = ? THEN 0 ELSE 1 END",
+                    [self::BIBLE_SOURCE]
+                );
+            }
+
             $query->orderByRaw(
                 "CASE
                     WHEN material_types.material_type_code LIKE 'RV-PROD3-%' THEN 0
@@ -245,6 +270,13 @@ class ProductSearchController extends Controller
              * finalized catalogue first, then other classified approved
              * products, then preserved unclassified approved fallback.
              */
+            if ($productMaster) {
+                $query->orderByRaw(
+                    "CASE WHEN material_types.catalogue_source_code = ? THEN 0 ELSE 1 END",
+                    [self::BIBLE_SOURCE]
+                );
+            }
+
             $query->orderByRaw(
                 "CASE
                     WHEN material_types.material_type_code LIKE 'RV-PROD3-%' THEN 0
@@ -260,6 +292,10 @@ class ProductSearchController extends Controller
             ->limit($limit)
             ->get();
 
+        // Only Product Master requests receive the expanded Bible details.
+        // Other ERP consumers retain their existing response contract.
+        $masterDetails = $productMaster ? $this->masterDetails($products->pluck('id')->all()) : [];
+
         return response()->json([
             'data' => $products
                 ->map(
@@ -267,7 +303,8 @@ class ProductSearchController extends Controller
                         $this->formatProduct(
                             $product,
                             $normalized,
-                            $concepts
+                            $concepts,
+                            $masterDetails[$product->id] ?? null
                         )
                 )
                 ->values(),
@@ -433,7 +470,34 @@ class ProductSearchController extends Controller
                                     'LOWER(type_code) LIKE ?',
                                     [$like]
                                 )
-                    );
+                    )
+
+                    /*
+                     * Material Bible classification search.
+                     * A concept may match the Trade, Main or Sub Category.
+                     * This is read-only and leaves legacy classification intact.
+                     */
+                    ->orWhereExists(function ($bibleQuery) use ($like) {
+                        $bibleQuery->selectRaw('1')
+                            ->from('material_bible_product_mappings as search_bible_map')
+                            ->join('material_bible_sub_categories as search_bible_sub',
+                                'search_bible_sub.id', '=', 'search_bible_map.material_bible_sub_category_id')
+                            ->join('material_bible_main_categories as search_bible_main',
+                                'search_bible_main.id', '=', 'search_bible_sub.material_bible_main_category_id')
+                            ->join('material_bible_trades as search_bible_trade',
+                                'search_bible_trade.id', '=', 'search_bible_main.material_bible_trade_id')
+                            ->whereColumn('search_bible_map.material_type_id', 'material_types.id')
+                            ->where('search_bible_map.is_active', 1)
+                            ->where('search_bible_sub.is_active', 1)
+                            ->where('search_bible_main.is_active', 1)
+                            ->where('search_bible_trade.is_active', 1)
+                            ->where(function ($categoryQuery) use ($like) {
+                                $categoryQuery
+                                    ->whereRaw('LOWER(search_bible_trade.name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(search_bible_main.name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(search_bible_sub.name) LIKE ?', [$like]);
+                            });
+                    });
             }
         );
     }
@@ -444,7 +508,8 @@ class ProductSearchController extends Controller
     private function formatProduct(
         MaterialType $product,
         string $normalized,
-        array $concepts
+        array $concepts,
+        ?array $masterDetails = null
     ): array {
         $matchingVariants = collect();
 
@@ -470,7 +535,7 @@ class ProductSearchController extends Controller
             ?? $product->productGroup?->group_name
             ?? $product->material_group;
 
-        return [
+        $result = [
             'id' => $product->id,
             'name' => $product->material_type_name,
             'code' => $product->material_type_code,
@@ -517,6 +582,78 @@ class ProductSearchController extends Controller
             'matching_variant_count' =>
                 $matchingVariants->count(),
         ];
+
+        if ($masterDetails !== null) {
+            $result['bible_paths'] = $masterDetails['bible_paths'];
+            $result['available_variants'] = $product->variants->map(fn (MaterialVariant $variant) => $this->formatVariant($variant))->values();
+            $result['available_specifications'] = $masterDetails['specifications'];
+            $result['available_grades'] = $masterDetails['grades'];
+            $result['available_brands'] = $masterDetails['brands'];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Fetch classification and related options in batches to avoid N+1 queries.
+     * Only invoked for the Product Master search screen.
+     */
+    private function masterDetails(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $details = [];
+        foreach ($ids as $id) {
+            $details[$id] = [
+                'bible_paths' => [], 'specifications' => [],
+                'grades' => [], 'brands' => [],
+            ];
+        }
+
+        $paths = DB::table('material_bible_product_mappings as map')
+            ->join('material_bible_sub_categories as sub', 'sub.id', '=', 'map.material_bible_sub_category_id')
+            ->join('material_bible_main_categories as main', 'main.id', '=', 'sub.material_bible_main_category_id')
+            ->join('material_bible_trades as trade', 'trade.id', '=', 'main.material_bible_trade_id')
+            ->whereIn('map.material_type_id', $ids)
+            ->where('map.is_active', 1)
+            ->where('sub.is_active', 1)
+            ->where('main.is_active', 1)
+            ->where('trade.is_active', 1)
+            ->select('map.material_type_id', 'map.material_variant_id',
+                'trade.id as trade_id', 'trade.name as trade_name',
+                'main.id as main_id', 'main.name as main_name',
+                'sub.id as sub_id', 'sub.name as sub_name')
+            ->distinct()->get();
+
+        foreach ($paths as $path) {
+            $details[$path->material_type_id]['bible_paths'][] = [
+                'trade_id' => $path->trade_id, 'trade_name' => $path->trade_name,
+                'main_id' => $path->main_id, 'main_name' => $path->main_name,
+                'sub_id' => $path->sub_id, 'sub_name' => $path->sub_name,
+                'variant_id' => $path->material_variant_id,
+            ];
+        }
+
+        foreach (DB::table('material_specifications')->whereIn('material_type_id', $ids)
+            ->where('is_active', 1)->select('id', 'material_type_id', 'specification_name')->get() as $row) {
+            $details[$row->material_type_id]['specifications'][] = ['id' => $row->id, 'name' => $row->specification_name];
+        }
+        foreach (DB::table('material_grades')->whereIn('material_type_id', $ids)
+            ->where('is_active', 1)->select('id', 'material_type_id', 'grade_name')->get() as $row) {
+            $details[$row->material_type_id]['grades'][] = ['id' => $row->id, 'name' => $row->grade_name];
+        }
+        $brands = DB::table('material_product_brand as mapping')
+            ->join('brand_masters as brand', 'brand.id', '=', 'mapping.brand_master_id')
+            ->whereIn('mapping.material_type_id', $ids)
+            ->where('mapping.is_active', 1)
+            ->where('brand.is_active', 1)
+            ->select('mapping.material_type_id', 'brand.id', 'brand.brand_name')->get();
+        foreach ($brands as $row) {
+            $details[$row->material_type_id]['brands'][] = ['id' => $row->id, 'name' => $row->brand_name];
+        }
+        return $details;
     }
 
     /**

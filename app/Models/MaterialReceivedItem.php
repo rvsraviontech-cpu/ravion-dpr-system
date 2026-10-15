@@ -23,6 +23,7 @@ class MaterialReceivedItem extends Model
 
         // Material variant identity
         'material_type_id',
+        'material_variant_id',
         'brand_master_id',
         'material_specification_id',
         'material_grade_id',
@@ -49,6 +50,7 @@ class MaterialReceivedItem extends Model
         'construction_work_package_id' => 'integer',
         'pending_material_classification_id' => 'integer',
         'material_type_id' => 'integer',
+        'material_variant_id' => 'integer',
         'brand_master_id' => 'integer',
         'material_specification_id' => 'integer',
         'material_grade_id' => 'integer',
@@ -107,6 +109,11 @@ class MaterialReceivedItem extends Model
     public function purchaseOrderItemAllocation(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrderItemAllocation::class, 'purchase_order_item_allocation_id');
+    }
+
+    public function materialVariant(): BelongsTo
+    {
+        return $this->belongsTo(MaterialVariant::class, 'material_variant_id');
     }
 
     public function materialType(): BelongsTo

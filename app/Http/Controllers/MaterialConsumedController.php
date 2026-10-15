@@ -138,6 +138,8 @@ class MaterialConsumedController extends Controller
             ->map(fn (array $row): array => [
                 'stock_key' => $row['stock_key'],
                 'material_type_id' => $row['material_type_id'],
+                'material_variant_id' => $row['material_variant_id'],
+                'variant_name' => $row['variant_name'],
                 'material_type_name' => $row['material_type_name'],
                 'material_group' => $row['material_group'],
                 'brand_master_id' => $row['brand_master_id'],
@@ -188,6 +190,7 @@ class MaterialConsumedController extends Controller
                         'activity_division_id' => $item['activity_division_id'] ?? null,
                         'activity_id' => $item['activity_id'] ?? null,
                         'material_type_id' => (int) $item['material_type_id'],
+                        'material_variant_id' => $item['material_variant_id'] ?? null,
                         'brand_master_id' => $item['brand_master_id'] ?? null,
                         'material_specification_id' => $item['material_specification_id'] ?? null,
                         'material_grade_id' => $item['material_grade_id'] ?? null,
@@ -288,6 +291,7 @@ class MaterialConsumedController extends Controller
                         'activity_division_id' => $item['activity_division_id'] ?? null,
                         'activity_id' => $item['activity_id'] ?? null,
                         'material_type_id' => (int) $item['material_type_id'],
+                        'material_variant_id' => $item['material_variant_id'] ?? null,
                         'brand_master_id' => $item['brand_master_id'] ?? null,
                         'material_specification_id' => $item['material_specification_id'] ?? null,
                         'material_grade_id' => $item['material_grade_id'] ?? null,
@@ -365,6 +369,7 @@ class MaterialConsumedController extends Controller
                 $items = $lockedConsumption->items
                     ->map(fn ($item): array => [
                         'material_type_id' => $item->material_type_id,
+                         'material_variant_id' => $item->material_variant_id,
                         'brand_master_id' => $item->brand_master_id,
                         'material_specification_id' => $item->material_specification_id,
                         'material_grade_id' => $item->material_grade_id,
@@ -492,6 +497,7 @@ class MaterialConsumedController extends Controller
             'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.activity_division_id' => ['nullable', 'integer', 'exists:activity_divisions,id'],
             'items.*.activity_id' => ['nullable', 'integer', 'exists:activities,id'],
+            'items.*.material_variant_id' => ['nullable', 'integer', 'exists:material_variants,id'],
             'items.*.material_type_id' => ['required', 'integer', 'exists:material_types,id'],
             'items.*.brand_master_id' => ['nullable', 'integer', 'exists:brand_masters,id'],
             'items.*.material_specification_id' => ['nullable', 'integer', 'exists:material_specifications,id'],
@@ -518,6 +524,15 @@ class MaterialConsumedController extends Controller
             $rowNumber = $index + 1;
             $materialTypeId = (int) $item['material_type_id'];
             $materialType = MaterialType::query()->find($materialTypeId);
+
+            if (! empty($item['material_variant_id'])) {
+                $variantValid = \App\Models\MaterialVariant::query()
+                    ->whereKey($item['material_variant_id'])
+                    ->where('material_type_id', $materialTypeId)->exists();
+                if (! $variantValid) {
+                    $errors["items.{$index}.material_variant_id"][] = "Row {$rowNumber}: the variant does not belong to the selected product.";
+                }
+            }
 
             if (! $materialType) {
                 continue;
@@ -652,6 +667,7 @@ class MaterialConsumedController extends Controller
             'items.activityDivision',
             'items.activity',
             'items.materialType.unit',
+            'items.materialVariant',
             'items.brand',
             'items.specification',
             'items.grade',
@@ -685,6 +701,7 @@ class MaterialConsumedController extends Controller
                     'activity_division_id' => $item->activity_division_id,
                     'activity_id' => $item->activity_id,
                     'material_type_id' => $item->material_type_id,
+                         'material_variant_id' => $item->material_variant_id,
                     'material_type_name' => $item->materialType?->material_type_name,
                     'brand_master_id' => $item->brand_master_id,
                     'brand_name' => $item->brand?->brand_name,

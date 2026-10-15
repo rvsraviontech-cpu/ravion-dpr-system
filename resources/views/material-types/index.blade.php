@@ -11,7 +11,7 @@
     <div>
         <h1 class="text-2xl font-bold text-gray-900">Product Master</h1>
         <p class="mt-1 text-sm text-gray-500">
-            Canonical construction product catalogue used across Requirements, Procurement, Dispatch, Receipt and Consumption.
+            Ravion Material Bible product catalogue for Requirements, Procurement, Dispatch, Receipt and Consumption.
         </p>
     </div>
 
@@ -51,8 +51,8 @@
     </div>
 
     <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
-        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Product Groups in Results</p>
-        <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format($filteredGroups) }}</p>
+        <p class="text-xs font-semibold uppercase tracking-wide text-gray-500">Bible-Mapped Products in Results</p>
+        <p class="mt-1 text-2xl font-bold text-gray-900">{{ number_format($filteredBibleProducts) }}</p>
     </div>
 </div>
 
@@ -69,54 +69,30 @@
                    type="search"
                    name="search"
                    value="{{ request('search') }}"
-                   placeholder="Product, code, group, type or alias..."
+                   placeholder="Product, code, Bible category or alias..."
                    autocomplete="off"
                    class="{{ $inputClass }}">
         </div>
 
         <div>
-            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Activity Division</label>
-            <select id="filter_activity_division"
-                    name="activity_division_id"
-                    class="{{ $inputClass }}">
-                <option value="">All Divisions</option>
-                @foreach($activityDivisions as $division)
-                    <option value="{{ $division->id }}"
-                        {{ (string) request('activity_division_id') === (string) $division->id ? 'selected' : '' }}>
-                        {{ $division->name }}
-                    </option>
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Trade Category</label>
+            <select id="filter_bible_trade" name="material_bible_trade_id" class="{{ $inputClass }}">
+                <option value="">All Trades</option>
+                @foreach($bibleTrades as $trade)
+                    <option value="{{ $trade->id }}" @selected((string) request('material_bible_trade_id') === (string) $trade->id)>{{ $trade->name }}</option>
                 @endforeach
             </select>
         </div>
-
         <div>
-            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Product Group</label>
-            <select id="filter_product_group"
-                    name="material_product_group_id"
-                    class="{{ $inputClass }}">
-                <option value="">All Groups</option>
-                @foreach($productGroups as $group)
-                    <option value="{{ $group->id }}"
-                        {{ (string) request('material_product_group_id') === (string) $group->id ? 'selected' : '' }}>
-                        {{ $group->group_name }}
-                    </option>
-                @endforeach
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Main Category</label>
+            <select id="filter_bible_main" name="material_bible_main_category_id" class="{{ $inputClass }}">
+                <option value="">All Main Categories</option>
             </select>
         </div>
-
         <div>
-            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Product Type</label>
-            <select id="filter_product_type"
-                    name="material_product_type_id"
-                    class="{{ $inputClass }}">
-                <option value="">All Types</option>
-                @foreach($productTypes as $type)
-                    <option value="{{ $type->id }}"
-                            data-group="{{ $type->material_product_group_id }}"
-                        {{ (string) request('material_product_type_id') === (string) $type->id ? 'selected' : '' }}>
-                        {{ $type->type_name }}
-                    </option>
-                @endforeach
+            <label class="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600">Sub Category</label>
+            <select id="filter_bible_sub" name="material_bible_sub_category_id" class="{{ $inputClass }}">
+                <option value="">All Sub Categories</option>
             </select>
         </div>
 
@@ -196,8 +172,9 @@
                 <tr>
                     <th class="px-3 py-3 text-left">#</th>
                     <th class="px-3 py-3 text-left">Product</th>
-                    <th class="px-3 py-3 text-left">Product Group</th>
-                    <th class="px-3 py-3 text-left">Product Type</th>
+                    <th class="px-3 py-3 text-left">Trade Category</th>
+                    <th class="px-3 py-3 text-left">Main Category</th>
+                    <th class="px-3 py-3 text-left">Sub Category</th>
                     <th class="px-3 py-3 text-center">Unit</th>
                     <th class="px-3 py-3 text-left">Inventory</th>
                     <th class="px-3 py-3 text-center">Master</th>
@@ -224,8 +201,25 @@
                             </div>
                         </td>
 
-                        <td class="px-3 py-3">{{ $type->productGroup?->group_name ?? $type->material_group ?? '-' }}</td>
-                        <td class="px-3 py-3">{{ $type->productType?->type_name ?? '-' }}</td>
+                        @php
+                            $paths = $biblePaths->get($type->id, collect());
+                            $firstPath = $paths->first();
+                        @endphp
+                        <td class="px-3 py-3 text-gray-700">{{ $firstPath?->trade_name ?? '-' }}</td>
+                        <td class="px-3 py-3 text-gray-700">{{ $firstPath?->main_name ?? '-' }}</td>
+                        <td class="px-3 py-3 text-gray-700">
+                            {{ $firstPath?->sub_name ?? '-' }}
+                            @if($paths->count() > 1)
+                                <details class="mt-1 text-xs text-gray-600">
+                                    <summary class="cursor-pointer font-semibold text-blue-700">{{ $paths->count() - 1 }} more path(s)</summary>
+                                    <ul class="mt-2 list-disc space-y-1 pl-4">
+                                        @foreach($paths->skip(1) as $path)
+                                            <li>{{ $path->trade_name }} → {{ $path->main_name }} → {{ $path->sub_name }}</li>
+                                        @endforeach
+                                    </ul>
+                                </details>
+                            @endif
+                        </td>
 
                         <td class="px-3 py-3 text-center">
                             @if($type->unit)
@@ -291,7 +285,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="10" class="px-6 py-12 text-center text-gray-500">
+                        <td colspan="11" class="px-6 py-12 text-center text-gray-500">
                             No Products found for the selected filters.
                         </td>
                     </tr>
@@ -309,88 +303,32 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const division = document.getElementById('filter_activity_division');
-    const group = document.getElementById('filter_product_group');
-    const type = document.getElementById('filter_product_type');
+    const trade = document.getElementById('filter_bible_trade');
+    const main = document.getElementById('filter_bible_main');
+    const sub = document.getElementById('filter_bible_sub');
+    const mains = @json($bibleMainCategories);
+    const subs = @json($bibleSubCategories);
+    const initialMain = @json((string) request('material_bible_main_category_id', ''));
+    const initialSub = @json((string) request('material_bible_sub_category_id', ''));
 
-    const divisionGroupMap = @json($divisionGroupMap);
-    const selectedGroup = @json((string) request('material_product_group_id', ''));
-    const selectedType = @json((string) request('material_product_type_id', ''));
-
-    const allGroups = Array.from(group.options)
-        .filter(option => option.value)
-        .map(option => ({
-            value: option.value,
-            text: option.textContent.trim()
-        }));
-
-    const allTypes = Array.from(type.options)
-        .filter(option => option.value)
-        .map(option => ({
-            value: option.value,
-            text: option.textContent.trim(),
-            group: option.dataset.group || ''
-        }));
-
-    function rebuildGroups() {
-        const divisionId = division.value;
-        const allowedGroups = divisionId
-            ? (divisionGroupMap[divisionId] || []).map(String)
-            : null;
-
-        const currentGroup = group.value || selectedGroup;
-
-        group.innerHTML = '';
-        group.add(new Option('All Groups', ''));
-
-        allGroups.forEach(item => {
-            if (!allowedGroups || allowedGroups.includes(item.value)) {
-                const option = new Option(item.text, item.value);
-                option.selected = item.value === currentGroup;
-                group.add(option);
-            }
+    function populate(select, rows, placeholder, selected) {
+        select.replaceChildren(new Option(placeholder, ''));
+        rows.forEach(row => {
+            const option = new Option(row.name, String(row.id));
+            option.selected = String(row.id) === String(selected);
+            select.add(option);
         });
-
-        if (currentGroup && !Array.from(group.options).some(option => option.value === currentGroup)) {
-            group.value = '';
-        }
-
-        rebuildTypes();
     }
-
-    function rebuildTypes() {
-        const groupId = group.value;
-        const currentType = type.value || selectedType;
-
-        type.innerHTML = '';
-        type.add(new Option('All Types', ''));
-
-        allTypes.forEach(item => {
-            if (!groupId || item.group === groupId) {
-                const option = new Option(item.text, item.value);
-                option.dataset.group = item.group;
-                option.selected = item.value === currentType;
-                type.add(option);
-            }
-        });
-
-        if (currentType && !Array.from(type.options).some(option => option.value === currentType)) {
-            type.value = '';
-        }
+    function refreshSub(selected = '') {
+        populate(sub, subs.filter(row => (!main.value || String(row.material_bible_main_category_id) === main.value) && Number(row.is_active) === 1), 'All Sub Categories', selected);
     }
-
-    division.addEventListener('change', function () {
-        group.value = '';
-        type.value = '';
-        rebuildGroups();
-    });
-
-    group.addEventListener('change', function () {
-        type.value = '';
-        rebuildTypes();
-    });
-
-    rebuildGroups();
+    function refreshMain(selectedMain = '', selectedSub = '') {
+        populate(main, mains.filter(row => (!trade.value || String(row.material_bible_trade_id) === trade.value) && Number(row.is_active) === 1), 'All Main Categories', selectedMain);
+        refreshSub(selectedSub);
+    }
+    trade.addEventListener('change', () => refreshMain());
+    main.addEventListener('change', () => refreshSub());
+    refreshMain(initialMain, initialSub);
 });
 </script>
 

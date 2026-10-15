@@ -85,6 +85,7 @@ use App\Http\Controllers\ConstructionWorkPackageMaterialController;
 use App\Http\Controllers\MaterialCatalogMappingController;
 use App\Http\Controllers\Materials\ProductSearchController;
 use App\Http\Controllers\Materials\ProductDependencyController;
+use App\Http\Controllers\Materials\MaterialBibleCatalogueController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\MaterialDispatchController;
 use App\Http\Controllers\MaterialDispatchReceiptController;
@@ -94,6 +95,7 @@ use App\Http\Controllers\IntelligentRoomSetupController;
 use App\Http\Controllers\MachineryEquipmentController;
 use App\Http\Controllers\MachineryEquipmentAllocationController;
 use App\Http\Controllers\MachineryDailyUsageController;
+use App\Http\Controllers\MaterialVariantController;
 
 
 
@@ -357,7 +359,8 @@ Route::get('/material-types/{material_type}/edit', [MaterialTypeController::clas
     ->middleware('permission:materials.manage');
 
 Route::match(['put', 'patch'], '/material-types/{material_type}', [MaterialTypeController::class, 'update'])
-    ->name('material-types.update');
+    ->name('material-types.update')
+    ->middleware('permission:materials.manage');
 
 Route::delete('/material-types/{material_type}', [MaterialTypeController::class, 'destroy'])
     ->name('material-types.destroy')
@@ -397,6 +400,35 @@ Route::patch(
     ->middleware('permission:materials.manage');
 
 
+/*
+|--------------------------------------------------------------------------
+| Product Variant & Attributes Management
+|--------------------------------------------------------------------------
+| Existing Product Master and Bible mappings are preserved.
+| All modifications require materials.manage permission.
+*/
+
+Route::post(
+    '/material-types/{material_type}/variants',
+    [MaterialVariantController::class, 'store']
+)
+    ->name('material-types.variants.store')
+    ->middleware('permission:materials.manage');
+
+Route::put(
+    '/material-types/{material_type}/variants/{materialVariant}',
+    [MaterialVariantController::class, 'update']
+)
+    ->name('material-types.variants.update')
+    ->middleware('permission:materials.manage');
+
+Route::patch(
+    '/material-types/{material_type}/variants/{materialVariant}/toggle-status',
+    [MaterialVariantController::class, 'toggleStatus']
+)
+    ->name('material-types.variants.toggle-status')
+    ->middleware('permission:materials.manage');
+
 Route::resource(
     'material-grades',
     MaterialGradeController::class
@@ -408,6 +440,11 @@ Route::patch(
 )
     ->middleware('permission:material_received.accountant_verify')
     ->name('material-received.accountant-verify');
+
+    // Read-only Material Bible category-first browsing for Material Requirements.
+    Route::get('/materials/bible-catalogue', MaterialBibleCatalogueController::class)
+        ->name('materials.bible-catalogue')
+        ->middleware('permission:material_required.view');
 
     Route::get('/materials/product-search', ProductSearchController::class)
     ->name('materials.product-search');

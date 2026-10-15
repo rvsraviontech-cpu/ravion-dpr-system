@@ -12,6 +12,7 @@ class MaterialRequirementItem extends Model
         'activity_division_id',
         'activity_id',
         'material_type_id',
+        'material_variant_id',
         'brand_master_id',
         'material_specification_id',
         'specification_text',
@@ -47,6 +48,11 @@ class MaterialRequirementItem extends Model
     public function materialType(): BelongsTo
     {
         return $this->belongsTo(MaterialType::class, 'material_type_id');
+    }
+
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(MaterialVariant::class, 'material_variant_id');
     }
 
     public function brand(): BelongsTo
@@ -94,9 +100,14 @@ class MaterialRequirementItem extends Model
     {
         return collect([
             $this->materialType?->material_type_name,
+            $this->variant?->variant_name,
             $this->brand?->brand_name,
             $this->specification_text ?: $this->specification?->specification_name,
             $this->grade?->grade_name,
         ])->filter()->implode(' — ');
     }
+    public function materialVariant(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+{
+    return $this->belongsTo(\App\Models\MaterialVariant::class, 'material_variant_id');
+}
 }

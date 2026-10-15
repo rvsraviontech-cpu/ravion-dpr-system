@@ -37,13 +37,17 @@
         <p id="direct-empty-message" class="px-4 py-5 text-sm text-slate-500">No materials added yet. Complete the form above and click Add to Receipt.</p>
     </div>
     @endif
-    <div class="{{ $isPoReceipt ? 'po-material-scroll overflow-auto' : 'overflow-x-auto direct-original-table' }}">
-        <table class="min-w-[1850px] w-full text-sm">
+    <div class="{{ $isPoReceipt ? 'po-material-cards' : 'overflow-x-auto direct-original-table' }}">
+        <table class="w-full text-sm">
             <thead class="bg-gray-100 text-xs uppercase tracking-wide text-gray-600 {{ $isPoReceipt ? 'sticky top-0 z-10' : '' }}">
                 <tr>
                     <th class="px-3 py-3 text-center">#</th>
-                    <th class="min-w-[260px] px-3 py-3 text-left">Product</th>
-                    <th class="min-w-48 px-3 py-3 text-left">Specification / Grade</th>
+                    <th class="min-w-[200px] px-3 py-3 text-left">{{ $isPoReceipt ? 'Item' : 'Product' }}</th>
+                    @if($isPoReceipt)
+                        <th class="min-w-[170px] px-3 py-3 text-left">Sub-Item</th>
+                        <th class="min-w-[120px] px-3 py-3 text-left">Specification</th>
+                    @endif
+                    <th class="min-w-48 px-3 py-3 text-left">{{ $isPoReceipt ? 'Grade' : 'Specification / Grade' }}</th>
                     <th class="min-w-40 px-3 py-3 text-left">Brand</th>
                     @if($isPoReceipt)
                         <th class="px-3 py-3 text-right">Ordered</th>
@@ -69,6 +73,7 @@
                             <input type="hidden" name="items[{{ $rowIndex }}][entry_mode]" value="{{ $entryMode }}" class="entry-mode-input">
                             <input type="hidden" name="items[{{ $rowIndex }}][purchase_order_item_id]" value="{{ $oldItem['purchase_order_item_id'] ?? '' }}" class="po-item-id">
                             <input type="hidden" name="items[{{ $rowIndex }}][purchase_order_item_allocation_id]" value="{{ $oldItem['purchase_order_item_allocation_id'] ?? '' }}" class="po-allocation-id">
+                            <input type="hidden" name="items[{{ $rowIndex }}][material_variant_id]" value="{{ $oldItem['material_variant_id'] ?? '' }}" class="material-variant-id-input">
                             <div class="existing-panel {{ $entryMode === 'temporary' ? 'hidden' : '' }}">
                                 @if($isPoReceipt)
                                     <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-semibold text-slate-800">{{ $materialTypes->firstWhere('id', $oldItem['material_type_id'] ?? null)?->material_type_name ?? 'PO Product' }}</div>
@@ -96,9 +101,25 @@
                             @endif
                             <input type="hidden" class="category-display">
                         </td>
+                        @if($isPoReceipt)
+                            @php
+                                $receiptBibleVariant = !empty($oldItem['material_variant_id'])
+                                    ? \App\Models\MaterialVariant::find($oldItem['material_variant_id'])
+                                    : null;
+                                $variantName = $receiptBibleVariant?->variant_name ?? '';
+                                $variantSubItem = trim(preg_replace('/\s*[-–—]\s*'.preg_quote((string)($receiptBibleVariant?->size_dimension ?? ''), '/').'\s*$/iu', '', $variantName));
+                                $variantSubItem = $variantSubItem ?: $variantName;
+                            @endphp
+                            <td class="px-3 py-3">
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-800" title="Inherited from Purchase Order">{{ $variantSubItem ?: '—' }}</div>
+                            </td>
+                            <td class="px-3 py-3">
+                                <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-800" title="Inherited from Purchase Order">{{ $receiptBibleVariant?->size_dimension ?: '—' }}</div>
+                            </td>
+                        @endif
                         <td class="px-3 py-3">
                             <div class="existing-field {{ $entryMode === 'temporary' ? 'hidden' : '' }} grid gap-2">
-                                <select name="items[{{ $rowIndex }}][material_specification_id]" class="{{ $inputClass }} specification-select" {{ $isPoReceipt ? 'disabled' : '' }}><option value="">Specification</option>@foreach($specifications as $specification)<option value="{{ $specification->id }}" {{ (string)($oldItem['material_specification_id'] ?? '') === (string)$specification->id ? 'selected' : '' }}>{{ $specification->specification_name }}</option>@endforeach</select>
+                                <select name="items[{{ $rowIndex }}][material_specification_id]" class="{{ $inputClass }} specification-select {{ $isPoReceipt ? 'hidden' : '' }}" {{ $isPoReceipt ? 'disabled' : '' }}><option value="">Specification</option>@foreach($specifications as $specification)<option value="{{ $specification->id }}" {{ (string)($oldItem['material_specification_id'] ?? '') === (string)$specification->id ? 'selected' : '' }}>{{ $specification->specification_name }}</option>@endforeach</select>
                                 @if($isPoReceipt)<input type="hidden" name="items[{{ $rowIndex }}][material_specification_id]" value="{{ $oldItem['material_specification_id'] ?? '' }}">@endif
                                 <select name="items[{{ $rowIndex }}][material_grade_id]" class="{{ $inputClass }} grade-select" {{ $isPoReceipt ? 'disabled' : '' }}><option value="">Grade / Rating</option>@foreach($grades as $grade)<option value="{{ $grade->id }}" {{ (string)($oldItem['material_grade_id'] ?? '') === (string)$grade->id ? 'selected' : '' }}>{{ $grade->grade_name }}</option>@endforeach</select>
                                 @if($isPoReceipt)<input type="hidden" name="items[{{ $rowIndex }}][material_grade_id]" value="{{ $oldItem['material_grade_id'] ?? '' }}">@endif
@@ -201,30 +222,82 @@
 
 @if($isPoReceipt)
 <style>
-/* PO items: independent two-axis scrolling, without affecting Direct Receipts. */
-.po-material-scroll {
-    height: 450px;
-    max-height: 60vh;
-    min-height: 220px;
-    overflow-x: scroll;
-    overflow-y: scroll;
-    scrollbar-gutter: stable;
-    overscroll-behavior: contain;
+/* PO material: exactly three content rows, preserving existing input hooks. */
+.po-material-cards { width:100%; padding:8px 10px; overflow-x:auto; }
+.po-material-cards table, .po-material-cards tbody { display:block; width:100%; min-width:0!important; }
+.po-material-cards thead { display:none!important; }
+.po-material-cards .material-item-row {
+  position:relative; display:grid!important;
+  grid-template-columns:repeat(100,minmax(0,1fr));
+  gap:7px 7px; padding:10px 12px; margin-bottom:8px;
+  border:1px solid #dbe3eb; border-left:3px solid #10212f;
+  border-radius:8px; background:white; align-items:end;
 }
-.po-material-scroll thead th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: #f3f4f6;
+.po-material-cards .material-item-row>td {
+  display:block!important; min-width:0!important; width:auto!important;
+  padding:0!important; border:0!important; text-align:left!important;
 }
-/* Chromium/Edge scrollbar styling; native scrollbar behavior remains intact. */
-.po-material-scroll::-webkit-scrollbar { width: 12px; height: 12px; }
-.po-material-scroll::-webkit-scrollbar-track { background: #e2e8f0; }
-.po-material-scroll::-webkit-scrollbar-thumb {
-    background: #94a3b8;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
+.po-material-cards .material-item-row>td::before {
+  display:block; margin-bottom:3px; color:#475569;
+  font-size:10px; font-weight:700; line-height:1.2;
 }
-.po-material-scroll::-webkit-scrollbar-thumb:hover { background: #64748b; }
+/* Header only: material number and unobtrusive remove button. */
+.po-material-cards .material-item-row>td:nth-child(1) { grid-column:1/-1; grid-row:1; border-bottom:1px solid #e2e8f0!important; padding-bottom:5px!important; padding-right:80px!important; }
+.po-material-cards .material-item-row>td:nth-child(1)::before { content:'Material Item'; display:inline; margin-right:6px; }
+/* Row 1: Item, Sub-Item, Specification, Grade, Brand. */
+.po-material-cards .material-item-row>td:nth-child(2) { grid-column:span 26; grid-row:2; }
+.po-material-cards .material-item-row>td:nth-child(3) { grid-column:span 19; grid-row:2; }
+.po-material-cards .material-item-row>td:nth-child(4) { grid-column:span 12; grid-row:2; }
+.po-material-cards .material-item-row>td:nth-child(5) { grid-column:span 22; grid-row:2; }
+.po-material-cards .material-item-row>td:nth-child(6) { grid-column:span 21; grid-row:2; }
+/* Row 2: Ordered, Previously Accounted, Pending, Receive Now, Unit,
+   Accepted, Short, Damaged, Rejected. */
+.po-material-cards .material-item-row>td:nth-child(7) { grid-column:span 10; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(8) { grid-column:span 14; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(9) { grid-column:span 9; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(10) { grid-column:span 12; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(11) { grid-column:span 12; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(12) { grid-column:span 12; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(13) { grid-column:span 10; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(14) { grid-column:span 10; grid-row:3; }
+.po-material-cards .material-item-row>td:nth-child(15) { grid-column:span 11; grid-row:3; }
+/* Row 3: Remarks across the entire row. */
+.po-material-cards .material-item-row>td:nth-child(16) { grid-column:1/-1; grid-row:4; }
+/* Action lives in the header, not a fourth field row. */
+.po-material-cards .material-item-row>td:nth-child(17) {
+  position:absolute; top:7px; right:10px; width:72px!important;
+}
+.po-material-cards .material-item-row>td:nth-child(17)::before { display:none; }
+.po-material-cards .material-item-row>td:nth-child(17) button { width:100%; min-height:25px; padding:3px 6px; font-size:10px; }
+.po-material-cards .material-item-row>td:nth-child(2)::before { content:'Item'; }
+.po-material-cards .material-item-row>td:nth-child(3)::before { content:'Sub-Item'; }
+.po-material-cards .material-item-row>td:nth-child(4)::before { content:'Specification'; }
+.po-material-cards .material-item-row>td:nth-child(5)::before { content:'Grade'; }
+.po-material-cards .material-item-row>td:nth-child(6)::before { content:'Brand'; }
+.po-material-cards .material-item-row>td:nth-child(7)::before { content:'Ordered'; }
+.po-material-cards .material-item-row>td:nth-child(8)::before { content:'Previously Accounted'; }
+.po-material-cards .material-item-row>td:nth-child(9)::before { content:'Pending'; }
+.po-material-cards .material-item-row>td:nth-child(10)::before { content:'Receive Now'; }
+.po-material-cards .material-item-row>td:nth-child(11)::before { content:'Unit'; }
+.po-material-cards .material-item-row>td:nth-child(12)::before { content:'Accepted'; }
+.po-material-cards .material-item-row>td:nth-child(13)::before { content:'Short'; }
+.po-material-cards .material-item-row>td:nth-child(14)::before { content:'Damaged'; }
+.po-material-cards .material-item-row>td:nth-child(15)::before { content:'Rejected'; }
+.po-material-cards .material-item-row>td:nth-child(16)::before { content:'Remarks'; }
+.po-material-cards .material-item-row input:not([type=hidden]),
+.po-material-cards .material-item-row select:not(.hidden) {
+  box-sizing:border-box; width:100%; min-width:0!important; max-width:100%;
+  min-height:32px; padding:5px 6px!important; font-size:12px;
+}
+.po-material-cards .material-item-row td:nth-child(2) .rounded-lg,
+.po-material-cards .material-item-row td:nth-child(3) .rounded-lg,
+.po-material-cards .material-item-row td:nth-child(4) .rounded-lg {
+  min-height:32px; padding:6px 7px!important; font-size:12px;
+}
+/* Nine inputs cannot physically fit in a phone viewport. Keep exact rows
+   and provide a horizontal scroll only at narrow viewports. */
+@media(max-width:850px) {
+  .po-material-cards .material-item-row { min-width:890px; }
+}
 </style>
 @endif

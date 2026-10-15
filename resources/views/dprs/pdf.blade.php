@@ -8,251 +8,47 @@
     </title>
 
     <style>
-        @page {
-            margin: 24px 26px 30px 26px;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font-family: DejaVu Sans, sans-serif;
-            font-size: 9.5px;
-            line-height: 1.4;
-            color: #1f2937;
-        }
-
-        h1, h2, h3, p {
-            margin: 0;
-        }
-
-        .header {
-            border: 1px solid #d1d5db;
-            padding: 14px;
-            margin-bottom: 12px;
-        }
-
-        .title {
-            font-size: 19px;
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .subtitle {
-            margin-top: 3px;
-            color: #6b7280;
-            font-size: 9px;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-weight: bold;
-            font-size: 8px;
-        }
-
-        .status-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .status-approved {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-rejected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .section {
-            border: 1px solid #d1d5db;
-            margin-bottom: 12px;
-            page-break-inside: auto;
-        }
-
-        .section-title {
-            background: #f3f4f6;
-            border-bottom: 1px solid #d1d5db;
-            padding: 8px 10px;
-            font-size: 12px;
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .section-body {
-            padding: 10px;
-        }
-
-        .meta-table,
-        .data-table,
-        .summary-table,
-        .photo-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .meta-table td {
-            width: 25%;
-            vertical-align: top;
-            padding: 5px 8px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .label {
-            display: block;
-            font-size: 7.5px;
-            text-transform: uppercase;
-            color: #6b7280;
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
-
-        .value {
-            font-size: 9.5px;
-            color: #111827;
-            font-weight: bold;
-        }
-
-        .summary-table td {
-            width: 12.5%;
-            text-align: center;
-            border: 1px solid #e5e7eb;
-            padding: 7px 3px;
-        }
-
-        .summary-value {
-            font-size: 14px;
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .summary-label {
-            margin-top: 2px;
-            font-size: 7px;
-            text-transform: uppercase;
-            color: #6b7280;
-        }
-
-        .data-table {
-            margin-top: 4px;
-        }
-
-        .data-table th,
-        .data-table td {
-            border: 1px solid #d1d5db;
-            padding: 5px 6px;
-            vertical-align: top;
-        }
-
-        .data-table th {
-            background: #f3f4f6;
-            font-size: 7.5px;
-            text-transform: uppercase;
-            color: #4b5563;
-            text-align: left;
-        }
-
-        .right {
-            text-align: right !important;
-        }
-
-        .center {
-            text-align: center !important;
-        }
-
-        .muted {
-            color: #6b7280;
-        }
-
-        .small {
-            font-size: 8px;
-        }
-
-        .work-card,
-        .issue-card,
-        .receipt-card {
-            border: 1px solid #d1d5db;
-            margin-bottom: 8px;
-            padding: 8px;
-            page-break-inside: avoid;
-        }
-
-        .work-title,
-        .issue-title,
-        .receipt-title {
-            font-size: 10.5px;
-            font-weight: bold;
-            color: #111827;
-        }
-
-        .inline-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 6px;
-        }
-
-        .inline-table td {
-            width: 25%;
-            border: 1px solid #e5e7eb;
-            padding: 5px;
-            vertical-align: top;
-        }
-
-        .note-box {
-            margin-top: 6px;
-            border: 1px solid #e5e7eb;
-            background: #fafafa;
-            padding: 6px;
-        }
-
-        .photo-table {
-            margin-top: 7px;
-        }
-
-        .photo-table td {
-            width: 25%;
-            padding: 4px;
-            vertical-align: top;
-            border: none;
-        }
-
-        .photo {
-            width: 100%;
-            height: 105px;
-            object-fit: cover;
-            border: 1px solid #d1d5db;
-        }
-
-        .photo-caption {
-            margin-top: 2px;
-            font-size: 7px;
-            color: #6b7280;
-        }
-
-        .priority {
-            display: inline-block;
-            padding: 2px 6px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 7.5px;
-        }
-
-        .page-break {
-            page-break-before: always;
-        }
-
-        .footer-note {
-            margin-top: 10px;
-            font-size: 7.5px;
-            color: #6b7280;
-            text-align: center;
-        }
+        @page { margin: 22px 24px 28px 24px; }
+        * { box-sizing: border-box; }
+        body { margin:0; font-family: DejaVu Sans, sans-serif; font-size:9.2px; line-height:1.42; color:#10212F; background:#fff; }
+        h1,h2,h3,p { margin:0; }
+        .header { border:1px solid #d9e0e5; border-top:5px solid #10212F; padding:15px 16px 13px; margin-bottom:12px; background:#fff; }
+        .title { font-size:21px; font-weight:bold; color:#10212F; letter-spacing:.1px; }
+        .subtitle { margin-top:3px; color:#667684; font-size:8.5px; }
+        .status { display:inline-block; padding:4px 9px; border-radius:12px; font-weight:bold; font-size:7.5px; text-transform:uppercase; letter-spacing:.35px; }
+        .status-pending { background:#fff4d6; color:#8a5a00; border:1px solid #f0d28a; }
+        .status-approved { background:#e9f7ef; color:#17653a; border:1px solid #b9dfc8; }
+        .status-rejected { background:#fdecec; color:#9b1c1c; border:1px solid #efbcbc; }
+        .section { border:1px solid #d9e0e5; margin-bottom:10px; page-break-inside:auto; background:#fff; }
+        .section-title { background:#10212F; border-bottom:3px solid #E8A500; padding:7px 10px; font-size:11px; font-weight:bold; color:#fff; letter-spacing:.15px; }
+        .section-body { padding:9px 10px; }
+        .meta-table,.data-table,.summary-table,.photo-table { width:100%; border-collapse:collapse; }
+        .meta-table td { width:25%; vertical-align:top; padding:7px 9px; border:1px solid #dfe5e9; background:#fbfcfd; }
+        .label { display:block; font-size:7px; text-transform:uppercase; color:#758491; font-weight:bold; letter-spacing:.35px; margin-bottom:2px; }
+        .value { font-size:9.7px; color:#10212F; font-weight:bold; }
+        .summary-table td { width:12.5%; text-align:center; border:1px solid #dfe5e9; padding:8px 3px; background:#fbfcfd; }
+        .summary-value { font-size:15px; font-weight:bold; color:#10212F; line-height:1.15; }
+        .summary-label { margin-top:3px; font-size:6.7px; text-transform:uppercase; letter-spacing:.25px; color:#71808c; }
+        .data-table { margin-top:3px; }
+        .data-table th,.data-table td { border:1px solid #d9e0e5; padding:5px 6px; vertical-align:top; }
+        .data-table th { background:#eef2f4; font-size:7px; text-transform:uppercase; letter-spacing:.25px; color:#40515e; text-align:left; }
+        .data-table tbody tr:nth-child(even) td { background:#fbfcfd; }
+        .right { text-align:right !important; }
+        .center { text-align:center !important; }
+        .muted { color:#6c7b87; }
+        .small { font-size:7.8px; }
+        .work-card,.issue-card,.receipt-card { border:1px solid #d9e0e5; border-left:3px solid #E8A500; margin-bottom:8px; padding:8px 9px; page-break-inside:avoid; background:#fff; }
+        .work-title,.issue-title,.receipt-title { font-size:10.4px; font-weight:bold; color:#10212F; }
+        .inline-table { width:100%; border-collapse:collapse; margin-top:6px; }
+        .inline-table td { width:25%; border:1px solid #e1e6ea; padding:5px 6px; vertical-align:top; background:#fbfcfd; }
+        .note-box { margin-top:6px; border:1px solid #e1e6ea; border-left:3px solid #E8A500; background:#fbfcfd; padding:6px 7px; }
+        .photo-table { margin-top:7px; }
+        .photo-table td { width:25%; padding:4px; vertical-align:top; border:none; }
+        .photo { width:100%; height:108px; object-fit:cover; border:1px solid #d9e0e5; }
+        .photo-caption { margin-top:3px; font-size:6.8px; line-height:1.35; color:#5f6f7b; }
+        .priority { display:inline-block; padding:2px 6px; border:1px solid #cfd8de; border-radius:8px; font-weight:bold; font-size:7px; background:#f8fafb; }
+        .page-break { page-break-before:always; }
+        .footer-note { margin-top:10px; padding-top:7px; border-top:1px solid #d9e0e5; font-size:7px; color:#7b8994; text-align:center; }
     </style>
 </head>
 
@@ -372,6 +168,8 @@ $halfDayCount = $attendanceDetails
     <table style="width:100%; border-collapse:collapse;">
         <tr>
             <td style="vertical-align:top;">
+                <div style="font-size:17px; font-weight:bold; color:#10212F; letter-spacing:1px; line-height:1;">RAVION</div>
+                <div style="width:64px; height:3px; background:#E8A500; margin:4px 0 9px 0;"></div>
                 <div class="title">
                     Daily Progress Report
                 </div>
@@ -468,13 +266,13 @@ $halfDayCount = $attendanceDetails
                 </td>
 
                 <td>
-                    <div class="summary-value">{{ $dpr->machineryTools->count() }}</div>
+                    <div class="summary-value">{{ $dpr->machineryDailyUsages->count() + $dpr->machineryTools->count() }}</div>
                     <div class="summary-label">Machinery</div>
                 </td>
 
                 <td>
-                    <div class="summary-value">{{ $dpr->photos->count() }}</div>
-                    <div class="summary-label">DPR Photos</div>
+                    <div class="summary-value">{{ $dpr->sitePhotoEntries->sum(fn ($entry) => $entry->photos->count()) + $dpr->photos->count() }}</div>
+                    <div class="summary-label">Site Photos</div>
                 </td>
             </tr>
         </table>
@@ -1068,8 +866,92 @@ $halfDayCount = $attendanceDetails
 
     <div class="section-body">
 
-        @if($dpr->machineryTools->isNotEmpty())
+        @if($dpr->machineryDailyUsages->isNotEmpty())
 
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Machine / Equipment</th>
+                        <th class="right">Qty</th>
+                        <th class="right">Site Hrs</th>
+                        <th class="right">Operating</th>
+                        <th class="right">Idle</th>
+                        <th class="right">Breakdown</th>
+                        <th>Condition</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach($dpr->machineryDailyUsages as $usage)
+                        @php
+                            $machineryLocation = collect([
+                                $usage->projectBlock?->name,
+                                $usage->projectFloor?->name,
+                                $usage->projectUnit?->name,
+                                $usage->projectRoom?->name,
+                                $usage->projectSubspace?->name,
+                            ])->filter()->implode(' -> ');
+
+                            $equipmentName =
+                                $usage->equipment?->equipment_name
+                                ?? $usage->equipment?->name
+                                ?? $usage->equipment?->equipment_code
+                                ?? $usage->equipment?->machineryTool?->machine_name
+                                ?? 'Machinery / Equipment';
+                        @endphp
+
+                        <tr>
+                            <td>
+                                <strong>{{ $equipmentName }}</strong>
+
+                                @if($usage->equipment?->equipment_code)
+                                    <div class="small muted">
+                                        {{ $usage->equipment->equipment_code }}
+                                    </div>
+                                @endif
+
+                                @if($machineryLocation)
+                                    <div class="small muted">
+                                        {{ $machineryLocation }}
+                                    </div>
+                                @endif
+
+                                @if($usage->operatorUser?->name || $usage->operator_name)
+                                    <div class="small muted">
+                                        Operator: {{ $usage->operatorUser?->name ?? $usage->operator_name }}
+                                    </div>
+                                @endif
+
+                                @if($usage->workActivity?->name || $usage->workActivity?->activity_name)
+                                    <div class="small muted">
+                                        Activity: {{ $usage->workActivity?->name ?? $usage->workActivity?->activity_name }}
+                                    </div>
+                                @endif
+
+                                @if($usage->remarks)
+                                    <div class="small muted">
+                                        Remarks: {{ $usage->remarks }}
+                                    </div>
+                                @endif
+                            </td>
+
+                            <td class="right">
+                                {{ $formatQty($usage->quantity_used) }} {{ $usage->unit }}
+                            </td>
+
+                            <td class="right">{{ $formatQty($usage->site_hours) }}</td>
+                            <td class="right">{{ $formatQty($usage->final_operating_hours) }}</td>
+                            <td class="right">{{ $formatQty($usage->idle_hours) }}</td>
+                            <td class="right">{{ $formatQty($usage->breakdown_hours) }}</td>
+                            <td>{{ $usage->working_condition ?: '-' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+
+        @elseif($dpr->machineryTools->isNotEmpty())
+
+            {{-- Historical DPR compatibility --}}
             <table class="data-table">
                 <thead>
                     <tr>
@@ -1084,47 +966,110 @@ $halfDayCount = $attendanceDetails
                 <tbody>
                     @foreach($dpr->machineryTools as $machine)
                         <tr>
-                            <td>
-                                {{ $machine->machineryTool?->machine_name ?? '-' }}
-                            </td>
-
-                            <td class="right">
-                                {{ $machine->quantity }}
-                            </td>
-
-                            <td class="right">
-                                {{ $machine->usage_hours }}
-                            </td>
-
-                            <td>
-                                {{ $machine->working_condition }}
-                            </td>
-
-                            <td>
-                                {{ $machine->remarks ?: '-' }}
-                            </td>
+                            <td>{{ $machine->machineryTool?->machine_name ?? '-' }}</td>
+                            <td class="right">{{ $machine->quantity }}</td>
+                            <td class="right">{{ $machine->usage_hours }}</td>
+                            <td>{{ $machine->working_condition }}</td>
+                            <td>{{ $machine->remarks ?: '-' }}</td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
 
         @else
-            <p class="muted">No Machinery / Equipment recorded.</p>
+            <p class="muted">No Machinery / Equipment linked.</p>
         @endif
     </div>
 </div>
 
-{{-- DPR PHOTOS --}}
+{{-- SITE PHOTOS --}}
 <div class="section">
 
     <div class="section-title">
-        DPR Photos
+        Site Photos
     </div>
 
     <div class="section-body">
 
-        @if($dpr->photos->isNotEmpty())
+        @if($dpr->sitePhotoEntries->isNotEmpty())
 
+            @foreach($dpr->sitePhotoEntries as $entry)
+
+                @php
+                    $sitePhotoLocation = collect([
+                        $entry->block?->name,
+                        $entry->floor?->name,
+                        $entry->unit?->name,
+                        $entry->room?->name,
+                        $entry->subspace?->name,
+                    ])->filter()->implode(' -> ');
+                @endphp
+
+                <div class="work-card">
+
+                    <div class="work-title">
+                        {{ $entry->title ?: 'Site Photo Entry #' . $entry->id }}
+                    </div>
+
+                    <div class="small muted">
+                        {{ $entry->category ?: 'Site Photo' }}
+
+                        @if($entry->workActivity?->name || $entry->workActivity?->activity_name)
+                            · {{ $entry->workActivity?->name ?? $entry->workActivity?->activity_name }}
+                        @endif
+
+                        @if($sitePhotoLocation)
+                            · {{ $sitePhotoLocation }}
+                        @endif
+
+                        @if($entry->status)
+                            · {{ $entry->status }}
+                        @endif
+                    </div>
+
+                    @if($entry->remarks)
+                        <div class="note-box">
+                            {{ $entry->remarks }}
+                        </div>
+                    @endif
+
+                    @if($entry->photos->isNotEmpty())
+                        <table class="photo-table">
+                            @foreach($entry->photos->chunk(4) as $row)
+                                <tr>
+                                    @foreach($row as $photo)
+                                        @php
+                                            $path = $photoPath($photo->file_path);
+                                        @endphp
+
+                                        <td>
+                                            @if($path)
+                                                <img src="{{ $path }}" class="photo">
+
+                                                <div class="photo-caption">
+                                                    <strong>{{ $photo->photo_type ?: 'Site Photo' }}</strong>
+                                                    @if($photo->caption)
+                                                        <br>{{ $photo->caption }}
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </td>
+                                    @endforeach
+
+                                    @for($i = $row->count(); $i < 4; $i++)
+                                        <td></td>
+                                    @endfor
+                                </tr>
+                            @endforeach
+                        </table>
+                    @endif
+
+                </div>
+            @endforeach
+
+        @elseif($dpr->photos->isNotEmpty())
+
+            {{-- Historical DPR compatibility --}}
             <table class="photo-table">
                 @foreach($dpr->photos->chunk(4) as $row)
                     <tr>
@@ -1135,8 +1080,7 @@ $halfDayCount = $attendanceDetails
 
                             <td>
                                 @if($path)
-                                    <img src="{{ $path }}"
-                                         class="photo">
+                                    <img src="{{ $path }}" class="photo">
                                 @endif
                             </td>
                         @endforeach
@@ -1149,7 +1093,7 @@ $halfDayCount = $attendanceDetails
             </table>
 
         @else
-            <p class="muted">No DPR-level photos uploaded.</p>
+            <p class="muted">No Site Photos linked.</p>
         @endif
     </div>
 </div>
@@ -1265,7 +1209,7 @@ $halfDayCount = $attendanceDetails
 </div>
 
 <div class="footer-note">
-    Generated from Ravion ERP · DPR #{{ $dpr->id }}
+    RAVION ERP  |  Daily Progress Report  |  DPR #{{ $dpr->id }}
 </div>
 
 </body>

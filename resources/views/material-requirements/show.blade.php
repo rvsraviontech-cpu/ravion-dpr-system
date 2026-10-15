@@ -174,92 +174,69 @@
         @endif
     </div>
 
+    {{-- Compact material list: quantities are kept per item/unit; never aggregate mixed units. --}}
     <div class="mb-5 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-5 py-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
             <div>
-                <h2 class="text-lg font-bold text-gray-800">Requirement Items</h2>
-                <p class="mt-1 text-xs text-gray-500">
-                    {{ $materialRequirement->items->count() }} item(s) in this requirement.
-                </p>
+                <h2 class="text-lg font-bold text-[#10212F]">Materials Required</h2>
+                <p class="mt-1 text-xs text-gray-500">Item-wise requirement with specifications and quantities.</p>
             </div>
-
-            <div class="flex flex-wrap gap-2 text-xs">
-                <span class="rounded-full bg-blue-50 px-3 py-1 font-semibold text-blue-700">
-                    Required {{ formatQuantity($materialRequirement->total_required_quantity) }}
-                </span>
-
-                <span class="rounded-full bg-green-50 px-3 py-1 font-semibold text-green-700">
-                    Fulfilled {{ formatQuantity($materialRequirement->total_fulfilled_quantity) }}
-                </span>
-
-                <span class="rounded-full bg-orange-50 px-3 py-1 font-semibold text-orange-700">
-                    Pending {{ formatQuantity($materialRequirement->total_pending_quantity) }}
-                </span>
-            </div>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                {{ $materialRequirement->items->count() }} {{ $materialRequirement->items->count() === 1 ? 'Item' : 'Items' }}
+            </span>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-[1050px] w-full text-sm">
-                <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-600">
-                    <tr>
-                        <th class="w-12 px-3 py-3 text-center">#</th>
-                        <th class="min-w-[200px] px-3 py-3 text-left">Product</th>
-                        <th class="min-w-[210px] px-3 py-3 text-left">Specification / Size</th>
-                        <th class="min-w-[100px] px-3 py-3 text-left">Grade</th>
-                        <th class="min-w-[120px] px-3 py-3 text-left">Brand</th>
-                        <th class="w-20 px-3 py-3 text-right">Qty</th>
-                        <th class="w-20 px-3 py-3 text-left">Unit</th>
-                        <th class="min-w-[130px] px-3 py-3 text-left">Remarks</th>
-                    </tr>
-                </thead>
-
-                <tbody class="divide-y divide-gray-200">
-                    @foreach($materialRequirement->items as $index => $item)
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-3 py-3 text-center">
-                                {{ $index + 1 }}
-                            </td>
-
-                            <td class="px-3 py-3 font-semibold text-gray-800">
-                                {{ $item->materialType?->material_type_name ?? '-' }}
-                            </td>
-
-                            <td class="px-3 py-3">
-                                @php
-                                    $masterSpec = trim((string) ($item->specification?->specification_name ?? ''));
-                                    $customSpec = trim((string) ($item->specification_text ?? ''));
-                                @endphp
-                                @if($masterSpec !== '')
-                                    <div class="font-semibold text-gray-800">{{ $masterSpec }}</div>
-                                @endif
-                                @if($customSpec !== '' && ($masterSpec === '' || strcasecmp($customSpec, $masterSpec) !== 0))
-                                    <div class="{{ $masterSpec !== '' ? 'mt-1 text-xs text-gray-500' : 'text-gray-800' }}">
-                                        @if($masterSpec !== '')Additional details: @endif{{ $customSpec }}
-                                    </div>
-                                @elseif($masterSpec === '')
-                                    <span class="text-gray-400">-</span>
-                                @endif
-                            </td>
-
-                            <td class="px-3 py-3">{{ $item->grade?->grade_name ?? '-' }}</td>
-
-                            <td class="px-3 py-3">
-                                {{ $item->brand?->brand_name ?? '-' }}
-                            </td>
-
-                            <td class="px-3 py-3 text-right font-semibold text-blue-700">
-                                {{ formatQuantity($item->required_quantity) }}
-                            </td>
-
-                            <td class="px-3 py-3">{{ $item->unit?->unit_code ?: ($item->unit?->symbol ?: ($item->unit?->unit_name ?? '-')) }}</td>
-
-                            <td class="px-3 py-3">
-                                {{ $item->remarks ?? '-' }}
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+        <div class="divide-y divide-gray-100">
+            @forelse($materialRequirement->items as $index => $item)
+                @php
+                    $productName = $item->materialType?->material_type_name ?? '-';
+                    $bibleVariant = trim((string) ($item->variant?->variant_name ?? ''));
+                    $masterSpec = trim((string) ($item->specification?->specification_name ?? ''));
+                    $customSpec = trim((string) ($item->specification_text ?? ''));
+                    $specParts = [];
+                    foreach ([$bibleVariant, $masterSpec, $customSpec] as $part) {
+                        if ($part !== '' && ! collect($specParts)->contains(fn ($existing) => strcasecmp($existing, $part) === 0)) {
+                            $specParts[] = $part;
+                        }
+                    }
+                    $gradeName = trim((string) ($item->grade?->grade_name ?? ''));
+                    $brandName = trim((string) ($item->brand?->brand_name ?? ''));
+                    $itemRemarks = trim((string) ($item->remarks ?? ''));
+                    $unitName = $item->unit?->unit_code ?: ($item->unit?->symbol ?: ($item->unit?->unit_name ?? ''));
+                    $fulfilled = (float) ($item->fulfilled_quantity ?? 0);
+                @endphp
+                <div class="flex flex-wrap items-start gap-3 px-4 py-3.5 hover:bg-slate-50 sm:flex-nowrap sm:items-center sm:px-5">
+                    <span class="mt-0.5 w-6 shrink-0 text-sm font-semibold text-gray-400">{{ $index + 1 }}.</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+                            <span class="font-bold text-[#10212F]">{{ $productName }}</span>
+                            @if(count($specParts))
+                                <span class="text-gray-600">{{ implode(' · ', $specParts) }}</span>
+                            @endif
+                        </div>
+                        @if($gradeName !== '' || $brandName !== '' || $itemRemarks !== '')
+                            <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                                @if($gradeName !== '') <span>Grade: {{ $gradeName }}</span> @endif
+                                @if($brandName !== '') <span>Brand: {{ $brandName }}</span> @endif
+                                @if($itemRemarks !== '') <span>Remarks: {{ $itemRemarks }}</span> @endif
+                            </div>
+                        @endif
+                        @if($fulfilled > 0)
+                            <div class="mt-1 text-xs text-gray-500">
+                                Fulfilled: {{ formatQuantity($fulfilled) }} {{ $unitName }}
+                                <span class="mx-1 text-gray-300">|</span>
+                                Pending: {{ formatQuantity(max(0, (float) $item->required_quantity - $fulfilled)) }} {{ $unitName }}
+                            </div>
+                        @endif
+                    </div>
+                    <div class="ml-9 shrink-0 text-left sm:ml-2 sm:min-w-[125px] sm:text-right">
+                        <span class="text-base font-bold text-[#10212F]">{{ formatQuantity($item->required_quantity) }}</span>
+                        <span class="ml-1 text-sm font-semibold text-gray-600">{{ $unitName }}</span>
+                    </div>
+                </div>
+            @empty
+                <div class="px-5 py-8 text-center text-sm text-gray-500">No materials recorded.</div>
+            @endforelse
         </div>
     </div>
 

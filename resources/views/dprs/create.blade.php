@@ -149,7 +149,7 @@
         </div>
 
         <div id="executionSummary"
-             class="mt-6 hidden grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+             class="mt-6 hidden grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-9">
         </div>
 
         <div id="executionSections"
@@ -421,6 +421,98 @@
                 </div>
             </div>
 
+            {{-- Machinery / Equipment Used --}}
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="machinery_daily_usages"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Machinery &amp; Equipment Used</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Machinery usage already recorded for the selected Project and Date.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section-body hidden">
+                    <div class="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button type="button"
+                                    class="section-toggle text-xs font-semibold text-blue-700">
+                                Unselect All
+                            </button>
+
+                            <a href="{{ route('machinery-daily-usages.create') }}"
+                               class="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700">
+                                + Add Machinery Usage
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="machinery_daily_usages"></div>
+                </div>
+            </div>
+
+            {{-- Site Photos --}}
+            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                 data-section="site_photo_entries"
+                 data-open="0">
+
+                <div class="bg-[#0F2A52] px-4 py-3 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <button type="button"
+                                class="section-collapse flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+                                aria-expanded="false">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <h2 class="truncate text-base font-bold sm:text-lg">Site Photos</h2>
+                                    <span class="section-count rounded-full bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white">0</span>
+                                </div>
+                                <p class="mt-1 line-clamp-1 text-xs text-blue-100">Site photos already recorded for the selected Project and Date.</p>
+                            </div>
+
+                            <span class="section-chevron shrink-0 text-lg transition-transform">⌄</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="section-body hidden">
+                    <div class="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="text-xs font-semibold text-gray-600">
+                            <span class="section-selected-count">0</span> selected
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button type="button"
+                                    class="section-toggle text-xs font-semibold text-blue-700">
+                                Unselect All
+                            </button>
+
+                            <a href="{{ route('site-photos.create') }}"
+                               class="rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700">
+                                + Add Site Photos
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 p-3 sm:p-5" data-list="site_photo_entries"></div>
+                </div>
+            </div>
+
         </div>
 
         <div id="emptyExecution"
@@ -434,248 +526,6 @@
             </p>
         </div>
 
-
-        {{-- Machinery / Equipment --}}
-        <div class="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm" x-data="{ machineryOpen: false }">
-
-            <div class="bg-[#0F2A52] px-4 py-3 text-white">
-                <button type="button"
-                        @click="machineryOpen = !machineryOpen"
-                        class="flex w-full items-center justify-between gap-3 text-left">
-                    <div>
-                        <h2 class="text-base font-bold sm:text-lg">Machinery / Equipment Used</h2>
-                        <p class="mt-1 text-xs text-blue-100">
-                            Optional for now. The standalone machinery module will be expanded separately.
-                        </p>
-                    </div>
-                    <span class="text-lg transition-transform"
-                          :class="machineryOpen ? 'rotate-180' : ''">⌄</span>
-                </button>
-            </div>
-
-            <div x-show="machineryOpen" x-cloak>
-                <div class="flex flex-col gap-3 border-b border-gray-200 bg-gray-50 p-4 md:flex-row md:items-center md:justify-between">
-                    <div class="text-sm text-gray-600">
-                        Add machinery only when it was actually used during the day.
-                    </div>
-
-                    <button type="button"
-                            id="addMachineryButton"
-                            class="w-full rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700 md:w-auto md:py-2">
-                        + Add Machinery / Equipment
-                    </button>
-                </div>
-
-            <div id="machineryRows" class="divide-y divide-gray-200">
-
-                <div class="machinery-row p-4 sm:p-5">
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-
-                        <div class="xl:col-span-2">
-                            <label class="{{ $labelClass }}">Machinery / Equipment</label>
-
-                            <select name="machinery[0][machinery_tool_id]"
-                                    class="{{ $inputClass }} machinery-select">
-                                <option value="">Select Machinery / Equipment</option>
-
-                                @foreach($machineries as $machine)
-                                    <option value="{{ $machine->id }}">
-                                        {{ $machine->machine_name }}
-                                        @if($machine->ownership_type)
-                                            — {{ $machine->ownership_type }}
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="{{ $labelClass }}">Quantity</label>
-                            <input type="number"
-                                   name="machinery[0][quantity]"
-                                   value="1"
-                                   min="1"
-                                   class="{{ $inputClass }}">
-                        </div>
-
-                        <div>
-                            <label class="{{ $labelClass }}">Usage Hours</label>
-                            <input type="number"
-                                   name="machinery[0][usage_hours]"
-                                   step="0.01"
-                                   min="0"
-                                   max="24"
-                                   class="{{ $inputClass }}">
-                        </div>
-
-                        <div>
-                            <label class="{{ $labelClass }}">Condition</label>
-                            <select name="machinery[0][working_condition]"
-                                    class="{{ $inputClass }}">
-                                <option value="Working">Working</option>
-                                <option value="Breakdown">Breakdown</option>
-                                <option value="Idle">Idle</option>
-                            </select>
-                        </div>
-
-                        <div class="flex items-end">
-                            <button type="button"
-                                    class="remove-machinery hidden w-full rounded-lg bg-red-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-red-700">
-                                Remove
-                            </button>
-                        </div>
-
-                        <div class="md:col-span-2 xl:col-span-6">
-                            <label class="{{ $labelClass }}">Remarks</label>
-                            <input type="text"
-                                   name="machinery[0][remarks]"
-                                   maxlength="1000"
-                                   class="{{ $inputClass }}"
-                                   placeholder="Optional">
-                        </div>
-
-                    </div>
-                </div>
-
-            </div>
-
-            <template id="machineryRowTemplate">
-                <div class="machinery-row p-4 sm:p-5">
-                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-6">
-
-                        <div class="xl:col-span-2">
-                            <label class="{{ $labelClass }}">Machinery / Equipment</label>
-
-                            <select name="machinery[__INDEX__][machinery_tool_id]"
-                                    class="{{ $inputClass }} machinery-select">
-                                <option value="">Select Machinery / Equipment</option>
-
-                                @foreach($machineries as $machine)
-                                    <option value="{{ $machine->id }}">
-                                        {{ $machine->machine_name }}
-                                        @if($machine->ownership_type)
-                                            — {{ $machine->ownership_type }}
-                                        @endif
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="{{ $labelClass }}">Quantity</label>
-                            <input type="number"
-                                   name="machinery[__INDEX__][quantity]"
-                                   value="1"
-                                   min="1"
-                                   class="{{ $inputClass }}">
-                        </div>
-
-                        <div>
-                            <label class="{{ $labelClass }}">Usage Hours</label>
-                            <input type="number"
-                                   name="machinery[__INDEX__][usage_hours]"
-                                   step="0.01"
-                                   min="0"
-                                   max="24"
-                                   class="{{ $inputClass }}">
-                        </div>
-
-                        <div>
-                            <label class="{{ $labelClass }}">Condition</label>
-                            <select name="machinery[__INDEX__][working_condition]"
-                                    class="{{ $inputClass }}">
-                                <option value="Working">Working</option>
-                                <option value="Breakdown">Breakdown</option>
-                                <option value="Idle">Idle</option>
-                            </select>
-                        </div>
-
-                        <div class="flex items-end">
-                            <button type="button"
-                                    class="remove-machinery w-full rounded-lg bg-red-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-red-700">
-                                Remove
-                            </button>
-                        </div>
-
-                        <div class="md:col-span-2 xl:col-span-6">
-                            <label class="{{ $labelClass }}">Remarks</label>
-                            <input type="text"
-                                   name="machinery[__INDEX__][remarks]"
-                                   maxlength="1000"
-                                   class="{{ $inputClass }}"
-                                   placeholder="Optional">
-                        </div>
-
-                    </div>
-                </div>
-            </template>
-            </div>
-
-        </div>
-
-        {{-- DPR Photo Upload --}}
-        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6">
-
-            <div class="mb-5 rounded-xl bg-[#0F2A52] px-4 py-3 text-white">
-                <h2 class="text-lg font-bold sm:text-xl">DPR Photo Upload</h2>
-                <p class="mt-1 text-xs text-blue-100">
-                    Take site photos one by one or select multiple photos from the gallery.
-                </p>
-            </div>
-
-            {{-- Final accumulated file input submitted to Laravel --}}
-            <input type="file"
-                   name="photos[]"
-                   id="dprPhotos"
-                   multiple
-                   accept="image/jpeg,image/png,image/webp,image/*"
-                   class="hidden">
-
-            {{-- Camera picker: one capture can be added at a time --}}
-            <input type="file"
-                   id="dprCameraInput"
-                   accept="image/*"
-                   capture="environment"
-                   class="hidden">
-
-            {{-- Gallery picker --}}
-            <input type="file"
-                   id="dprGalleryInput"
-                   multiple
-                   accept="image/jpeg,image/png,image/webp,image/*"
-                   class="hidden">
-
-            <div class="grid grid-cols-2 gap-3">
-                <button type="button"
-                        id="takeDprPhotoButton"
-                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0F2A52] px-4 py-3 text-sm font-semibold text-white">
-                    <span aria-hidden="true">📷</span>
-                    Take Photo
-                </button>
-
-                <button type="button"
-                        id="chooseDprPhotosButton"
-                        class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700">
-                    <span aria-hidden="true">🖼️</span>
-                    Gallery
-                </button>
-            </div>
-
-            <div class="mt-3 flex items-center justify-between gap-3">
-                <p class="text-xs text-gray-500">
-                    JPG, PNG or WEBP. Maximum 10 MB per image.
-                </p>
-
-                <span id="dprPhotoCount"
-                      class="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                    0 photos
-                </span>
-            </div>
-
-            <div id="dprPhotoPreview"
-                 class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-            </div>
-        </div>
 
         <div id="submitBar"
              class="sticky bottom-[68px] z-30 mt-6 hidden border-t border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur lg:bottom-0">
@@ -744,6 +594,14 @@ document.addEventListener('DOMContentLoaded', function () {
         tomorrow_plans: {
             label: 'Plans',
             input: 'tomorrow_plan_ids[]',
+        },
+        machinery_daily_usages: {
+            label: 'Machinery',
+            input: 'machinery_daily_usage_ids[]',
+        },
+        site_photo_entries: {
+            label: 'Site Photos',
+            input: 'site_photo_entry_ids[]',
         },
     };
 
@@ -926,6 +784,107 @@ document.addEventListener('DOMContentLoaded', function () {
                 );
             }
 
+            if (key === 'machinery_daily_usages') {
+                const machineryMeta = [
+                    record.location && record.location !== '-' ? record.location : null,
+                    record.activity,
+                    record.status,
+                ].filter(Boolean).join(' • ');
+
+                html = card(
+                    config[key].input,
+                    record.id,
+                    record.equipment,
+                    machineryMeta,
+                    `
+                        <div class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3 xl:grid-cols-6">
+                            <div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Qty</div>
+                                <div class="font-semibold text-gray-800">${escapeHtml(record.quantity)} ${escapeHtml(record.unit)}</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Site Hrs</div>
+                                <div class="font-semibold text-gray-800">${escapeHtml(record.site_hours ?? '-')}</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Operating Hrs</div>
+                                <div class="font-semibold text-gray-800">${escapeHtml(record.operating_hours ?? '-')}</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Idle Hrs</div>
+                                <div class="font-semibold text-gray-800">${escapeHtml(record.idle_hours ?? '-')}</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Breakdown Hrs</div>
+                                <div class="font-semibold text-gray-800">${escapeHtml(record.breakdown_hours ?? '-')}</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Condition</div>
+                                <div class="font-semibold text-gray-800">${escapeHtml(record.working_condition ?? '-')}</div>
+                            </div>
+                        </div>
+
+                        ${(record.operator || record.remarks) ? `
+                            <div class="mt-3 text-xs text-gray-600">
+                                ${record.operator ? `<span class="font-semibold">Operator:</span> ${escapeHtml(record.operator)}` : ''}
+                                ${record.operator && record.remarks ? ' • ' : ''}
+                                ${record.remarks ? `<span class="font-semibold">Remarks:</span> ${escapeHtml(record.remarks)}` : ''}
+                            </div>
+                        ` : ''}
+                    `
+                );
+            }
+
+            if (key === 'site_photo_entries') {
+                const photoMeta = [
+                    record.category,
+                    record.activity,
+                    record.location && record.location !== '-' ? record.location : null,
+                    record.status,
+                ].filter(Boolean).join(' • ');
+
+                const photos = Array.isArray(record.photos) ? record.photos : [];
+
+                const photoGrid = photos.length > 0
+                    ? `
+                        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                            ${photos.map(photo => `
+                                <div class="overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                                    <img src="${escapeHtml(photo.url)}"
+                                         alt="${escapeHtml(photo.caption || photo.photo_type || 'Site photo')}"
+                                         loading="lazy"
+                                         class="h-28 w-full object-cover">
+                                    <div class="p-2">
+                                        <div class="text-[11px] font-semibold text-gray-700">
+                                            ${escapeHtml(photo.photo_type || 'Photo')}
+                                        </div>
+                                        ${photo.caption ? `
+                                            <div class="mt-1 line-clamp-2 text-[11px] text-gray-500">
+                                                ${escapeHtml(photo.caption)}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `
+                    : '<div class="text-sm text-gray-500">No photo files found.</div>';
+
+                html = card(
+                    config[key].input,
+                    record.id,
+                    record.title,
+                    photoMeta,
+                    `
+                        <div class="mb-3 text-sm text-gray-700">
+                            <span class="font-semibold">${escapeHtml(record.photo_count || 0)}</span> photo(s)
+                            ${record.remarks ? ` • ${escapeHtml(record.remarks)}` : ''}
+                        </div>
+                        ${photoGrid}
+                    `
+                );
+            }
+
             list.insertAdjacentHTML('beforeend', html);
         });
     }
@@ -933,19 +892,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function updateSelectedCount() {
         const count = document.querySelectorAll('.execution-checkbox:checked').length;
 
-        const machineryCount = Array.from(
-            document.querySelectorAll('.machinery-select')
-        ).filter(select => select.value).length;
-
-        const photoCount =
-            document.getElementById('dprPhotos')?.files?.length || 0;
-
-        selectedCount.textContent = String(
-            count + machineryCount + photoCount
-        );
+        selectedCount.textContent = String(count);
 
         submitButton.disabled =
-            (count + machineryCount + photoCount) === 0
+            count === 0
             || !existingNotice.classList.contains('hidden');
 
         document.querySelectorAll('[data-section]').forEach(section => {
@@ -1168,284 +1118,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Machinery / Equipment
-    |--------------------------------------------------------------------------
-    */
-
-    const machineryRows = document.getElementById('machineryRows');
-    const machineryTemplate = document.getElementById('machineryRowTemplate');
-    const addMachineryButton = document.getElementById('addMachineryButton');
-
-    function renumberMachinery() {
-        document.querySelectorAll('.machinery-row')
-            .forEach((row, index) => {
-                row.querySelectorAll('[name]')
-                    .forEach(field => {
-                        field.name = field.name.replace(
-                            /machinery\[\d+\]/g,
-                            `machinery[${index}]`
-                        );
-                    });
-            });
-
-        const rows = document.querySelectorAll('.machinery-row');
-
-        rows.forEach(row => {
-            const button = row.querySelector('.remove-machinery');
-
-            if (button) {
-                button.classList.toggle(
-                    'hidden',
-                    rows.length <= 1
-                );
-            }
-        });
-
-        updateSelectedCount();
-    }
-
-    function bindMachineryRow(row) {
-        if (!row || row.dataset.bound === '1') return;
-
-        row.dataset.bound = '1';
-
-        row.querySelector('.machinery-select')
-            ?.addEventListener(
-                'change',
-                updateSelectedCount
-            );
-
-        row.querySelector('.remove-machinery')
-            ?.addEventListener('click', function () {
-                const rows =
-                    document.querySelectorAll('.machinery-row');
-
-                if (rows.length <= 1) {
-                    row.querySelectorAll('input, select')
-                        .forEach(field => {
-                            if (field.tagName === 'SELECT') {
-                                field.selectedIndex = 0;
-                            } else if (
-                                field.type === 'number'
-                                && field.name.includes('[quantity]')
-                            ) {
-                                field.value = '1';
-                            } else {
-                                field.value = '';
-                            }
-                        });
-
-                    updateSelectedCount();
-                    return;
-                }
-
-                row.remove();
-                renumberMachinery();
-            });
-    }
-
-    document.querySelectorAll('.machinery-row')
-        .forEach(bindMachineryRow);
-
-    addMachineryButton?.addEventListener('click', function () {
-        const index =
-            document.querySelectorAll('.machinery-row').length;
-
-        machineryRows.insertAdjacentHTML(
-            'beforeend',
-            machineryTemplate.innerHTML.replaceAll(
-                '__INDEX__',
-                String(index)
-            )
-        );
-
-        const rows =
-            document.querySelectorAll('.machinery-row');
-
-        bindMachineryRow(
-            rows[rows.length - 1]
-        );
-
-        renumberMachinery();
-    });
-
-    renumberMachinery();
-
-    /*
-    |--------------------------------------------------------------------------
-    | DPR Photos - Accumulated Camera + Gallery Selection
-    |--------------------------------------------------------------------------
-    |
-    | Mobile camera capture commonly returns only one file per invocation.
-    | We therefore keep our own selectedFiles array and rebuild the final
-    | photos[] FileList using DataTransfer before form submission.
-    |
-    */
-
-    const dprPhotos = document.getElementById('dprPhotos');
-    const dprCameraInput = document.getElementById('dprCameraInput');
-    const dprGalleryInput = document.getElementById('dprGalleryInput');
-    const takeDprPhotoButton = document.getElementById('takeDprPhotoButton');
-    const chooseDprPhotosButton = document.getElementById('chooseDprPhotosButton');
-    const dprPhotoPreview = document.getElementById('dprPhotoPreview');
-    const dprPhotoCount = document.getElementById('dprPhotoCount');
-
-    let selectedDprPhotos = [];
-
-    function photoKey(file) {
-        return `${file.name}-${file.size}-${file.lastModified}`;
-    }
-
-    function syncDprPhotoInput() {
-        const transfer = new DataTransfer();
-
-        selectedDprPhotos.forEach(file => {
-            transfer.items.add(file);
-        });
-
-        dprPhotos.files = transfer.files;
-
-        const count = selectedDprPhotos.length;
-
-        dprPhotoCount.textContent =
-            `${count} ${count === 1 ? 'photo' : 'photos'}`;
-
-        updateSelectedCount();
-    }
-
-    function renderDprPhotoPreview() {
-        dprPhotoPreview.innerHTML = '';
-
-        selectedDprPhotos.forEach((file, index) => {
-            const url = URL.createObjectURL(file);
-
-            const card = document.createElement('div');
-            card.className =
-                'overflow-hidden rounded-xl border border-gray-200 bg-white';
-
-            const image = document.createElement('img');
-            image.src = url;
-            image.alt = file.name;
-            image.className = 'h-28 w-full object-cover';
-
-            image.onload = function () {
-                URL.revokeObjectURL(url);
-            };
-
-            const meta = document.createElement('div');
-            meta.className = 'p-2';
-
-            const fileName = document.createElement('div');
-            fileName.className =
-                'truncate text-[11px] text-gray-500';
-            fileName.textContent = file.name;
-
-            const footer = document.createElement('div');
-            footer.className =
-                'mt-2 flex items-center justify-between gap-2';
-
-            const size = document.createElement('span');
-            size.className = 'text-[11px] text-gray-400';
-            size.textContent =
-                `${(file.size / 1024 / 1024).toFixed(2)} MB`;
-
-            const remove = document.createElement('button');
-            remove.type = 'button';
-            remove.className =
-                'rounded-lg bg-red-50 px-2 py-1 text-xs font-semibold text-red-700';
-            remove.textContent = 'Remove';
-
-            remove.addEventListener('click', function () {
-                selectedDprPhotos.splice(index, 1);
-                renderDprPhotoPreview();
-                syncDprPhotoInput();
-            });
-
-            footer.append(size, remove);
-            meta.append(fileName, footer);
-            card.append(image, meta);
-            dprPhotoPreview.appendChild(card);
-        });
-    }
-
-    function addDprPhotos(fileList) {
-        const incoming = Array.from(fileList || []);
-
-        if (incoming.length === 0) {
-            return;
-        }
-
-        const oversized = incoming.find(
-            file => file.size > 10 * 1024 * 1024
-        );
-
-        if (oversized) {
-            alert(`"${oversized.name}" is larger than 10 MB.`);
-            return;
-        }
-
-        const allowedTypes = [
-            'image/jpeg',
-            'image/png',
-            'image/webp',
-        ];
-
-        const invalid = incoming.find(file => {
-            return file.type && !allowedTypes.includes(file.type);
-        });
-
-        if (invalid) {
-            alert(`"${invalid.name}" is not a supported image format.`);
-            return;
-        }
-
-        const existingKeys = new Set(
-            selectedDprPhotos.map(photoKey)
-        );
-
-        incoming.forEach(file => {
-            const key = photoKey(file);
-
-            if (!existingKeys.has(key)) {
-                selectedDprPhotos.push(file);
-                existingKeys.add(key);
-            }
-        });
-
-        renderDprPhotoPreview();
-        syncDprPhotoInput();
-
-        if (selectedDprPhotos.length > 0) {
-            submitBar.classList.remove('hidden');
-        }
-    }
-
-    takeDprPhotoButton?.addEventListener('click', function () {
-        dprCameraInput.click();
-    });
-
-    chooseDprPhotosButton?.addEventListener('click', function () {
-        dprGalleryInput.click();
-    });
-
-    dprCameraInput?.addEventListener('change', function () {
-        addDprPhotos(this.files);
-
-        // Reset so another camera capture can be added immediately.
-        this.value = '';
-    });
-
-    dprGalleryInput?.addEventListener('change', function () {
-        addDprPhotos(this.files);
-
-        // Reset so the same gallery can be opened again.
-        this.value = '';
-    });
-
-    syncDprPhotoInput();
 
     if (project.value && dprDate.value) {
         loadExecution();

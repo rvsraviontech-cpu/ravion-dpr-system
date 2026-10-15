@@ -13,6 +13,7 @@
             'purchase_order_item_id' => $item->purchase_order_item_id,
             'purchase_order_item_allocation_id' => $item->purchase_order_item_allocation_id,
             'material_type_id' => $item->material_type_id,
+            'material_variant_id' => $item->material_variant_id,
             'brand_master_id' => $item->brand_master_id,
             'material_specification_id' => $item->material_specification_id,
             'material_grade_id' => $item->material_grade_id,

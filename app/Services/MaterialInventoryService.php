@@ -14,7 +14,7 @@ class MaterialInventoryService
         $stock = [];
 
         $received = MaterialReceived::query()
-            ->with(['items.materialType', 'items.brand', 'items.specification', 'items.grade', 'items.unit'])
+            ->with(['items.materialType', 'items.materialVariant', 'items.brand', 'items.specification', 'items.grade', 'items.unit'])
             ->where('project_id', $projectId)
             ->whereIn('status', ['Approved', 'approved'])
             ->get();
@@ -31,7 +31,8 @@ class MaterialInventoryService
                     $item->brand_master_id ? (int) $item->brand_master_id : null,
                     $item->material_specification_id ? (int) $item->material_specification_id : null,
                     $item->material_grade_id ? (int) $item->material_grade_id : null,
-                    (int) $item->unit_master_id
+                    (int) $item->unit_master_id,
+                    $item->material_variant_id ? (int) $item->material_variant_id : null
                 );
 
                 $this->ensureRow($stock, $key, (int) $header->project_id, $item);
@@ -40,7 +41,7 @@ class MaterialInventoryService
         }
 
         $consumptions = MaterialConsumed::query()
-            ->with(['items.materialType', 'items.brand', 'items.specification', 'items.grade', 'items.unit'])
+            ->with(['items.materialType', 'items.materialVariant', 'items.brand', 'items.specification', 'items.grade', 'items.unit'])
             ->where('project_id', $projectId)
             ->whereIn('status', ['Approved', 'approved', 'Submitted', 'submitted'])
             ->get();
@@ -60,7 +61,8 @@ class MaterialInventoryService
                     $item->brand_master_id ? (int) $item->brand_master_id : null,
                     $item->material_specification_id ? (int) $item->material_specification_id : null,
                     $item->material_grade_id ? (int) $item->material_grade_id : null,
-                    (int) $item->unit_master_id
+                    (int) $item->unit_master_id,
+                    $item->material_variant_id ? (int) $item->material_variant_id : null
                 );
 
                 $this->ensureRow($stock, $key, (int) $header->project_id, $item);
@@ -105,6 +107,7 @@ class MaterialInventoryService
             ['brand_name', 'asc'],
             ['specification_name', 'asc'],
             ['grade_name', 'asc'],
+            ['variant_name', 'asc'],
             ['unit_name', 'asc'],
         ])->values();
     }
@@ -120,7 +123,8 @@ class MaterialInventoryService
         ?int $brandId,
         ?int $specificationId,
         ?int $gradeId,
-        int $unitId
+        int $unitId,
+        ?int $materialVariantId = null
     ): float {
         $key = $this->variantKey(
             $projectId,
@@ -147,7 +151,8 @@ class MaterialInventoryService
                 ! empty($item['brand_master_id']) ? (int) $item['brand_master_id'] : null,
                 ! empty($item['material_specification_id']) ? (int) $item['material_specification_id'] : null,
                 ! empty($item['material_grade_id']) ? (int) $item['material_grade_id'] : null,
-                (int) $item['unit_master_id']
+                (int) $item['unit_master_id'],
+                ! empty($item['material_variant_id']) ? (int) $item['material_variant_id'] : null
             );
 
             $requested[$key] ??= ['quantity' => 0.0, 'first_row_index' => $index];
@@ -186,7 +191,8 @@ class MaterialInventoryService
         ?int $brandId,
         ?int $specificationId,
         ?int $gradeId,
-        int $unitId
+        int $unitId,
+        ?int $materialVariantId = null
     ): string {
         return implode(':', [
             'new',
@@ -196,6 +202,7 @@ class MaterialInventoryService
             $specificationId ?? 0,
             $gradeId ?? 0,
             $unitId,
+            $materialVariantId === null ? 'legacy' : 'v' . $materialVariantId,
         ]);
     }
 
@@ -209,6 +216,8 @@ class MaterialInventoryService
             'stock_key' => $key,
             'project_id' => $projectId,
             'material_type_id' => (int) $item->material_type_id,
+            'material_variant_id' => $item->material_variant_id ? (int) $item->material_variant_id : null,
+            'variant_name' => $item->materialVariant?->display_name,
             'material_type_name' => $item->materialType?->material_type_name,
             'material_group' => $item->materialType?->material_group,
             'brand_master_id' => $item->brand_master_id ? (int) $item->brand_master_id : null,
@@ -244,6 +253,7 @@ class MaterialInventoryService
     {
         return collect([
             $row['material_type_name'] ?? null,
+            $row['variant_name'] ?? null,
             $row['brand_name'] ?? null,
             $row['specification_name'] ?? null,
             $row['grade_name'] ?? null,

@@ -7,6 +7,7 @@ use App\Models\MaterialRequirement;
 use App\Models\MaterialSpecification;
 use App\Models\MaterialGrade;
 use App\Models\MaterialType;
+use App\Models\MaterialVariant;
 use App\Models\Project;
 use App\Models\ProjectBlock;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -109,6 +110,7 @@ class MaterialRequirementController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $validated = $this->validateRequirement($request);
+        $this->validateProjectSelection($validated);
         $this->validateItemRelationships($validated['items']);
 
         try {
@@ -135,6 +137,7 @@ class MaterialRequirementController extends Controller
                         'activity_division_id' => null,
                         'activity_id' => null,
                         'material_type_id' => (int) $item['material_type_id'],
+                        'material_variant_id' => $item['material_variant_id'] ?? null,
                         'brand_master_id' => $item['brand_master_id'] ?? null,
                         'material_specification_id' => $item['material_specification_id'] ?? null,
                         'specification_text' => $this->nullableTrim($item['specification_text'] ?? null),
@@ -238,6 +241,7 @@ class MaterialRequirementController extends Controller
         }
 
         $validated = $this->validateRequirement($request);
+        $this->validateProjectSelection($validated);
         $this->validateItemRelationships($validated['items'], $materialRequirement);
 
         try {
@@ -255,30 +259,50 @@ class MaterialRequirementController extends Controller
                     'remarks' => $this->nullableTrim($validated['remarks'] ?? null),
                 ]);
 
-                $materialRequirement->items()->delete();
-
+                // Preserve existing item IDs and fulfilment links during Draft edits.
+                $retainedIds = [];
                 foreach (array_values($validated['items']) as $index => $item) {
                     $existingItem = ! empty($item['id'])
                         ? $existingItems->get((int) $item['id'])
                         : null;
 
-                    $materialRequirement->items()->create([
-                        'activity_division_id' => $existingItem?->activity_division_id,
-                        'activity_id' => $existingItem?->activity_id,
+                    $attributes = [
                         'material_type_id' => (int) $item['material_type_id'],
+                        'material_variant_id' => array_key_exists('material_variant_id', $item)
+                            ? $item['material_variant_id']
+                            : $existingItem?->material_variant_id,
                         'brand_master_id' => $item['brand_master_id'] ?? null,
                         'material_specification_id' => $item['material_specification_id'] ?? null,
                         'specification_text' => $this->nullableTrim($item['specification_text'] ?? null),
                         'material_grade_id' => $item['material_grade_id'] ?? null,
                         'required_quantity' => $item['required_quantity'],
-
-                        // Fulfilment is system-controlled.
-                        'fulfilled_quantity' => $existingItem?->fulfilled_quantity ?? 0,
-
                         'unit_master_id' => (int) $item['unit_master_id'],
                         'sort_order' => $index + 1,
                         'remarks' => $this->nullableTrim($item['remarks'] ?? null),
-                    ]);
+                    ];
+
+                    if ($existingItem) {
+                        $existingItem->update($attributes);
+                        $retainedIds[] = $existingItem->id;
+                    } else {
+                        $newItem = $materialRequirement->items()->create($attributes + [
+                            'activity_division_id' => null,
+                            'activity_id' => null,
+                            'fulfilled_quantity' => 0,
+                        ]);
+                        $retainedIds[] = $newItem->id;
+                    }
+                }
+
+                // An omitted fulfilled row must never be silently deleted.
+                $removedItems = $existingItems->except($retainedIds);
+                foreach ($removedItems as $removedItem) {
+                    if ((float) $removedItem->fulfilled_quantity > 0) {
+                        throw ValidationException::withMessages([
+                            'items' => 'A fulfilled requirement item cannot be removed.',
+                        ]);
+                    }
+                    $removedItem->delete();
                 }
 
                 $materialRequirement->load($this->requirementRelationships());
@@ -422,6 +446,7 @@ class MaterialRequirementController extends Controller
             'items' => ['required', 'array', 'min:1', 'max:100'],
             'items.*.id' => ['nullable', 'integer', 'exists:material_requirement_items,id'],
             'items.*.material_type_id' => ['required', 'integer', 'exists:material_types,id'],
+            'items.*.material_variant_id' => ['nullable', 'integer', 'exists:material_variants,id'],
             'items.*.brand_master_id' => ['nullable', 'integer', 'exists:brand_masters,id'],
             'items.*.material_specification_id' => ['nullable', 'integer', 'exists:material_specifications,id'],
             'items.*.material_grade_id' => ['nullable', 'integer', 'exists:material_grades,id'],
@@ -436,6 +461,28 @@ class MaterialRequirementController extends Controller
             'items.*.required_quantity.gt' => 'Required quantity must be greater than zero.',
             'items.*.unit_master_id.required' => 'Every Product row must have a unit.',
         ]);
+    }
+
+    private function validateProjectSelection(array $validated): void
+    {
+        $projectId = (int) $validated['project_id'];
+        if (! $this->availableProjects()->contains('id', $projectId)) {
+            throw ValidationException::withMessages([
+                'project_id' => 'Select an active project assigned to your account.',
+            ]);
+        }
+
+        if (! empty($validated['project_block_id'])) {
+            $belongs = ProjectBlock::query()
+                ->whereKey((int) $validated['project_block_id'])
+                ->where('project_id', $projectId)
+                ->exists();
+            if (! $belongs) {
+                throw ValidationException::withMessages([
+                    'project_block_id' => 'The selected block does not belong to this project.',
+                ]);
+            }
+        }
     }
 
     private function validateItemRelationships(
@@ -463,6 +510,33 @@ class MaterialRequirementController extends Controller
             ) {
                 $errors["items.{$index}.material_type_id"][] =
                     "Row {$rowNumber}: select an active Product available for operational use.";
+            }
+
+            $existingItem = ! empty($item['id'])
+                ? $existingItems->get((int) $item['id'])
+                : null;
+
+            // Older forms and historical records may not have a variant yet.
+            $variantId = $item['material_variant_id'] ?? $existingItem?->material_variant_id;
+            if ($variantId !== null && $variantId !== '') {
+                $variant = MaterialVariant::query()->find((int) $variantId);
+                $preservingVariant = $existingItem
+                    && (int) $existingItem->material_variant_id === (int) $variantId
+                    && (int) $existingItem->material_type_id === (int) $product->id;
+
+                if (! $variant || (int) $variant->material_type_id !== (int) $product->id
+                    || (! $variant->is_active && ! $preservingVariant)) {
+                    $errors["items.{$index}.material_variant_id"][] =
+                        "Row {$rowNumber}: select a valid active variant of the selected Product.";
+                }
+                // Requirement/order unit is independently chosen by the engineer.
+                // The Bible variant unit remains a default, not a restriction.
+                // No stock-unit conversion is implied by this choice.
+            }
+
+            if ($existingItem && (float) $existingItem->fulfilled_quantity > (float) $item['required_quantity']) {
+                $errors["items.{$index}.required_quantity"][] =
+                    "Row {$rowNumber}: required quantity cannot be below fulfilled quantity.";
             }
 
             if (! empty($item['material_specification_id'])) {
@@ -612,6 +686,7 @@ class MaterialRequirementController extends Controller
             'items.materialType.productGroup',
             'items.materialType.productType',
             'items.materialType.unit',
+            'items.variant.unit',
             'items.brand',
             'items.specification',
             'items.grade',
@@ -639,6 +714,8 @@ class MaterialRequirementController extends Controller
                 ->map(fn ($item) => [
                     'id' => $item->id,
                     'material_type_id' => $item->material_type_id,
+                    'material_variant_id' => $item->material_variant_id,
+                    'variant_name' => $item->variant?->variant_name,
                     'material_type_name' => $item->materialType?->material_type_name,
                     'brand_master_id' => $item->brand_master_id,
                     'brand_name' => $item->brand?->brand_name,

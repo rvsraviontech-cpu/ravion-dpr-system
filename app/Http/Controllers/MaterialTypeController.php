@@ -14,6 +14,7 @@ use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -24,31 +25,34 @@ class MaterialTypeController extends Controller
         $query = MaterialType::query()
             ->with(['productGroup', 'productType', 'unit', 'creator']);
 
-        if ($request->filled('activity_division_id')) {
-            $divisionId = $request->integer('activity_division_id');
-
-            $query->whereExists(function (QueryBuilder $subQuery) use ($divisionId) {
-                $subQuery
-                    ->selectRaw('1')
-                    ->from('material_product_usage_mappings as usage')
-                    ->whereColumn('usage.material_type_id', 'material_types.id')
-                    ->where('usage.activity_division_id', $divisionId)
-                    ->where('usage.is_active', 1);
+        // Bible classification filters are applied at SQL level before pagination.
+        $bibleFilters = [
+            'material_bible_trade_id' => 't.id',
+            'material_bible_main_category_id' => 'mc.id',
+            'material_bible_sub_category_id' => 'sc.id',
+        ];
+        $selectedBibleFilters = [];
+        foreach ($bibleFilters as $field => $column) {
+            if ($request->filled($field)) {
+                $selectedBibleFilters[$column] = $request->integer($field);
+            }
+        }
+        if ($selectedBibleFilters) {
+            $query->whereExists(function (QueryBuilder $sub) use ($selectedBibleFilters) {
+                $sub->selectRaw('1')
+                    ->from('material_bible_product_mappings as bpm')
+                    ->join('material_bible_sub_categories as sc', 'sc.id', '=', 'bpm.material_bible_sub_category_id')
+                    ->join('material_bible_main_categories as mc', 'mc.id', '=', 'sc.material_bible_main_category_id')
+                    ->join('material_bible_trades as t', 't.id', '=', 'mc.material_bible_trade_id')
+                    ->whereColumn('bpm.material_type_id', 'material_types.id')
+                    ->where('bpm.is_active', 1)
+                    ->where('sc.is_active', 1)
+                    ->where('mc.is_active', 1)
+                    ->where('t.is_active', 1);
+                foreach ($selectedBibleFilters as $column => $value) {
+                    $sub->where($column, $value);
+                }
             });
-        }
-
-        if ($request->filled('material_product_group_id')) {
-            $query->where(
-                'material_types.material_product_group_id',
-                $request->integer('material_product_group_id')
-            );
-        }
-
-        if ($request->filled('material_product_type_id')) {
-            $query->where(
-                'material_types.material_product_type_id',
-                $request->integer('material_product_type_id')
-            );
         }
 
         if ($request->filled('inventory_type')) {
@@ -71,7 +75,7 @@ class MaterialTypeController extends Controller
             '', 'canonical' => $query->where('material_types.is_legacy', 0),
             'catalogue' => $query->whereNotNull('material_types.catalogue_source_code'),
             'manual' => $query
-                ->whereNull('material_types.catalogue_source_code')
+                ->where('material_types.catalogue_source_code', 'RAVION_ERP_MANUAL')
                 ->where('material_types.is_legacy', 0),
             'legacy' => $query->where('material_types.is_legacy', 1),
             'all' => null,
@@ -88,8 +92,11 @@ class MaterialTypeController extends Controller
         $search = trim((string) $request->input('search', ''));
 
         if ($search !== '') {
-            $like = '%' . mb_strtolower($search) . '%';
-
+            // Each word may match a different field (e.g. product TMT Bar + variant 12mm).
+            // Retain the existing product, classification and alias search conditions.
+            $tokens = preg_split('/\s+/u', mb_strtolower($search), -1, PREG_SPLIT_NO_EMPTY);
+            foreach (array_unique($tokens ?: []) as $token) {
+                $like = '%' . $token . '%';
             $query->where(function ($searchQuery) use ($like) {
                 $searchQuery
                     ->whereRaw('LOWER(material_types.material_type_name) LIKE ?', [$like])
@@ -119,6 +126,20 @@ class MaterialTypeController extends Controller
                             });
                     })
                     ->orWhereExists(function (QueryBuilder $subQuery) use ($like) {
+                        $subQuery->selectRaw('1')
+                            ->from('material_bible_product_mappings as bpm')
+                            ->join('material_bible_sub_categories as sc', 'sc.id', '=', 'bpm.material_bible_sub_category_id')
+                            ->join('material_bible_main_categories as mc', 'mc.id', '=', 'sc.material_bible_main_category_id')
+                            ->join('material_bible_trades as t', 't.id', '=', 'mc.material_bible_trade_id')
+                            ->whereColumn('bpm.material_type_id', 'material_types.id')
+                            ->where('bpm.is_active', 1)
+                            ->where(function (QueryBuilder $names) use ($like) {
+                                $names->whereRaw('LOWER(t.name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(mc.name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(sc.name) LIKE ?', [$like]);
+                            });
+                    })
+                    ->orWhereExists(function (QueryBuilder $subQuery) use ($like) {
                         $subQuery
                             ->selectRaw('1')
                             ->from('material_search_aliases as aliases')
@@ -129,8 +150,23 @@ class MaterialTypeController extends Controller
                                     ->whereRaw('LOWER(aliases.alias) LIKE ?', [$like])
                                     ->orWhereRaw('LOWER(aliases.normalized_alias) LIKE ?', [$like]);
                             });
+                    })
+                    ->orWhereExists(function (QueryBuilder $subQuery) use ($like) {
+                        $subQuery->selectRaw('1')
+                            ->from('material_variants as variants')
+                            ->whereColumn('variants.material_type_id', 'material_types.id')
+                            ->where('variants.is_active', 1)
+                            ->where(function (QueryBuilder $variantSearch) use ($like) {
+                                $variantSearch
+                                    ->whereRaw('LOWER(variants.variant_name) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(COALESCE(variants.size_dimension, "")) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(COALESCE(variants.finish, "")) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(COALESCE(variants.colour_shade, "")) LIKE ?', [$like])
+                                    ->orWhereRaw('LOWER(COALESCE(variants.search_aliases, "")) LIKE ?', [$like]);
+                            });
                     });
             });
+            }
         }
 
         if ($request->filled('status')) {
@@ -146,10 +182,12 @@ class MaterialTypeController extends Controller
             ->where('material_types.is_active', 1)
             ->count();
 
-        $filteredGroups = (clone $query)
-            ->whereNotNull('material_types.material_product_group_id')
-            ->distinct()
-            ->count('material_types.material_product_group_id');
+        $filteredBibleProducts = (clone $query)
+            ->whereExists(function (QueryBuilder $sub) {
+                $sub->selectRaw('1')->from('material_bible_product_mappings as bpm')
+                    ->whereColumn('bpm.material_type_id', 'material_types.id')
+                    ->where('bpm.is_active', 1);
+            })->count();
 
         $totalCanonicalProducts = MaterialType::query()
             ->where('is_legacy', 0)
@@ -175,6 +213,25 @@ class MaterialTypeController extends Controller
             ->paginate(config('rds.pagination.per_page', 25))
             ->withQueryString();
 
+        // Batch-load Bible paths for this page only (avoids N+1 queries).
+        $pageIds = $materialTypes->getCollection()->pluck('id')->all();
+        $biblePaths = collect();
+        if ($pageIds) {
+            $biblePaths = DB::table('material_bible_product_mappings as bpm')
+                ->join('material_bible_sub_categories as sc', 'sc.id', '=', 'bpm.material_bible_sub_category_id')
+                ->join('material_bible_main_categories as mc', 'mc.id', '=', 'sc.material_bible_main_category_id')
+                ->join('material_bible_trades as t', 't.id', '=', 'mc.material_bible_trade_id')
+                ->whereIn('bpm.material_type_id', $pageIds)
+                ->where('bpm.is_active', 1)
+                ->where('sc.is_active', 1)
+                ->where('mc.is_active', 1)
+                ->where('t.is_active', 1)
+                ->select('bpm.material_type_id', 't.name as trade_name', 'mc.name as main_name', 'sc.name as sub_name', 'sc.id as sub_id')
+                ->distinct()
+                ->orderBy('t.name')->orderBy('mc.name')->orderBy('sc.name')
+                ->get()->groupBy('material_type_id');
+        }
+
         return view(
             'material-types.index',
             array_merge(
@@ -183,7 +240,8 @@ class MaterialTypeController extends Controller
                     'totalCanonicalProducts',
                     'filteredProducts',
                     'filteredActiveProducts',
-                    'filteredGroups'
+                    'filteredBibleProducts',
+                    'biblePaths'
                 ),
                 $this->formData()
             )
@@ -199,24 +257,25 @@ class MaterialTypeController extends Controller
     {
         $validated = $this->validateMaterialType($request);
 
-        $group = MaterialProductGroup::query()
-            ->where('is_active', true)
-            ->findOrFail($validated['material_product_group_id']);
-
-        MaterialProductType::query()
-            ->where('is_active', true)
-            ->whereKey($validated['material_product_type_id'])
-            ->where('material_product_group_id', $group->id)
-            ->firstOrFail();
-
-        $validated['material_group'] = $group->group_name;
+        // Bible taxonomy is authoritative for new products; legacy group/type stay null.
+        $validated['material_product_group_id'] = null;
+        $validated['material_product_type_id'] = null;
+        $validated['material_group'] = null;
         $validated['sequence'] = $validated['sequence'] ?? 0;
         $validated['is_active'] = true;
         $validated['is_legacy'] = false;
-        $validated['catalogue_source_code'] = null;
+        // Distinguish new ERP products from historical records with a null source.
+        $validated['catalogue_source_code'] = 'RAVION_ERP_MANUAL';
         $validated['created_by'] = auth()->id();
 
-        $materialType = MaterialType::create($validated);
+        $bibleSubCategoryId = $this->validatedBibleSubCategory($request, true);
+        $materialType = DB::transaction(function () use ($validated, $bibleSubCategoryId) {
+            $product = MaterialType::create($validated);
+            if ($bibleSubCategoryId !== null) {
+                $this->addBibleProductMapping($product->id, $bibleSubCategoryId);
+            }
+            return $product;
+        });
 
         AuditHelper::log(
             'Product Master',
@@ -236,33 +295,75 @@ class MaterialTypeController extends Controller
     }
 
     public function show(MaterialType $materialType): View
-{
-    $materialType->load([
-        'productGroup',
-        'productType',
-        'unit',
-        'creator',
-        'specifications',
-        'grades',
-        'variants',
-        'searchAliases',
-        'usageMappings',
-        'productBrandMappings.brand.segment',
-    ]);
+    {
+        $materialType->load([
+            'productGroup',
+            'productType',
+            'unit',
+            'creator',
+            'specifications',
+            'grades',
+            'variants.unit',
+            'searchAliases',
+            'usageMappings',
+            'productBrandMappings.brand.segment',
+        ]);
 
-    $availableBrands = BrandMaster::query()
-        ->with('segment')
-        ->where('is_active', true)
-        ->whereDoesntHave('productMappings', function ($query) use ($materialType) {
-            $query->where('material_type_id', $materialType->id);
-        })
-        ->orderByRaw('CASE WHEN brand_segment_id IS NULL THEN 1 ELSE 0 END')
-        ->orderBy('brand_segment_id')
-        ->orderBy('brand_name')
-        ->get();
+        // Original Bible hierarchy, including multiple valid paths per Item.
+        // Variant-scoped mappings retain the exact path of each imported combination.
+        $bibleMappings = DB::table('material_bible_product_mappings as bpm')
+            ->join('material_bible_sub_categories as sc', 'sc.id', '=', 'bpm.material_bible_sub_category_id')
+            ->join('material_bible_main_categories as mc', 'mc.id', '=', 'sc.material_bible_main_category_id')
+            ->join('material_bible_trades as t', 't.id', '=', 'mc.material_bible_trade_id')
+            ->where('bpm.material_type_id', $materialType->id)
+            ->where('bpm.is_active', 1)
+            ->where('sc.is_active', 1)
+            ->where('mc.is_active', 1)
+            ->where('t.is_active', 1)
+            ->select([
+                'bpm.id as mapping_id',
+                'bpm.material_variant_id',
+                'bpm.variant_scope_key',
+                'bpm.source_code',
+                't.id as trade_id',
+                't.name as trade_name',
+                'mc.id as main_id',
+                'mc.name as main_name',
+                'sc.id as sub_id',
+                'sc.name as sub_name',
+            ])
+            ->orderBy('t.name')
+            ->orderBy('mc.name')
+            ->orderBy('sc.name')
+            ->get();
 
-    return view('material-types.show', compact('materialType', 'availableBrands'));
-}
+        $biblePaths = $bibleMappings
+            ->unique(fn ($mapping) => $mapping->trade_id . ':' . $mapping->main_id . ':' . $mapping->sub_id)
+            ->values();
+
+        $bibleVariantMappings = $bibleMappings
+            ->filter(fn ($mapping) => $mapping->material_variant_id !== null)
+            ->groupBy('material_variant_id');
+
+        $availableBrands = BrandMaster::query()
+            ->with('segment')
+            ->where('is_active', true)
+            ->whereDoesntHave('productMappings', function ($query) use ($materialType) {
+                $query->where('material_type_id', $materialType->id);
+            })
+            ->orderByRaw('CASE WHEN brand_segment_id IS NULL THEN 1 ELSE 0 END')
+            ->orderBy('brand_segment_id')
+            ->orderBy('brand_name')
+            ->get();
+
+        return view('material-types.show', compact(
+            'materialType',
+            'availableBrands',
+            'biblePaths',
+            'bibleVariantMappings'
+        ));
+    }
+
     public function storeBrandMapping(Request $request, MaterialType $materialType): RedirectResponse
     {
         $validated = $request->validate([
@@ -366,10 +467,22 @@ class MaterialTypeController extends Controller
     {
         $materialType->load(['productGroup', 'productType', 'unit']);
 
+        $existingBiblePaths = DB::table('material_bible_product_mappings as bpm')
+            ->join('material_bible_sub_categories as sc', 'sc.id', '=', 'bpm.material_bible_sub_category_id')
+            ->join('material_bible_main_categories as mc', 'mc.id', '=', 'sc.material_bible_main_category_id')
+            ->join('material_bible_trades as t', 't.id', '=', 'mc.material_bible_trade_id')
+            ->where('bpm.material_type_id', $materialType->id)
+            ->where('bpm.is_active', 1)
+            ->select('t.id as trade_id', 't.name as trade_name', 'mc.id as main_id',
+                'mc.name as main_name', 'sc.id as sub_id', 'sc.name as sub_name')
+            ->distinct()
+            ->orderBy('t.name')->orderBy('mc.name')->orderBy('sc.name')
+            ->get();
+
         return view(
             'material-types.edit',
             array_merge(
-                compact('materialType'),
+                compact('materialType', 'existingBiblePaths'),
                 $this->formData()
             )
         );
@@ -379,17 +492,7 @@ class MaterialTypeController extends Controller
     {
         $validated = $this->validateMaterialType($request, $materialType);
 
-        $group = MaterialProductGroup::query()
-            ->where('is_active', true)
-            ->findOrFail($validated['material_product_group_id']);
-
-        MaterialProductType::query()
-            ->where('is_active', true)
-            ->whereKey($validated['material_product_type_id'])
-            ->where('material_product_group_id', $group->id)
-            ->firstOrFail();
-
-        $validated['material_group'] = $group->group_name;
+        // Preserve any existing legacy group/type fields on edit.
         $validated['sequence'] = $validated['sequence'] ?? 0;
         $validated['is_active'] = $request->boolean('is_active');
 
@@ -399,7 +502,14 @@ class MaterialTypeController extends Controller
             $materialType->load(['productGroup', 'productType', 'unit'])
         );
 
-        $materialType->update($validated);
+        // Legacy edit forms do not send Bible category fields: retain all mappings.
+        $bibleSubCategoryId = $this->validatedBibleSubCategory($request);
+        DB::transaction(function () use ($materialType, $validated, $bibleSubCategoryId) {
+            $materialType->update($validated);
+            if ($bibleSubCategoryId !== null) {
+                $this->addBibleProductMapping($materialType->id, $bibleSubCategoryId);
+            }
+        });
 
         AuditHelper::log(
             'Product Master',
@@ -516,7 +626,15 @@ class MaterialTypeController extends Controller
             )
             ->toArray();
 
+        $bibleTrades = DB::table('material_bible_trades')
+            ->where('is_active', 1)->orderBy('sort_order')->orderBy('name')->get();
+        $bibleMainCategories = DB::table('material_bible_main_categories')
+            ->where('is_active', 1)->orderBy('sort_order')->orderBy('name')->get();
+        $bibleSubCategories = DB::table('material_bible_sub_categories')
+            ->where('is_active', 1)->orderBy('sort_order')->orderBy('name')->get();
+
         return compact(
+            'bibleTrades', 'bibleMainCategories', 'bibleSubCategories',
             'activityDivisions',
             'productGroups',
             'productTypes',
@@ -532,22 +650,6 @@ class MaterialTypeController extends Controller
         ?MaterialType $materialType = null
     ): array {
         return $request->validate([
-            'material_product_group_id' => [
-                'required',
-                'integer',
-                'exists:material_product_groups,id',
-            ],
-            'material_product_type_id' => [
-                'required',
-                'integer',
-                Rule::exists('material_product_types', 'id')
-                    ->where(
-                        fn ($query) => $query->where(
-                            'material_product_group_id',
-                            $request->integer('material_product_group_id')
-                        )
-                    ),
-            ],
             'material_type_name' => [
                 'required',
                 'string',
@@ -563,6 +665,68 @@ class MaterialTypeController extends Controller
             'is_active' => ['nullable', 'boolean'],
             'remarks' => ['nullable', 'string', 'max:2000'],
         ]);
+    }
+
+    /**
+     * Required for new products; optional for edits of existing products. When provided,
+     * validate the full Trade -> Main -> Sub relationship, not just the sub ID.
+     */
+    private function validatedBibleSubCategory(Request $request, bool $required = false): ?int
+    {
+        $fields = ['material_bible_trade_id', 'material_bible_main_category_id', 'material_bible_sub_category_id'];
+        $present = collect($fields)->contains(fn ($field) => $request->exists($field));
+        if (!$present && !$required) {
+            return null;
+        }
+
+        $data = $request->validate([
+            'material_bible_trade_id' => ['required', 'integer', Rule::exists('material_bible_trades', 'id')->where('is_active', 1)],
+            'material_bible_main_category_id' => ['required', 'integer', Rule::exists('material_bible_main_categories', 'id')->where('is_active', 1)],
+            'material_bible_sub_category_id' => ['required', 'integer', Rule::exists('material_bible_sub_categories', 'id')->where('is_active', 1)],
+        ]);
+
+        $valid = DB::table('material_bible_sub_categories as sub')
+            ->join('material_bible_main_categories as main', 'main.id', '=', 'sub.material_bible_main_category_id')
+            ->join('material_bible_trades as trade', 'trade.id', '=', 'main.material_bible_trade_id')
+            ->where('sub.id', $data['material_bible_sub_category_id'])
+            ->where('main.id', $data['material_bible_main_category_id'])
+            ->where('trade.id', $data['material_bible_trade_id'])
+            ->where('sub.is_active', 1)
+            ->where('main.is_active', 1)
+            ->where('trade.is_active', 1)
+            ->exists();
+
+        if (!$valid) {
+            throw ValidationException::withMessages([
+                'material_bible_sub_category_id' => 'The selected Bible category path is invalid.',
+            ]);
+        }
+
+        return (int) $data['material_bible_sub_category_id'];
+    }
+
+    /** Add a product-level path; never remove imported or other existing paths. */
+    private function addBibleProductMapping(int $materialTypeId, int $subCategoryId): void
+    {
+        $exists = DB::table('material_bible_product_mappings')
+            ->where('material_bible_sub_category_id', $subCategoryId)
+            ->where('material_type_id', $materialTypeId)
+            ->where('variant_scope_key', 0)
+            ->exists();
+
+        if (!$exists) {
+            DB::table('material_bible_product_mappings')->insert([
+                'material_bible_sub_category_id' => $subCategoryId,
+                'material_type_id' => $materialTypeId,
+                'material_variant_id' => null,
+                'variant_scope_key' => 0,
+                'source_code' => 'RAVION_ERP_MANUAL',
+                'is_active' => 1,
+                'sort_order' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
     }
 
     private function ensureBrandMappingBelongsToProduct(

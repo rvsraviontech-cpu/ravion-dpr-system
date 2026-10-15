@@ -14,7 +14,8 @@ class MaterialBibleImport extends Command
 {
     protected $signature = 'materials:bible-import
         {file : Path to Ravion Material Bible XLSX}
-        {--apply : Actually write the import to the database}';
+        {--apply : Actually write the import to the database}
+        {--classifications-only : Import only Bible category paths and existing product/variant mappings}';
 
     protected $description = 'Dry-run or additively import the validated Ravion Material Bible into Product Master.';
 
@@ -72,6 +73,10 @@ class MaterialBibleImport extends Command
             }
 
             $this->stats['source_rows'] = $rows->count();
+
+            if ((bool) $this->option('classifications-only')) {
+                return $this->importClassifications($rows, $apply);
+            }
 
             $items = $this->buildItems($rows);
 
@@ -1197,4 +1202,168 @@ if (!$headerFound) {
             ]
         );
     }
+
+    /**
+     * Classification backfill only. Never changes material_types or material_variants.
+     * A dry-run is mandatory before applying to an existing installation.
+     */
+    private function importClassifications(Collection $rows, bool $apply): int
+    {
+        foreach (['material_bible_trades', 'material_bible_main_categories',
+            'material_bible_sub_categories', 'material_bible_product_mappings'] as $table) {
+            if (!DB::getSchemaBuilder()->hasTable($table)) {
+                throw new RuntimeException("Missing Bible classification table: {$table}");
+            }
+        }
+
+        $products = [];
+        $ambiguous = [];
+        foreach (DB::table('material_types')->where('catalogue_source_code', self::SOURCE_CODE)
+            ->select('id', 'material_type_name')->get() as $product) {
+            $key = $this->key((string) $product->material_type_name);
+            if (isset($products[$key])) {
+                $ambiguous[$key] = true;
+            }
+            $products[$key] = (int) $product->id;
+        }
+
+        $variants = [];
+        foreach (DB::table('material_variants as v')
+            ->join('material_types as p', 'p.id', '=', 'v.material_type_id')
+            ->where('p.catalogue_source_code', self::SOURCE_CODE)
+            ->select('v.id', 'v.material_type_id', 'v.variant_code')->get() as $variant) {
+            $variants[(int) $variant->material_type_id . '|' . (string) $variant->variant_code] = (int) $variant->id;
+        }
+
+        $this->unitsByCode = DB::table('unit_masters')->where('is_active', 1)->get()
+            ->keyBy(fn ($unit) => $this->key((string) $unit->unit_code));
+
+        $trades = [];
+        $mains = [];
+        $subs = [];
+        $links = [];
+        $errors = [];
+        $errorCount = 0;
+
+        foreach ($rows as $index => $row) {
+            $trade = trim((string) $row['trade_category']);
+            $main = trim((string) $row['main_category']);
+            $sub = trim((string) $row['sub_category']);
+            $item = trim((string) $row['item']);
+            $tk = $this->key($trade);
+            $mk = $this->key($main);
+            $sk = $this->key($sub);
+            $ik = $this->key($item);
+            $reason = null;
+            if (!$tk || !$mk || !$sk || !$ik) {
+                $reason = 'missing category or item';
+            } elseif (isset($ambiguous[$ik])) {
+                $reason = 'ambiguous Bible product name';
+            } elseif (!isset($products[$ik])) {
+                $reason = 'Bible product not found in Product Master';
+            } elseif (mb_strlen($tk) > 255 || mb_strlen($mk) > 255 || mb_strlen($sk) > 255) {
+                $reason = 'normalized category name exceeds 255 characters';
+            }
+
+            $productId = $products[$ik] ?? null;
+            $variantId = null;
+            if ($reason === null && (trim($row['sub_item']) !== '' || trim($row['specification']) !== '')) {
+                $unit = $this->resolveUnit($row['unit']);
+                if ($unit['status'] === 'UNRESOLVED') {
+                    $reason = 'unresolved unit';
+                } else {
+                    $identity = implode('|', [
+                        $ik, $this->key($row['sub_item']), $this->key($row['specification']),
+                        $this->key($unit['default_code'] ?? ''),
+                    ]);
+                    $variantCode = 'RMBV-' . strtoupper(substr(sha1($identity), 0, 16));
+                    $variantId = $variants[$productId . '|' . $variantCode] ?? null;
+                    if ($variantId === null) {
+                        $reason = 'Bible variant not found: ' . $variantCode;
+                    }
+                }
+            }
+            if ($reason !== null) {
+                $errorCount++;
+                if (count($errors) < 15) {
+                    $errors[] = 'Row ' . ($index + 1) . ' (' . $item . '): ' . $reason;
+                }
+                continue;
+            }
+
+            $trades[$tk] ??= $trade;
+            $mainKey = $tk . "\x1f" . $mk;
+            $mains[$mainKey] ??= ['trade' => $tk, 'name' => $main, 'key' => $mk];
+            $subKey = $mainKey . "\x1f" . $sk;
+            $subs[$subKey] ??= ['main' => $mainKey, 'name' => $sub, 'key' => $sk];
+            $scope = $variantId ?? 0;
+            $linkKey = $subKey . "\x1f" . $productId . "\x1f" . $scope;
+            $links[$linkKey] ??= ['sub' => $subKey, 'product' => $productId, 'variant' => $variantId, 'scope' => $scope];
+        }
+
+        $this->table(['Classification check', 'Count'], [
+            ['Workbook rows', $rows->count()],
+            ['Trade categories', count($trades)],
+            ['Trade/Main paths', count($mains)],
+            ['Trade/Main/Sub paths', count($subs)],
+            ['Distinct product/variant mappings', count($links)],
+            ['Unmatched/invalid rows', $errorCount],
+            ['Mode', $apply ? 'APPLY' : 'DRY RUN'],
+        ]);
+        foreach ($errors as $error) {
+            $this->warn($error);
+        }
+        if ($errorCount > 0) {
+            $this->error('Classification import blocked. Resolve all unmatched rows first.');
+            return self::FAILURE;
+        }
+        if (!$apply) {
+            $this->info('Classification dry-run passed; no database changes made.');
+            return self::SUCCESS;
+        }
+        if (!$this->confirm('Write Bible classifications and mappings only? No Product Master records will be changed.', false)) {
+            $this->warn('Cancelled.');
+            return self::SUCCESS;
+        }
+
+        DB::transaction(function () use ($trades, $mains, $subs, $links) {
+            $now = now();
+            $tradeIds = [];
+            foreach ($trades as $key => $name) {
+                DB::table('material_bible_trades')->updateOrInsert(
+                    ['normalized_name' => $key],
+                    ['name' => $name, 'updated_at' => $now]
+                );
+                $tradeIds[$key] = (int) DB::table('material_bible_trades')->where('normalized_name', $key)->value('id');
+            }
+            $mainIds = [];
+            foreach ($mains as $path => $data) {
+                $where = ['material_bible_trade_id' => $tradeIds[$data['trade']], 'normalized_name' => $data['key']];
+                DB::table('material_bible_main_categories')->updateOrInsert($where, ['name' => $data['name'], 'updated_at' => $now]);
+                $mainIds[$path] = (int) DB::table('material_bible_main_categories')->where($where)->value('id');
+            }
+            $subIds = [];
+            foreach ($subs as $path => $data) {
+                $where = ['material_bible_main_category_id' => $mainIds[$data['main']], 'normalized_name' => $data['key']];
+                DB::table('material_bible_sub_categories')->updateOrInsert($where, ['name' => $data['name'], 'updated_at' => $now]);
+                $subIds[$path] = (int) DB::table('material_bible_sub_categories')->where($where)->value('id');
+            }
+            foreach ($links as $data) {
+                $where = [
+                    'material_bible_sub_category_id' => $subIds[$data['sub']],
+                    'material_type_id' => $data['product'],
+                    'variant_scope_key' => $data['scope'],
+                ];
+                DB::table('material_bible_product_mappings')->updateOrInsert($where, [
+                    'material_variant_id' => $data['variant'],
+                    'source_code' => self::SOURCE_CODE,
+                    'is_active' => 1,
+                    'updated_at' => $now,
+                ]);
+            }
+        }, 3);
+        $this->info('Bible classification import completed. Existing products and variants were not modified.');
+        return self::SUCCESS;
+    }
+
 }

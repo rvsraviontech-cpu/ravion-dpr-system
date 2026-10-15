@@ -210,7 +210,7 @@
                                                     <div class="font-medium text-gray-900" x-text="row.product_name"></div>
                                                     <div class="text-xs text-gray-400" x-text="row.catalogue_code || row.product_code || ''"></div>
                                                 </td>
-                                                <td class="px-3 py-2" x-text="row.specification_text || '-'"></td>
+                                                <td class="px-3 py-2" x-text="materialDescription(row)"></td>
                                                 <td class="px-3 py-2 text-right" x-text="qty(row.required_quantity)"></td>
                                                 <td class="px-3 py-2 text-right" x-text="qty(row.already_ordered_quantity)"></td>
                                                 <td class="px-3 py-2 text-right font-semibold" x-text="qty(row.pending_quantity)"></td>
@@ -278,7 +278,7 @@
                                            :value="item.material_requirement_item_id">
                                     <div class="font-medium text-gray-900" x-text="item.product_name"></div>
                                 </td>
-                                <td class="px-3 py-2" x-text="item.specification_text || '-'"></td>
+                                <td class="px-3 py-2" x-text="materialDescription(item)"></td>
                                 <td class="px-3 py-2">
                                     <select :name="`items[${index}][brand_master_id]`"
                                             x-model="item.brand_master_id"
@@ -383,6 +383,7 @@ function purchaseOrderCreate() {
         deliveryAddress: @json(old('delivery_address', '')),
         paymentTerms: @json(old('payment_terms', '')),
         search: '',
+        selectedRequirementId: @json((int) ($selectedRequirementId ?? 0)),
         loading: false,
         submitting: false,
         requirementRows: [],
@@ -480,6 +481,13 @@ function purchaseOrderCreate() {
 
                 const json = await response.json();
                 this.requirementRows = json.data || [];
+                if (this.selectedRequirementId) {
+                    const match = this.requirementRows.filter(row => Number(row.material_requirement_id) === Number(this.selectedRequirementId));
+                    if (match.length) {
+                        for (const row of match) this.addItem(row);
+                    }
+                    this.selectedRequirementId = 0;
+                }
             } catch (error) {
                 console.error(error);
                 this.requirementRows = [];
@@ -522,6 +530,9 @@ function purchaseOrderCreate() {
                 requirement_no: row.requirement_no,
                 product_name: row.product_name,
                 specification_text: row.specification_text,
+                variant_sub_item: row.variant_sub_item || '',
+                variant_size_specification: row.variant_size_specification || '',
+                material_variant_id: row.material_variant_id || null,
                 brand_master_id: row.brand_master_id ? String(row.brand_master_id) : '',
                 brands: Array.isArray(row.brands) ? row.brands : [],
                 pending_quantity: Number(row.pending_quantity) || 0,
@@ -542,6 +553,24 @@ function purchaseOrderCreate() {
             return this.items.some(item =>
                 Number(item.material_requirement_item_id) === Number(id)
             );
+        },
+
+        materialDescription(item) {
+            const parts = [
+                item.variant_sub_item,
+                item.variant_size_specification,
+                item.specification_text,
+            ].map(value => String(value || '').trim()).filter(Boolean);
+
+            // Avoid displaying the same specification twice when the MR
+            // specification text already contains the Bible size/variant.
+            const unique = [];
+            for (const part of parts) {
+                if (!unique.some(existing => existing.toLowerCase() === part.toLowerCase())) {
+                    unique.push(part);
+                }
+            }
+            return unique.join(' / ') || '-';
         },
 
         qty(value) {

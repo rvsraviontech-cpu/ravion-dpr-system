@@ -27,6 +27,7 @@ class MachineryDailyUsage extends Model
 
     protected $fillable = [
         'project_id',
+        'dpr_id',
         'machinery_equipment_id',
         'usage_date',
 
@@ -114,6 +115,10 @@ class MachineryDailyUsage extends Model
     {
         return $this->belongsTo(Project::class);
     }
+    public function dpr(): BelongsTo
+{
+    return $this->belongsTo(Dpr::class);
+}
 
     public function equipment(): BelongsTo
     {

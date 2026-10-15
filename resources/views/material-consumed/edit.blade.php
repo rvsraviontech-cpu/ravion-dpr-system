@@ -11,6 +11,7 @@
             'activity_division_id' => $item->activity_division_id,
             'activity_id' => $item->activity_id,
             'material_type_id' => $item->material_type_id,
+            'material_variant_id' => $item->material_variant_id,
             'brand_master_id' => $item->brand_master_id,
             'material_specification_id' => $item->material_specification_id,
             'material_grade_id' => $item->material_grade_id,
@@ -27,6 +28,7 @@
             'activity_division_id' => '',
             'activity_id' => '',
             'material_type_id' => '',
+            'material_variant_id' => '',
             'brand_master_id' => '',
             'material_specification_id' => '',
             'material_grade_id' => '',
@@ -357,7 +359,8 @@
                                         <option value="">Select Project first</option>
                                     </select>
 
-                                    <input type="hidden" name="items[{{ $rowIndex }}][material_type_id]"
+                                    <input type="hidden" name="items[{{ $rowIndex }}][material_variant_id]" value="{{ $oldItem['material_variant_id'] ?? '' }}" class="material-variant-id-input">
+                                     <input type="hidden" name="items[{{ $rowIndex }}][material_type_id]"
                                            value="{{ $oldItem['material_type_id'] ?? '' }}" class="material-type-id-input">
                                     <input type="hidden" name="items[{{ $rowIndex }}][brand_master_id]"
                                            value="{{ $oldItem['brand_master_id'] ?? '' }}" class="brand-id-input">
@@ -482,6 +485,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function stockLabel(item) {
         const parts = [
             item.material_type_name,
+            item.variant_name,
             item.brand_name,
             item.specification_name,
             item.grade_name,
@@ -499,7 +503,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function identityMatchesRow(item, row) {
-        return String(item.material_type_id ?? '') === String(row.querySelector('.material-type-id-input').value ?? '')
+        return String(item.material_variant_id ?? '') === String(row.querySelector('.material-variant-id-input').value ?? '')
+            && String(item.material_type_id ?? '') === String(row.querySelector('.material-type-id-input').value ?? '')
             && String(item.brand_master_id ?? '') === String(row.querySelector('.brand-id-input').value ?? '')
             && String(item.material_specification_id ?? '') === String(row.querySelector('.specification-id-input').value ?? '')
             && String(item.material_grade_id ?? '') === String(row.querySelector('.grade-id-input').value ?? '')
@@ -507,6 +512,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function clearStockIdentity(row) {
+        row.querySelector('.material-variant-id-input').value = '';
         row.querySelector('.material-type-id-input').value = '';
         row.querySelector('.brand-id-input').value = '';
         row.querySelector('.specification-id-input').value = '';
@@ -517,6 +523,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function applyStockIdentity(row, item) {
+        row.querySelector('.material-variant-id-input').value = item.material_variant_id ?? '';
         row.querySelector('.material-type-id-input').value = item.material_type_id ?? '';
         row.querySelector('.brand-id-input').value = item.brand_master_id ?? '';
         row.querySelector('.specification-id-input').value = item.material_specification_id ?? '';
@@ -735,7 +742,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 <select class="{{ $inputClass }} stock-identity-select" required>
                     <option value="">Select Available Stock</option>
                 </select>
-                <input type="hidden" name="items[${index}][material_type_id]" class="material-type-id-input">
+                <input type="hidden" name="items[${index}][material_variant_id]" class="material-variant-id-input">
+                 <input type="hidden" name="items[${index}][material_type_id]" class="material-type-id-input">
                 <input type="hidden" name="items[${index}][brand_master_id]" class="brand-id-input">
                 <input type="hidden" name="items[${index}][material_specification_id]" class="specification-id-input">
                 <input type="hidden" name="items[${index}][material_grade_id]" class="grade-id-input">

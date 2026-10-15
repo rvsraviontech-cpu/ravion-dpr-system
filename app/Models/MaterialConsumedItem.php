@@ -12,6 +12,7 @@ class MaterialConsumedItem extends Model
         'activity_division_id',
         'activity_id',
         'material_type_id',
+        'material_variant_id',
         'brand_master_id',
         'material_specification_id',
         'material_grade_id',
@@ -24,6 +25,7 @@ class MaterialConsumedItem extends Model
     ];
 
     protected $casts = [
+        'material_variant_id' => 'integer',
         'quantity_consumed' => 'decimal:3',
         'wastage_quantity' => 'decimal:3',
         'sort_order' => 'integer',
@@ -51,6 +53,11 @@ class MaterialConsumedItem extends Model
             Activity::class,
             'activity_id'
         );
+    }
+
+    public function materialVariant(): BelongsTo
+    {
+        return $this->belongsTo(MaterialVariant::class, 'material_variant_id');
     }
 
     public function materialType(): BelongsTo

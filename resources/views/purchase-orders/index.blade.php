@@ -46,43 +46,103 @@
         </div>
     </form>
 
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    {{-- Compact PME action queue: one row per approved MR with pending PO allocation. --}}
+    <section class="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
+            <h2 class="text-sm font-semibold text-gray-900">Pending Purchase Orders</h2>
+            <span class="text-xs text-gray-500">{{ $pendingRequirements->count() }} MRs · {{ $pendingItemCount }} pending items</span>
+        </div>
+        <div class="max-h-[220px] overflow-y-auto overscroll-contain">
+            <table class="w-full table-fixed text-xs sm:text-sm">
+                <thead class="sticky top-0 z-10 bg-gray-50 text-[11px] uppercase tracking-wide text-gray-500">
+                    <tr>
+                        <th class="w-[105px] px-3 py-2 text-left">MR</th>
+                        <th class="w-[19%] px-3 py-2 text-left">Project</th>
+                        <th class="w-[108px] px-2 py-2 text-left">MR Date</th>
+                        <th class="px-3 py-2 text-left">Material</th>
+                        <th class="w-[65px] px-2 py-2 text-center">Items</th>
+                        <th class="w-[116px] px-3 py-2 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    @forelse ($pendingRequirements as $mrId => $mrItems)
+                        @php
+                            $mr = $mrItems->first()?->materialRequirement;
+                            $firstPending = $mrItems->first();
+                            $firstMaterial = $firstPending?->materialType?->material_type_name ?? 'Material';
+                            $firstVariant = $firstPending?->materialVariant?->variant_name;
+                            $firstSize = $firstPending?->materialVariant?->size_dimension;
+                            $firstLabel = collect([$firstMaterial, $firstVariant, $firstSize])->filter()->unique()->implode(' · ');
+                            $remaining = $mrItems->count() - 1;
+                        @endphp
+                        <tr class="hover:bg-gray-50">
+                            <td class="whitespace-nowrap px-3 py-2 font-semibold text-gray-900">MR-{{ str_pad((string) $mrId, 4, '0', STR_PAD_LEFT) }}</td>
+                            <td class="truncate px-3 py-2 text-gray-700" title="{{ $mr?->project?->project_name ?? '-' }}">{{ $mr?->project?->project_name ?? '-' }}</td>
+                            <td class="whitespace-nowrap px-2 py-2 text-gray-600">{{ $mr?->required_date ? \Illuminate\Support\Carbon::parse($mr->required_date)->format('d/m/Y') : '-' }}</td>
+                            <td class="max-w-0 px-3 py-2 text-gray-700">
+                                <div class="truncate" title="{{ $firstLabel }}{{ $remaining > 0 ? ' +'.$remaining.' more' : '' }}">
+                                    {{ $firstLabel }}@if($remaining > 0) <span class="font-medium text-gray-500">+{{ $remaining }} more</span>@endif
+                                </div>
+                            </td>
+                            <td class="px-2 py-2 text-center tabular-nums text-gray-700">{{ $mrItems->count() }}</td>
+                            <td class="px-3 py-1.5 text-right">
+                                <a href="{{ route('purchase-orders.create', ['project_id' => $mr?->project_id, 'material_requirement_id' => $mrId]) }}"
+                                   class="inline-flex whitespace-nowrap rounded-md bg-[#10212F] px-2.5 py-1.5 text-xs font-medium text-white hover:opacity-90">Create PO →</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="6" class="px-3 py-6 text-center text-sm text-gray-500">No approved MRs pending purchase orders.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <div class="border-b border-gray-200 px-3 py-2">
+            <h2 class="text-sm font-semibold text-gray-900">Existing Purchase Orders</h2>
+        </div>
         <div class="max-h-[470px] overflow-auto">
-            <table class="min-w-[1000px] w-full text-sm">
+            <table class="w-full table-fixed text-xs sm:text-sm">
                 <thead class="sticky top-0 bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                     <tr>
-                        <th class="px-4 py-3 text-left">PO</th>
-                        <th class="px-4 py-3 text-left">Date</th>
-                        <th class="px-4 py-3 text-left">Project</th>
-                        <th class="px-4 py-3 text-left">Vendor</th>
-                        <th class="px-4 py-3 text-right">Amount</th>
-                        <th class="px-4 py-3 text-left">Status</th>
-                        <th class="px-4 py-3 text-right">Action</th>
+                        <th class="w-[115px] px-2 py-2 text-left">PO</th>
+                        <th class="w-[85px] px-2 py-2 text-left">Date</th>
+                        <th class="w-[15%] px-2 py-2 text-left">Project</th>
+                        <th class="w-[15%] px-2 py-2 text-left">Vendor</th>
+                        <th class="px-2 py-2 text-left">Material Items</th>
+                        <th class="w-[95px] px-2 py-2 text-right">Amount</th>
+                        <th class="w-[105px] px-2 py-2 text-left">Status</th>
+                        <th class="w-[55px] px-2 py-2 text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
                     @forelse ($purchaseOrders as $po)
+                        @php
+                            $itemNames = $po->items->map(function ($item) {
+                                $name = trim((string) ($item->product_name ?: $item->materialType?->material_type_name ?: 'Material'));
+                                $spec = trim((string) ($item->specification_text ?? ''));
+                                return $spec !== '' ? $name . ' · ' . $spec : $name;
+                            })->filter()->values();
+                            $itemsLabel = $itemNames->implode(', ');
+                        @endphp
                         <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 font-semibold text-gray-900">{{ $po->po_number }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ optional($po->po_date)->format('d/m/Y') }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $po->project_name }}</td>
-                            <td class="px-4 py-3 text-gray-700">{{ $po->vendor_name }}</td>
-                            <td class="px-4 py-3 text-right font-medium">₹ {{ number_format((float) $po->grand_total, 2) }}</td>
-                            <td class="px-4 py-3">
-                                <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">
-                                    {{ $po->status }}
-                                </span>
+                            <td class="whitespace-nowrap px-2 py-2 font-semibold text-gray-900">{{ $po->po_number }}</td>
+                            <td class="whitespace-nowrap px-2 py-2 text-gray-700">{{ optional($po->po_date)->format('d/m/Y') }}</td>
+                            <td class="max-w-0 px-2 py-2 text-gray-700"><div class="truncate" title="{{ $po->project_name }}">{{ $po->project_name }}</div></td>
+                            <td class="max-w-0 px-2 py-2 text-gray-700"><div class="truncate" title="{{ $po->vendor_name }}">{{ $po->vendor_name }}</div></td>
+                            <td class="max-w-0 px-2 py-2 text-gray-700">
+                                <div class="truncate" title="{{ $itemsLabel }}">
+                                    {{ $itemNames->first() ?? '-' }}@if($itemNames->count() > 1) <span class="font-medium text-gray-500">+{{ $itemNames->count() - 1 }} more</span>@endif
+                                </div>
                             </td>
-                            <td class="px-4 py-3 text-right">
-                                <a href="{{ route('purchase-orders.show', $po) }}"
-                                   class="text-sm font-medium text-blue-700 hover:underline">
-                                    View
-                                </a>
-                            </td>
+                            <td class="whitespace-nowrap px-2 py-2 text-right font-medium">₹ {{ number_format((float) $po->grand_total, 2) }}</td>
+                            <td class="px-2 py-2"><span class="inline-block max-w-full truncate rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-700">{{ $po->status }}</span></td>
+                            <td class="px-2 py-2 text-right"><a href="{{ route('purchase-orders.show', $po) }}" class="font-medium text-blue-700 hover:underline">View</a></td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-4 py-10 text-center text-gray-500">No Purchase Orders found.</td>
+                            <td colspan="8" class="px-4 py-10 text-center text-gray-500">No Purchase Orders found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -94,6 +154,6 @@
                 {{ $purchaseOrders->links() }}
             </div>
         @endif
-    </div>
+    </section>
 </div>
 @endsection
