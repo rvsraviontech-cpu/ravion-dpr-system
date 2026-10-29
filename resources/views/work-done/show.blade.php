@@ -5,6 +5,22 @@
     $tableClass = 'wd-full-table text-sm text-left';
     $thClass = 'wd-th px-3 py-2 font-semibold text-slate-700';
     $tdClass = 'wd-td border-t border-slate-100 px-3 py-2 text-slate-700';
+    $isWorkDoneReviewer = in_array(auth()->user()?->role?->name, ['PMO', 'Admin'], true);
+    $workDoneStatus = $workDone->status ?? 'Draft';
+    // Resolve canonical operation titles in one query, without changing the Work Done controller.
+    // Column names are inspected because the Work Done Bible schema has evolved across phases.
+    $operationLabels = collect();
+    $operationIds = $workDone->items->pluck('bible_operation_id')->filter()->unique()->values();
+    if ($operationIds->isNotEmpty() && \Illuminate\Support\Facades\Schema::hasTable('work_done_bible_operations')) {
+        $operationColumns = \Illuminate\Support\Facades\Schema::getColumnListing('work_done_bible_operations');
+        $titleColumn = collect(['micro_operation','operation_name','micro_operation_name','name','title','work_name','description','operation_title','display_name','label'])
+            ->first(fn ($column) => in_array($column, $operationColumns, true));
+        if ($titleColumn) {
+            $operationLabels = \Illuminate\Support\Facades\DB::table('work_done_bible_operations')
+                ->whereIn('id', $operationIds)->pluck($titleColumn, 'id');
+        }
+    }
+
 @endphp
 <style>
 /* Scoped styles: do not modify the Create form or global ERP theme. */
@@ -55,6 +71,13 @@
 .wd-view .wd-photo:hover { transform:translateY(-2px); box-shadow:0 5px 16px rgba(16,33,47,.13); }
 @media(max-width:640px) { .wd-view .wd-summary .wd-field { border-left:0; padding:4px 0; } .wd-view .wd-facts > div { border-left:0; padding-left:0; } }
 @media print { .wd-view .wd-activity-head { print-color-adjust:exact; -webkit-print-color-adjust:exact; } .wd-view .wd-panel { break-inside:avoid; } }
+/* Compact PMO review accordion */
+.wd-view .wd-activity > summary { list-style:none; cursor:pointer; }
+.wd-view .wd-activity > summary::-webkit-details-marker { display:none; }
+.wd-view .wd-activity > summary:focus-visible { outline:3px solid #60a5fa; outline-offset:-3px; }
+.wd-view .wd-activity .wd-chevron { transition:transform .18s ease; }
+.wd-view .wd-activity[open] .wd-chevron { transform:rotate(180deg); }
+.wd-view .wd-activity:not([open]) { box-shadow:none; }
 </style>
 <div class="wd-view mx-auto max-w-full space-y-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
@@ -63,7 +86,11 @@
             <p class="mt-1 text-sm text-slate-500">Saved work activities and informational resource usage</p>
         </div>
         <div class="flex gap-2">
-            <a href="{{ route('work-done.index') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Back to Work Done</a>
+            @if($isWorkDoneReviewer)
+                <a href="{{ route('work-done.review.index') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Back to PMO Review Queue</a>
+            @else
+                <a href="{{ route('work-done.index') }}" class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Back to Work Done</a>
+            @endif
         </div>
     </div>
     @if(session('success'))
@@ -79,22 +106,83 @@
             <div class="mt-4 border-t border-slate-100 pt-3 text-sm"><span class="font-semibold">Daily remarks:</span> {{ $workDone->remarks }}</div>
         @endif
     </div>
+    {{-- Entry-level status and PMO decisions (not per-activity). --}}
+    <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-sm font-bold text-slate-900">Work Done Review Status</p>
+                <p class="mt-1 text-xs text-slate-500">{{ $workDone->items->count() }} activities in this daily entry</p>
+            </div>
+            <span class="rounded-full px-3 py-1 text-xs font-bold {{ $workDoneStatus === 'Verified' ? 'bg-emerald-100 text-emerald-800' : ($workDoneStatus === 'Returned' ? 'bg-amber-100 text-amber-800' : ($workDoneStatus === 'Submitted' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-700')) }}">
+                {{ $workDoneStatus === 'Verified' ? 'Verified & Locked' : ($workDoneStatus === 'Returned' ? 'Returned for Correction' : ($workDoneStatus === 'Submitted' ? 'Pending PMO Approval' : 'Draft')) }}
+            </span>
+        </div>
+        @if($isWorkDoneReviewer && $workDoneStatus === 'Submitted')
+      <div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">Review each activity below. The daily entry is finalized automatically after every activity is verified.</div>
+    @endif
+    @if($workDone->status === 'Draft' && (int)$workDone->user_id === (int)auth()->id())
+  <form method="POST" action="{{ route('work-done.review.submit',$workDone) }}" onsubmit="return confirm('Submit this Work Done entry for PMO review?')">
+    @csrf
+    <button class="rounded-lg bg-slate-800 px-4 py-2 text-white">Submit for PMO Review</button>
+  </form>
+@endif
+@if($workDone->status === 'Returned')<div class="rounded border border-amber-200 bg-amber-50 p-3 text-amber-900">PMO corrections: {{ $workDone->review_remarks }}</div>@endif
+
     @forelse($workDone->items as $item)
         @php
             $materials = $reportedMaterials->get($item->id, collect());
             $labours = $reportedLabours->get($item->id, collect());
             $machinery = $reportedMachinery->get($item->id, collect());
         @endphp
-        <section class="wd-activity overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="wd-activity-head flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+
+        
+        <details class="wd-activity overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm" {{ $loop->first ? 'open' : '' }}>
+            <summary class="wd-activity-head flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
                 <div>
-                    <h2 class="font-bold text-slate-800">Work Activity {{ $loop->iteration }} — {{ $item->workActivity?->name ?? $item->activity_name ?? 'Activity' }}</h2>
+                    @php
+                        $operationTitle = $operationLabels->get($item->bible_operation_id)
+                            ?: ($item->workActivity?->name ?? null)
+                            ?: ($item->workActivity?->activity_name ?? null)
+                            ?: ($item->activity?->activity_name ?? null)
+                            ?: ($item->activity_name ?? null)
+                            ?: ($item->bible_operation_id ? 'Operation #'.$item->bible_operation_id : 'Activity name unavailable');
+                    @endphp
+                    <h2 class="font-bold text-slate-800">Work Activity {{ $loop->iteration }} — {{ $operationTitle }}</h2>
                     <p class="mt-1 text-xs text-slate-500">{{ $item->location_path ?: 'Location not specified' }}</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <span class="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">{{ $item->execution_status }}</span>
                     @if($item->dpr_id)<span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">DPR linked</span>@endif
+                    <span class="wd-chevron text-white" aria-hidden="true">⌄</span>
                 </div>
+            </summary>
+            <div class="px-5 pt-3 text-sm">
+                @php $itemReviewStatus = $item->review_status ?? 'Draft'; @endphp
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="font-semibold">PMO review: {{ $itemReviewStatus }}</span>
+                    @if($itemReviewStatus === 'Returned' && $item->review_remarks)
+                        <span class="rounded bg-amber-50 px-3 py-2 text-amber-900">Correction: {{ $item->review_remarks }}</span>
+                    @endif
+                </div>
+                @if($isWorkDoneReviewer && $workDoneStatus === 'Submitted' && $itemReviewStatus === 'Submitted')
+                    <div class="mt-3 flex flex-wrap gap-3">
+                        <form method="POST" action="{{ route('work-done.review.item.verify', [$workDone, $item]) }}" onsubmit="return confirm('Verify this activity?')">@csrf
+                            <button class="rounded-lg bg-emerald-700 px-4 py-2 font-semibold text-white">Verify Activity</button>
+                        </form>
+                        <details class="rounded-lg border border-amber-300 bg-amber-50 p-2">
+                            <summary class="cursor-pointer font-semibold text-amber-900">Return this Activity</summary>
+                            <form method="POST" action="{{ route('work-done.review.item.return', [$workDone, $item]) }}" class="mt-2 space-y-2">@csrf
+                                <textarea name="review_remarks" required minlength="5" maxlength="2000" rows="2" class="w-full rounded border border-amber-300 p-2" placeholder="Required correction reason"></textarea>
+                                <button class="rounded bg-amber-700 px-3 py-2 text-white">Return for Correction</button>
+                            </form>
+                        </details>
+                    </div>
+                @endif
+                @if((int)$workDone->user_id === (int)auth()->id() && $workDoneStatus === 'Returned' && $itemReviewStatus === 'Returned')
+                    <form method="POST" action="{{ route('work-done.review.item.resubmit', [$workDone, $item]) }}" class="mt-3" onsubmit="return confirm('Have you saved the corrected activity?')">@csrf
+                        <button class="rounded-lg bg-slate-800 px-4 py-2 text-white">Resubmit Corrected Activity</button>
+                    </form>
+                @endif
             </div>
             <div class="space-y-5 p-5">
                 <div class="wd-facts grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
@@ -142,7 +230,7 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </details>
     @empty
         <div class="rounded-xl border border-slate-200 bg-white p-6 text-slate-500">No work activities found for this record.</div>
     @endforelse

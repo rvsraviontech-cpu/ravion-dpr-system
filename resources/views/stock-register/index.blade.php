@@ -2,11 +2,24 @@
 @section('content')
 @php $filters = request()->except('export'); @endphp
 <div class="mx-auto max-w-full space-y-4">
- <div class="flex flex-wrap items-center justify-between gap-3">
-  <div><h1 class="text-2xl font-bold tracking-tight text-slate-900">Stock Register</h1><p class="mt-1 text-xs text-slate-500">Current approved balances · latest transaction first</p></div>
-  <div class="flex gap-2">
-   <a id="stock-export-pdf" href="{{ route('stock-register.index', array_merge($filters, ['export'=>'pdf'])) }}" class="rounded-lg border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">↓ PDF</a>
-   <a id="stock-export-excel" href="{{ route('stock-register.index', array_merge($filters, ['export'=>'xlsx'])) }}" class="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-800">↓ Excel</a>
+ <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="min-w-0">
+   <h1 class="text-2xl font-bold tracking-tight text-slate-900">Stock Register</h1>
+   <p class="mt-1 text-xs text-slate-500">Current approved balances · latest transaction first</p>
+  </div>
+  <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap sm:shrink-0" role="group" aria-label="Stock Register exports">
+   <a id="stock-export-pdf"
+      href="{{ route('stock-register.index', array_merge($filters, ['export'=>'pdf'])) }}"
+      class="inline-flex min-h-[40px] min-w-[120px] flex-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-800 bg-slate-900 px-4 py-2 text-sm font-semibold leading-5 text-white no-underline shadow-sm transition-colors hover:border-slate-700 hover:bg-slate-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-700">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>
+    <span>Export PDF</span>
+   </a>
+   <a id="stock-export-excel"
+      href="{{ route('stock-register.index', array_merge($filters, ['export'=>'xlsx'])) }}"
+      class="inline-flex min-h-[40px] min-w-[120px] flex-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-emerald-800 bg-emerald-700 px-4 py-2 text-sm font-semibold leading-5 text-white no-underline shadow-sm transition-colors hover:border-emerald-900 hover:bg-emerald-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+    <span>Export Excel</span>
+   </a>
   </div>
  </div>
  <div id="stock-summary" class="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm">

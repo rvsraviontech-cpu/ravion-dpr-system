@@ -86,7 +86,27 @@ class PmoDashboardController extends Controller
             ->select('tomorrow_plans.id','tomorrow_plans.planned_date as date','tomorrow_plans.status','tomorrow_plans.priority','tomorrow_plans.planned_quantity','tomorrow_plans.unit','projects.project_name','activities.activity_name as activity_name','users.name as engineer_name')
             ->orderBy('tomorrow_plans.planned_date')->orderByDesc('tomorrow_plans.id')->limit(5)->get();
 
+        // Phase 06: Work Done entries awaiting PMO review.
+        $workDonePending = DB::table('work_done_headers as wdh')
+            ->join('projects as p', 'p.id', '=', 'wdh.project_id')
+            ->leftJoin('users as u', 'u.id', '=', 'wdh.user_id')
+            ->where('wdh.status', 'Submitted')
+            ->select('wdh.id', 'wdh.work_date', 'wdh.submitted_at', 'wdh.status',
+                'p.project_name', 'u.name as engineer_name')
+            ->orderBy('wdh.submitted_at')
+            ->orderBy('wdh.id')
+            ->limit(5)
+            ->get();
+
+        $workDoneStats = [
+            'pending' => DB::table('work_done_headers')->where('status', 'Submitted')->count(),
+            'verified' => DB::table('work_done_headers')->where('status', 'Verified')->count(),
+            'returned' => DB::table('work_done_headers')->where('status', 'Returned')->count(),
+            'total' => DB::table('work_done_headers')->count(),
+        ];
+
         $counts = [
+            'work_done_pending' => $workDoneStats['pending'],
             'dpr_pending' => DB::table('dprs')->where('status', 'Pending')->count(),
             'attendance_pending' => DB::table('labour_attendances')->where('status', 'submitted')->whereNull('deleted_at')->count(),
             'attendance_corrections' => DB::table('attendance_corrections')->where('status', 'submitted')->whereNull('deleted_at')->count(),
@@ -127,6 +147,8 @@ class PmoDashboardController extends Controller
 
         return view('pmo.index', compact(
             'counts',
+            'workDonePending',
+            'workDoneStats',
             'dprPending',
             'mappingPending',
             'labourAttendance',

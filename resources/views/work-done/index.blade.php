@@ -11,21 +11,11 @@
         ->getCollection()
         ->sum(fn ($header) => $header->items->count());
 
-    $pageMaterials = $workDoneHeaders
-        ->getCollection()
-        ->sum(
-            fn ($header) => $header->items->sum(
-                fn ($item) => $item->materialConsumptions->count()
-            )
-        );
+    $pageUnlinked = $workDoneHeaders->getCollection()->sum(
+        fn ($header) => $header->items->whereNull('dpr_id')->count()
+    );
 
-    $pagePhotos = $workDoneHeaders
-        ->getCollection()
-        ->sum(
-            fn ($header) => $header->items->sum(
-                fn ($item) => $item->photos->count()
-            )
-        );
+    $pageLinked = $pageActivities - $pageUnlinked;
 @endphp
 
 <div class="mx-auto max-w-full">
@@ -38,7 +28,7 @@
             </h1>
 
             <p class="mt-1 text-gray-500">
-                Review project-wise daily work activities, material usage and photographic evidence.
+                Review project-wise work activities, DPR linking and execution status.
             </p>
         </div>
 
@@ -94,15 +84,15 @@
 
         <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <div class="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Material Links
+                Pending DPR Link
             </div>
 
             <div class="mt-1 text-2xl font-bold text-gray-800 sm:mt-2 sm:text-3xl">
-                {{ number_format($pageMaterials) }}
+                {{ number_format($pageUnlinked) }}
             </div>
 
             <div class="mt-1 text-xs text-gray-500">
-                Material Consumed records
+                Unlinked activities on this page
             </div>
         </div>
 
@@ -112,11 +102,11 @@
             </div>
 
             <div class="mt-1 text-2xl font-bold text-gray-800 sm:mt-2 sm:text-3xl">
-                {{ number_format($pagePhotos) }}
+                {{ number_format($pageLinked) }}
             </div>
 
             <div class="mt-1 text-xs text-gray-500">
-                Work evidence
+                Linked activities on this page
             </div>
         </div>
 
@@ -679,16 +669,16 @@
                         </td>
                         <td class="px-2 py-3 text-center"><span class="rounded bg-slate-100 px-1.5 py-1 text-[11px] font-medium text-slate-700">{{ $header->status ?: 'Draft' }}</span></td>
                         <td class="px-2 py-3">
-                            <div class="flex flex-wrap items-center justify-center gap-1">
-                                <a href="{{ route('work-done.show', $header) }}" class="rounded bg-[#0F2A52] px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-slate-700">View</a>
+                            <div class="flex items-center justify-center gap-1">
+                                <a href="{{ route('work-done.show', $header) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#0F2A52] text-white hover:bg-slate-700" title="View work execution" aria-label="View work execution"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></a>
                                 @if($canEditHeader)
-                                    <a href="{{ route('work-done.edit', $header) }}" class="rounded bg-amber-500 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-amber-600">Edit</a>
+                                    <a href="{{ route('work-done.edit', $header) }}" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" title="Edit work execution" aria-label="Edit work execution"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4 10.5-10.5Z"/></svg></a>
                                 @endif
                                 @if($canDeleteHeader)
                                     <form method="POST" action="{{ route('work-done.destroy', $header) }}" class="inline">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" onclick="return confirm('Delete this Daily Work Execution entry and all its Work Activities?')" class="rounded bg-red-600 px-2 py-1.5 text-[11px] font-semibold text-white hover:bg-red-700" title="Delete work execution">Del</button>
+                                        <button type="submit" onclick="return confirm('Delete this Daily Work Execution entry and all its Work Activities?')" class="inline-flex h-8 w-8 items-center justify-center rounded-md border border-red-200 bg-red-50 text-red-700 hover:bg-red-100" title="Delete work execution" aria-label="Delete work execution"><svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4h8v2m3 0-1 14H6L5 6m5 4v7m4-7v7"/></svg></button>
                                     </form>
                                 @endif
                             </div>

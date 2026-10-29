@@ -12,15 +12,15 @@
 
     <x-dashboard-card
         title="Pending DPRs"
-        :value="$pendingDprs" />
+        :value="$pendingDprs ?? ($counts['dpr_pending'] ?? 0)" />
 
     <x-dashboard-card
         title="Approved DPRs"
-        :value="$approvedDprs" />
+        :value="$approvedDprs ?? 0" />
 
     <x-dashboard-card
         title="Rejected DPRs"
-        :value="$rejectedDprs" />
+        :value="$rejectedDprs ?? 0" />
 
 </div>
 
@@ -40,5 +40,7 @@
     </a>
 
 </div>
+
+@include('pmo.partials.work_done_approvals')
 
 @endsection

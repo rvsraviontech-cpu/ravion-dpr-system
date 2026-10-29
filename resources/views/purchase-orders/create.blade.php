@@ -85,6 +85,21 @@
                 </div>
 
                 <div>
+                    <label class="mb-1 block text-xs font-medium text-gray-700">Site Delivery Contact Name</label>
+                    <input type="text" name="delivery_contact_name" value="{{ old('delivery_contact_name') }}"
+                           maxlength="150" autocomplete="name" placeholder="Site Engineer / Store Keeper / Other contact"
+                           class="w-full rounded-lg border-gray-300 text-sm focus:border-slate-500 focus:ring-slate-500">
+                    <p class="mt-1 text-xs text-gray-500">Person the vendor should contact at the delivery site.</p>
+                </div>
+
+                <div>
+                    <label class="mb-1 block text-xs font-medium text-gray-700">Site Delivery Contact Mobile</label>
+                    <input type="tel" name="delivery_contact_phone" value="{{ old('delivery_contact_phone') }}"
+                           maxlength="30" autocomplete="tel" placeholder="Contact mobile number"
+                           class="w-full rounded-lg border-gray-300 text-sm focus:border-slate-500 focus:ring-slate-500">
+                </div>
+
+                <div>
                     <label class="mb-1 block text-xs font-medium text-gray-700">Vendor Reference / Quotation</label>
                     <input type="text" name="vendor_reference" value="{{ old('vendor_reference') }}"
                            placeholder="Quotation no. / reference"

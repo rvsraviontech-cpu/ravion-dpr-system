@@ -33,6 +33,8 @@ class PurchaseOrder extends Model
         'vendor_email',
         'project_name',
         'delivery_address',
+        'delivery_contact_name',
+        'delivery_contact_phone',
         'payment_terms',
         'delivery_terms',
         'freight_terms',

@@ -14,10 +14,19 @@ class WorkDoneHeader extends Model
         'work_date',
         'status',
         'remarks',
+        'submitted_at',
+        'verified_at',
+        'verified_by',
+        'returned_at',
+        'returned_by',
+        'review_remarks',
     ];
 
     protected $casts = [
         'work_date' => 'date',
+        'submitted_at' => 'datetime',
+        'verified_at' => 'datetime',
+        'returned_at' => 'datetime',
     ];
 
     public function project(): BelongsTo

@@ -17,6 +17,7 @@ class WorkDoneItem extends Model
         'activity_id',
         'activity_mapping_id',
         'work_activity_id',
+        'bible_operation_id',
         'contractor_id',
 
         'project_block_id',

@@ -255,5 +255,15 @@
 
 @stack('scripts')
 
+<script>
+document.addEventListener('wheel', function (event) {
+    const input = event.target.closest('input[type="number"]');
+
+    if (input && !input.disabled && !input.readOnly) {
+        input.blur();
+    }
+}, { passive: true });
+</script>
+
 </body>
 </html>

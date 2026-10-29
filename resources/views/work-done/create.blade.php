@@ -28,8 +28,10 @@
         ['key' => 'photos', 'label' => 'Photos', 'value' => 0],
     ];
 
+    $bibleStages = \Illuminate\Support\Facades\DB::table('work_done_bible_stages')->orderBy('id')->get(['id', 'stage_name']);
     $oldWorks = collect(old('works', [
         [
+            'bible_operation_id' => '',
             'work_stage_id' => '',
             'activity_division_id' => '',
             'activity_id' => '',
@@ -104,7 +106,8 @@
           enctype="multipart/form-data"
           data-ref-work-done-form
           data-ref-materials-url="{{ route('work-done.available-materials') }}"
-          data-ref-labour-url="{{ route('work-done.available-labour') }}">
+          data-ref-labour-url="{{ route('work-done.available-labour') }}"
+           data-bible-operations-url="{{ route('work-done-bible.approved-operations') }}">
 
         @csrf
 
@@ -224,25 +227,24 @@
                                     icon="⚙️"
                                 />
 
-                                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 sm:p-4" data-canonical-picker>
-                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                        <span class="text-sm font-bold text-slate-800">Work Execution Master <span class="text-red-500">*</span></span>
-                                        <span class="text-xs text-slate-500">Search by activity name or browse categories</span>
-                                    </div>
-                                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                        <div class="">
-                                            <label class="{{ $labelClass }}">Search work activity</label>
-                                            <input type="search" autocomplete="off" data-canonical-search class="{{ $inputClass }}" placeholder="e.g. Internal Material Shifting, brick masonry, slab concrete">
-                                            <div data-canonical-results class="hidden mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-md" role="listbox"></div>
-                                        </div>
-                                        <div><label class="{{ $labelClass }}">Work Package</label><select data-canonical-package class="{{ $inputClass }}"><option value="">All packages</option></select></div>
-                                        <div><label class="{{ $labelClass }}">Work Section</label><select data-canonical-section class="{{ $inputClass }}"><option value="">All sections</option></select></div>
-                                        <div><label class="{{ $labelClass }}">Work Activity</label><select data-canonical-activity class="{{ $inputClass }}"><option value="">Choose an activity</option></select></div>
-                                    </div>
-                                    <input type="hidden" name="works[{{ $workIndex }}][work_activity_id]" value="{{ $work['work_activity_id'] ?? '' }}" data-canonical-id>
-                                    <p data-canonical-selection class="mt-2 text-xs font-semibold text-slate-600">No canonical activity selected.</p>
-                                </div>
-                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 sm:p-4" data-bible-picker>
+  <div class="mb-3 text-sm font-bold text-slate-800">Work Execution Selection <span class="text-red-500">*</span></div>
+  <label class="block text-sm font-semibold mb-3">Search work operations
+    <input type="search" data-bible-search class="{{ $inputClass }}" placeholder="Search operation, stage, trade, assembly, element or work item">
+  </label>
+  <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <label class="text-sm font-semibold">Work Stage<select data-bible-stage class="{{ $inputClass }}"><option value="">All stages</option>@foreach($bibleStages as $stage)<option value="{{ $stage->id }}">{{ $stage->stage_name }}</option>@endforeach</select></label>
+    <label class="text-sm font-semibold">Trade<select data-bible-trade class="{{ $inputClass }}"><option value="">All trades</option></select></label>
+    <label class="text-sm font-semibold">Assembly<select data-bible-assembly class="{{ $inputClass }}"><option value="">All assemblies</option></select></label>
+    <label class="text-sm font-semibold">Element<select data-bible-element class="{{ $inputClass }}"><option value="">All elements</option></select></label>
+    <label class="text-sm font-semibold">Work Item<select data-bible-work-item class="{{ $inputClass }}"><option value="">All work items</option></select></label>
+    <label class="text-sm font-semibold">Micro Operation<select data-bible-operation class="{{ $inputClass }}" required><option value="">Select an operation</option></select></label>
+  </div>
+  <input type="hidden" name="works[{{ $workIndex }}][bible_operation_id]" value="{{ $work['bible_operation_id'] ?? '' }}" data-bible-id>
+  <input type="hidden" name="works[{{ $workIndex }}][work_activity_id]" value="">
+  <p class="mt-2 text-xs text-slate-600" data-bible-message>Choose by category or search directly. Unassigned project types do not block reporting.</p>
+</div>
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
                                     <div class="hidden" x-show="false">
                                         <label class="{{ $labelClass }}">
@@ -256,7 +258,7 @@
                                             @foreach($workStages as $stage)
                                                 <option value="{{ $stage->id }}"
                                                     {{ (string) ($work['work_stage_id'] ?? '') === (string) $stage->id ? 'selected' : '' }}>
-                                                    {{ $stage->name }}
+                                                    {{ $stage->stage_name }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -500,25 +502,24 @@
                                     icon="⚙️"
                                 />
 
-                                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 sm:p-4" data-canonical-picker>
-                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                        <span class="text-sm font-bold text-slate-800">Work Execution Master <span class="text-red-500">*</span></span>
-                                        <span class="text-xs text-slate-500">Search by activity name or browse categories</span>
-                                    </div>
-                                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                        <div class="">
-                                            <label class="{{ $labelClass }}">Search work activity</label>
-                                            <input type="search" autocomplete="off" data-canonical-search class="{{ $inputClass }}" placeholder="e.g. Internal Material Shifting, brick masonry, slab concrete">
-                                            <div data-canonical-results class="hidden mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-md" role="listbox"></div>
-                                        </div>
-                                        <div><label class="{{ $labelClass }}">Work Package</label><select data-canonical-package class="{{ $inputClass }}"><option value="">All packages</option></select></div>
-                                        <div><label class="{{ $labelClass }}">Work Section</label><select data-canonical-section class="{{ $inputClass }}"><option value="">All sections</option></select></div>
-                                        <div><label class="{{ $labelClass }}">Work Activity</label><select data-canonical-activity class="{{ $inputClass }}"><option value="">Choose an activity</option></select></div>
-                                    </div>
-                                    <input type="hidden" name="works[__INDEX__][work_activity_id]" value="" data-canonical-id>
-                                    <p data-canonical-selection class="mt-2 text-xs font-semibold text-slate-600">No canonical activity selected.</p>
-                                </div>
-                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                                <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50/50 p-3 sm:p-4" data-bible-picker>
+  <div class="mb-3 text-sm font-bold text-slate-800">Work Execution Selection <span class="text-red-500">*</span></div>
+  <label class="block text-sm font-semibold mb-3">Search work operations
+    <input type="search" data-bible-search class="{{ $inputClass }}" placeholder="Search operation, stage, trade, assembly, element or work item">
+  </label>
+  <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <label class="text-sm font-semibold">Work Stage<select data-bible-stage class="{{ $inputClass }}"><option value="">All stages</option>@foreach($bibleStages as $stage)<option value="{{ $stage->id }}">{{ $stage->stage_name }}</option>@endforeach</select></label>
+    <label class="text-sm font-semibold">Trade<select data-bible-trade class="{{ $inputClass }}"><option value="">All trades</option></select></label>
+    <label class="text-sm font-semibold">Assembly<select data-bible-assembly class="{{ $inputClass }}"><option value="">All assemblies</option></select></label>
+    <label class="text-sm font-semibold">Element<select data-bible-element class="{{ $inputClass }}"><option value="">All elements</option></select></label>
+    <label class="text-sm font-semibold">Work Item<select data-bible-work-item class="{{ $inputClass }}"><option value="">All work items</option></select></label>
+    <label class="text-sm font-semibold">Micro Operation<select data-bible-operation class="{{ $inputClass }}" required><option value="">Select an operation</option></select></label>
+  </div>
+  <input type="hidden" name="works[__INDEX__][bible_operation_id]" value="" data-bible-id>
+  <input type="hidden" name="works[__INDEX__][work_activity_id]" value="">
+  <p class="mt-2 text-xs text-slate-600" data-bible-message>Choose by category or search directly. Unassigned project types do not block reporting.</p>
+</div>
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
 
                                     <div class="hidden" x-show="false">
                                         <label class="{{ $labelClass }}">Work Stage</label>
@@ -527,7 +528,7 @@
                                                 class="{{ $inputClass }}">
                                             <option value="">Select Work Stage</option>
                                             @foreach($workStages as $stage)
-                                                <option value="{{ $stage->id }}">{{ $stage->name }}</option>
+                                                <option value="{{ $stage->id }}">{{ $stage->stage_name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -739,7 +740,7 @@
 </div>
 
 <script src="{{ asset('js/ravion-execution.js') }}?v=20260928-canonical-stage1-2"></script>
-<script src="{{ asset('js/ravion-work-canonical.js') }}?v=20260928-canonical-stage1-2"></script>
+
 
 
 <script>
@@ -787,6 +788,83 @@ window.RAVION_WORK_LABOUR = {
     contractors: @json($labourContractorOptions),
 };
 </script>
-<script src="{{ asset('js/ravion-work-resources.js') }}?v=20260929-v4"></script>
+<script src="{{ asset('js/ravion-work-resources.js') }}?v=20261017-index-fix"></script>
+
+<script>
+(() => {
+ const form=document.querySelector('[data-ref-work-done-form]'); if(!form)return;
+ const project=form.querySelector('[data-ref-project-field]'), url=form.dataset.bibleOperationsUrl;
+ const fields=['stage','trade','assembly','element','work-item','operation'];
+ const selectors=fields.map(f=>'[data-bible-'+f+']');
+ const versions=new WeakMap();
+ const all=()=>[...form.querySelectorAll('[data-bible-picker]')];
+ const norm=x=>String(x??'');
+ const unique=(ops,key,label)=>[...new Map(ops.filter(o=>norm(o[key])!=='').map(o=>[norm(o[key]),{id:norm(o[key]),label:norm(o[label]??o[key])}])).values()].sort((a,b)=>a.label.localeCompare(b.label));
+ function fill(el,values,placeholder,keep) {
+   el.replaceChildren(new Option(placeholder,''));
+   values.forEach(x=>el.add(new Option(x.label,x.id)));
+   el.value=keep && [...el.options].some(o=>o.value===keep)?keep:'';
+ }
+ function assign(p,op) {
+   const sel=p.querySelector('[data-bible-operation]'),hidden=p.querySelector('[data-bible-id]');
+   sel.value=op?norm(op.id):''; hidden.value=sel.value;
+   const unit=p.closest('[data-ref-activity-card]')?.querySelector('[data-ref-canonical-unit-field]');
+   if(unit && op?.unit){const u=norm(op.unit);if(![...unit.options].some(o=>o.value===u))unit.add(new Option(u,u));unit.value=u;unit.dispatchEvent(new Event('change',{bubbles:true}));}
+ }
+ async function refresh(p,changed=-1) {
+   const v=(versions.get(p)||0)+1;versions.set(p,v);
+   const selects=selectors.map(s=>p.querySelector(s));
+   const saved=changed===-2?selects.map(()=>''):selects.map(s=>s.value), hidden=p.querySelector('[data-bible-id]'), previous=changed===-2?'':hidden.value;
+   const message=p.querySelector('[data-bible-message]');
+   if(changed>=0){for(let i=changed+1;i<selects.length;i++)saved[i]='';hidden.value='';}
+   if(!project.value){message.textContent='Select a project first.';fill(selects[5],[],'Select project first','');return;}
+   message.textContent='Loading available operations...';
+   const params=new URLSearchParams({project_id:project.value});
+   const search=p.querySelector('[data-bible-search]').value.trim();if(search)params.set('search',search);
+   try {
+     const response=await fetch(url+'?'+params,{headers:{Accept:'application/json'},credentials:'same-origin'});
+     if(!response.ok)throw new Error('Unable to load operations ('+response.status+')');
+     const data=await response.json();if(!p.isConnected||versions.get(p)!==v)return;
+     const ops=data.operations||[];
+     const specs=[['stage_id','stage_name','All stages'],['trade','trade','All trades'],['assembly_id','assembly_name','All assemblies'],['element','element','All elements'],['work_item_id','work_item_name','All work items']];
+     let filtered=ops;
+     specs.forEach(([key,label,placeholder],i)=>{
+       fill(selects[i],unique(filtered,key,label),placeholder,saved[i]);
+       if(selects[i].value)filtered=filtered.filter(o=>norm(o[key])===selects[i].value);
+     });
+     const options=filtered.map(o=>({id:norm(o.id),label:[o.name].filter(Boolean).join(' — ')}));
+     fill(selects[5],options,'Select micro operation',saved[5]||(changed===-1?previous:''));
+     const op=filtered.find(o=>norm(o.id)===selects[5].value);assign(p,op);
+     message.textContent=ops.length+' matching available operations. '+(ops.length>=5000?'Refine your search.':'');
+     p._workOperations=ops;
+   } catch(e){message.textContent=e.message;fill(selects[5],[],'Unable to load','');hidden.value='';}
+ }
+ function selectSearch(p,op){
+   const values=[op.stage_id,op.trade,op.assembly_id,op.element,op.work_item_id,op.id];
+   selectors.forEach((s,i)=>{const el=p.querySelector(s);const value=norm(values[i]);if(value && ![...el.options].some(o=>o.value===value))el.add(new Option(value,value));el.value=value;});
+   assign(p,op);
+ }
+ form.addEventListener('change',e=>{
+   const p=e.target.closest('[data-bible-picker]');if(!p)return;
+   const i=selectors.findIndex(s=>e.target.matches(s));
+   if(i===5){const op=(p._workOperations||[]).find(o=>norm(o.id)===e.target.value);assign(p,op);return;}
+   if(i>=0)refresh(p,i);
+ });
+ const delays=new WeakMap();
+ form.addEventListener('input',e=>{if(!e.target.matches('[data-bible-search]'))return;const p=e.target.closest('[data-bible-picker]');clearTimeout(delays.get(p));delays.set(p,setTimeout(async()=>{
+   // Search results are loaded without restricting the hierarchy; selecting one fills every level.
+   await refresh(p,-2);
+   const term=e.target.value.trim();if(!term)return;
+   const ops=p._workOperations||[];
+   const list=p.querySelector('[data-bible-operation]');
+   fill(list,ops.map(o=>({id:norm(o.id),label:[o.stage_name,o.trade,o.element,o.name].filter(Boolean).join(' / ')})),'Choose search result','');
+ },250));});
+ form.addEventListener('change',e=>{if(!e.target.matches('[data-bible-operation]'))return;const p=e.target.closest('[data-bible-picker]');const op=(p._workOperations||[]).find(o=>norm(o.id)===e.target.value);if(op)selectSearch(p,op);});
+ project.addEventListener('change',()=>all().forEach(p=>{p.querySelector('[data-bible-id]').value='';p.querySelector('[data-bible-search]').value='';refresh(p,-2);}));
+ const container=document.getElementById('work-activity-container');
+ if(container)new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes){if(node.nodeType!==1)continue;const p=node.matches?.('[data-bible-picker]')?node:node.querySelector?.('[data-bible-picker]');if(p)refresh(p,-2);}}).observe(container,{childList:true,subtree:true});
+ all().forEach(p=>refresh(p,-1));
+})();
+</script>
 
 @endsection

@@ -96,6 +96,7 @@ use App\Http\Controllers\MachineryEquipmentController;
 use App\Http\Controllers\MachineryEquipmentAllocationController;
 use App\Http\Controllers\MachineryDailyUsageController;
 use App\Http\Controllers\MaterialVariantController;
+use App\Http\Controllers\WorkDoneReviewController;
 
 
 
@@ -110,6 +111,24 @@ Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified', 'permission:dashboard.view'])->name('dashboard');
 
+/*
+|--------------------------------------------------------------------------
+| Public vendor RFQ portal — token access, no ERP login
+|--------------------------------------------------------------------------
+| Keep web middleware (sessions + CSRF). Controller must validate token,
+| expiration, revocation and invitation scope on every request.
+*/
+Route::get('/vendor/rfq/{token}', [\App\Http\Controllers\RfqVendorAccessController::class, 'show'])
+    ->where('token', '[a-f0-9]{64}')
+    ->middleware('throttle:30,1')
+    ->name('vendor-rfqs.show');
+
+Route::post('/vendor/rfq/{token}', [\App\Http\Controllers\RfqVendorAccessController::class, 'save'])
+    ->where('token', '[a-f0-9]{64}')
+    ->middleware('throttle:15,1')
+    ->name('vendor-rfqs.save');
+
+/* Internal ERP routes — login required */
 Route::middleware('auth')->group(function () {
 
     /*
@@ -153,6 +172,8 @@ Route::get(
     '/material-dispatches/approved-requirement-items',
     [MaterialDispatchController::class, 'approvedRequirementItems']
 )->name('material-dispatches.approved-requirement-items');
+
+
 
 Route::patch(
     '/material-dispatches/{materialDispatch}/dispatch',
@@ -221,7 +242,7 @@ Route::get(
     [MaterialReceivedPurchaseOrderController::class, 'show']
 )->name('material-received.purchase-orders.show');
 
-Route::resource('purchase-orders', PurchaseOrderController::class);
+
 
 
 Route::resource('purchase-orders', PurchaseOrderController::class);
@@ -665,6 +686,92 @@ Route::get(
     | Masters
     |--------------------------------------------------------------------------
     */
+
+// Phase 06 Step 2B — insert inside the existing Route::middleware('auth')->group(...).
+// Controller independently enforces Admin/PMO role authorization (fail-closed).
+Route::prefix('work-done-bible')->name('work-done-bible.')->group(function () {
+    Route::get('/project-types', [\App\Http\Controllers\WorkDoneBibleProjectTypeController::class, 'index'])
+        ->name('project-types.index');
+    Route::post('/project-types', [\App\Http\Controllers\WorkDoneBibleProjectTypeController::class, 'store'])
+        ->name('project-types.store');
+     
+});
+
+Route::prefix('work-done-bible')->name('work-done-bible.')->group(function () {
+    Route::get('/project-types', [\App\Http\Controllers\WorkDoneBibleProjectTypeController::class, 'index'])
+        ->name('project-types.index');
+    Route::post('/project-types', [\App\Http\Controllers\WorkDoneBibleProjectTypeController::class, 'store'])
+        ->name('project-types.store');
+});
+
+Route::get('/work-done-bible/applicability', [\App\Http\Controllers\WorkDoneBibleApplicabilityController::class, 'index'])
+    ->name('work-done-bible.applicability.index');
+Route::post('/work-done-bible/applicability', [\App\Http\Controllers\WorkDoneBibleApplicabilityController::class, 'store'])
+    ->name('work-done-bible.applicability.store');
+
+    Route::get('/work-done-bible/approved-operations', [\App\Http\Controllers\WorkDoneBibleOperationLookupController::class, 'index'])
+    ->name('work-done-bible.approved-operations');
+
+    Route::get('/work-done-bible/templates', [\App\Http\Controllers\WorkDoneBibleTemplateApplicabilityController::class, 'index'])
+    ->name('work-done-bible.templates.index');
+Route::post('/work-done-bible/templates', [\App\Http\Controllers\WorkDoneBibleTemplateApplicabilityController::class, 'store'])
+    ->name('work-done-bible.templates.store');
+
+    Route::post('/{workDone}/items/{item}/verify', [WorkDoneReviewController::class, 'verifyItem'])->name('review.item.verify');
+Route::post('/{workDone}/items/{item}/return', [WorkDoneReviewController::class, 'returnItem'])->name('review.item.return');
+Route::post('/{workDone}/items/{item}/resubmit', [WorkDoneReviewController::class, 'resubmitItem'])->name('review.item.resubmit');
+
+    Route::get('/work-done-pmo', [\App\Http\Controllers\WorkDoneReviewController::class,'index'])->name('work-done.review.index');
+Route::post('/work-done/{workDone}/submit', [\App\Http\Controllers\WorkDoneReviewController::class,'submit'])->name('work-done.review.submit');
+Route::post('/work-done/{workDone}/verify', [\App\Http\Controllers\WorkDoneReviewController::class,'verify'])->name('work-done.review.verify');
+Route::post('/work-done/{workDone}/return', [\App\Http\Controllers\WorkDoneReviewController::class,'returnForCorrection'])->name('work-done.review.return');
+
+Route::get('rfqs/{rfq}/invitations/{invitation}/editable-pdf', [\App\Http\Controllers\RfqEditablePdfController::class, 'download'])
+    ->whereNumber('invitation')
+    ->name('rfqs.invitations.editable-pdf');
+Route::get('rfqs/comparisons', [\App\Http\Controllers\RfqWorkflowIndexController::class, 'comparisons'])->name('rfqs.comparisons.index');
+Route::get('rfqs/awards', [\App\Http\Controllers\RfqWorkflowIndexController::class, 'awards'])->name('rfqs.awards.index');
+
+Route::get('/rfqs/requirement-items', [\App\Http\Controllers\RfqController::class, 'requirementItems'])->name('rfqs.requirement-items');
+Route::get('/rfqs', [\App\Http\Controllers\RfqController::class, 'index'])->name('rfqs.index');
+Route::get('/rfqs/create', [\App\Http\Controllers\RfqController::class, 'create'])->name('rfqs.create');
+Route::post('/rfqs', [\App\Http\Controllers\RfqController::class, 'store'])->name('rfqs.store');
+Route::get('/rfqs/{rfq}', [\App\Http\Controllers\RfqController::class, 'show'])->name('rfqs.show');
+
+    Route::post('/rfq-invitations/{invitation}/issue-link', [\App\Http\Controllers\RfqVendorAccessController::class, 'issue'])
+    ->middleware('throttle:10,1')
+    ->name('rfq-invitations.issue-link');
+
+    Route::get('/rfqs/{rfq}/comparison', [
+    \App\Http\Controllers\RfqComparisonController::class,
+    'show'
+])->name('rfqs.comparison');
+
+Route::post('rfqs/{rfq}/awards/review', [\App\Http\Controllers\RfqAwardController::class, 'review'])->name('rfqs.awards.review');
+Route::post('rfqs/{rfq}/awards', [\App\Http\Controllers\RfqAwardController::class, 'store'])->name('rfqs.awards.store');
+Route::get('rfqs/{rfq}/invitations/{invitation}/print', [\App\Http\Controllers\RfqPrintController::class, 'show'])
+    ->whereNumber('invitation')
+    ->name('rfqs.invitations.print');
+
+
+
+// Phase 06 — Activity-wise PMO Review
+
+Route::post(
+    'work-done/{workDone}/items/{item}/verify',
+    [\App\Http\Controllers\WorkDoneReviewController::class, 'verifyItem']
+)->name('work-done.review.item.verify');
+
+Route::post(
+    'work-done/{workDone}/items/{item}/return',
+    [\App\Http\Controllers\WorkDoneReviewController::class, 'returnItem']
+)->name('work-done.review.item.return');
+
+Route::post(
+    'work-done/{workDone}/items/{item}/resubmit',
+    [\App\Http\Controllers\WorkDoneReviewController::class, 'resubmitItem']
+)->name('work-done.review.item.resubmit');
+
 
     Route::resource('projects', ProjectController::class)
     ->except(['destroy'])
@@ -1986,6 +2093,8 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
     Route::get('/material-shortage-report', [MaterialShortageReportController::class, 'index'])
         ->name('material-shortage-report.index')
         ->middleware('permission:material_shortage_report.view');
+
+        
 
 
     /*

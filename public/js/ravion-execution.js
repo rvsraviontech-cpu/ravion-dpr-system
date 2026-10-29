@@ -264,7 +264,7 @@
                         .forEach((field) => {
                             field.name =
                                 field.name.replace(
-                                    /works\[\d+\]/g,
+                                    /works\[(?:\d+|undefined|__INDEX__)\]/g,
                                     `works[${index}]`
                                 );
                         });
@@ -1432,7 +1432,7 @@
                                     field.name =
                                         field.name
                                             .replace(
-                                                /works\[\d+\]/g,
+                                                /works\[(?:\d+|undefined|__INDEX__)\]/g,
                                                 `works[${workIndex}]`
                                             )
                                             .replace(

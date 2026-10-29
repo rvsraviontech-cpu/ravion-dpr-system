@@ -185,6 +185,25 @@ return [
                 'permission' => 'material_required.view',
                 'icon' => 'document',
             ],
+
+            [
+    'title' => 'Quotations (RFQ)',
+    'route' => 'rfqs.index',
+    'icon' => 'document',
+    'permission' => 'rfqs.view',
+],
+            [
+                'title' => 'Quotation Comparison',
+                'route' => 'rfqs.comparisons.index',
+                'permission' => 'rfqs.view',
+                'icon' => 'scale',
+            ],
+            [
+                'title' => 'Quotation Awards',
+                'route' => 'rfqs.awards.index',
+                'permission' => 'purchase_orders.create',
+                'icon' => 'clipboard',
+            ],
             [
                 'title' => 'Purchase Orders',
                 'route' => 'purchase-orders.index',

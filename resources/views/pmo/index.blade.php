@@ -550,4 +550,5 @@
     </div>
 
 </div>
+ @include('pmo.partials.work_done_approvals')
 @endsection

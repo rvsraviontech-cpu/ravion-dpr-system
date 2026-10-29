@@ -280,6 +280,9 @@ class WorkDoneController extends Controller
                             ]
                         );
 
+                    $header = WorkDoneHeader::whereKey($header->id)->lockForUpdate()->firstOrFail();
+                    abort_unless($header->status === 'Draft', 409, 'Cannot append activities after submission.');
+
                     if (
                         array_key_exists('remarks', $validated)
                         && $header->remarks !== $this->nullableTrim(
@@ -395,6 +398,13 @@ class WorkDoneController extends Controller
             ->orderBy('sort_order')
             ->get()->groupBy('work_done_item_id');
 
+            $operationNames = DB::table('work_done_bible_operations')
+    ->whereIn(
+        'id',
+        $workDone->items->pluck('bible_operation_id')->filter()->unique()
+    )
+    ->pluck('micro_operation', 'id');
+
         return view('work-done.show', compact(
             'workDone', 'reportedMaterials', 'reportedLabours', 'reportedMachinery'
         ));
@@ -411,6 +421,8 @@ class WorkDoneController extends Controller
         );
 
         $this->ensureHeaderAccess($workDone);
+
+        abort_unless(in_array($workDone->status, ['Draft','Returned'], true), 409, 'This Work Done entry is locked.');
 
         return view(
             'work-done.edit',
@@ -441,6 +453,8 @@ class WorkDoneController extends Controller
         );
 
         $this->ensureHeaderAccess($workDone);
+
+        abort_unless(in_array($workDone->status, ['Draft','Returned'], true), 409, 'This Work Done entry is locked.');
 
         $validated = $this->validatePayload(
             $request,
@@ -480,6 +494,27 @@ class WorkDoneController extends Controller
                     &$storedPaths,
                     &$pathsToDeleteAfterCommit
                 ): void {
+                    $lockedHeader = WorkDoneHeader::whereKey($workDone->id)->lockForUpdate()->firstOrFail();
+                    abort_unless(in_array($lockedHeader->status,['Draft','Returned'],true),409,'Entry is locked.');
+                    if ($lockedHeader->status === 'Returned') {
+                        $existing = $lockedHeader->items()->lockForUpdate()->get();
+                        $provided = collect($validated['works'])->pluck('id')->filter()->map(fn($id)=>(int)$id)->sort()->values()->all();
+                        $expected = $existing->pluck('id')->map(fn($id)=>(int)$id)->sort()->values()->all();
+                        abort_unless($provided === $expected && count($validated['works']) === count($expected),409,'Corrections must preserve all existing activities.');
+                        foreach($validated['works'] as $workData) {
+                            $saved = $existing->firstWhere('id',(int)$workData['id']);
+                            abort_unless($saved,409);
+                            if ($saved->review_status !== 'Returned') {
+                                // Non-returned records cannot be modified by the edit form.
+                                // Prevent edits to approved and awaiting-review activities.
+                                $incoming = $this->workItemAttributes(workData:$workData,sortOrder:$saved->sort_order);
+                                foreach($incoming as $key=>$value) {
+                                    abort_unless((string)($saved->{$key} ?? '') === (string)($value ?? ''),409,'Only returned activities can be corrected.');
+                                }
+                                abort_if(!empty($workData['remove_photo_ids']),409);
+                            }
+                        }
+                    }
                     $oldValues =
                         $this->auditHeaderValues($workDone);
 
@@ -555,6 +590,8 @@ class WorkDoneController extends Controller
                                  */
                                 continue;
                             }
+
+                            if ($lockedHeader->status === 'Returned' && $workItem->review_status !== 'Returned') { continue; }
 
                             $workItem->update(
                                 $this->workItemAttributes(
@@ -653,6 +690,8 @@ class WorkDoneController extends Controller
         );
 
         $this->ensureHeaderAccess($workDone);
+
+        abort_unless($workDone->status === 'Draft',409,'Submitted and reviewed Work Done entries cannot be deleted.');
 
         abort_if(
             $workDone->items->contains(
@@ -873,13 +912,15 @@ class WorkDoneController extends Controller
             ],
 
             'works.*.activity_id' => [
-                'required_without:works.*.work_activity_id',
+                'nullable',
                 'integer',
                 'exists:activities,id',
             ],
 
+            'works.*.bible_operation_id' => ['required', 'integer', 'exists:work_done_bible_operations,id'],
+
             'works.*.work_activity_id' => [
-                'required_without:works.*.activity_id',
+                'nullable',
                 'integer',
                 'exists:work_activities,id',
             ],
@@ -1052,6 +1093,12 @@ class WorkDoneController extends Controller
 
         foreach ($works as $index => $work) {
             $prefix = "works.{$index}";
+
+            // Bible V5 eligibility is enforced on the server, not trusted from the dropdown.
+            $bibleId = (int) ($work['bible_operation_id'] ?? 0);
+            if (!$bibleId || !$this->isBibleOperationEligible($projectId, $bibleId)) {
+                $errors["{$prefix}.bible_operation_id"][] = 'Select an available physical work operation for this project.';
+            }
 
             if (! empty($work['work_activity_id'])) {
                 $canonicalActivity = WorkActivity::query()
@@ -1289,12 +1336,50 @@ class WorkDoneController extends Controller
         }
     }
 
+    private function bibleOperationUnit(int $operationId): ?string
+    {
+        return DB::table('work_done_bible_operations')->where('id', $operationId)->value('uom');
+    }
+
+    /** Match the approved-operation endpoint's effective template/project policy. */
+    private function isBibleOperationEligible(int $projectId, int $operationId): bool
+    {
+        $assignment = DB::table('work_done_bible_project_type_assignments')
+            ->where('project_id', $projectId)->first();
+        // Unassigned projects use the active PHYSICAL catalogue by default.
+
+        return DB::table('work_done_bible_operations as o')
+            ->leftJoin('work_done_bible_template_operations as t', function ($join) use ($assignment) {
+                $join->on('t.operation_id', '=', 'o.id')
+                    ->where('t.project_type_id', '=', $assignment->bible_project_type_id ?? -1);
+            })
+            ->leftJoin('work_done_bible_project_applicabilities as a', function ($join) use ($projectId) {
+                $join->on('a.operation_id', '=', 'o.id')->where('a.project_id', '=', $projectId);
+            })
+            ->where('o.id', $operationId)
+            ->where('o.is_active', 1)
+            ->where('o.record_type', 'PHYSICAL')
+            ->where(function ($q) {
+                $q->where(function ($p) {
+                    $p->whereNotNull('a.id')->where('a.is_enabled', 1)
+                        ->whereIn('a.applicability', ['Applicable', 'Optional']);
+                })->orWhere(function ($p) {
+                    $p->whereNull('a.id')->where(function ($t) {
+                        $t->whereNull('t.id')
+                            ->orWhere('t.review_status', '!=', 'Approved')
+                            ->orWhere('t.is_enabled', 1);
+                    });
+                });
+            })->exists();
+    }
+
     private function workItemAttributes(
         array $workData,
         int $sortOrder
     ): array {
         return [
             'dpr_id' => null,
+            'bible_operation_id' => (int) $workData['bible_operation_id'],
 
             'work_stage_id' =>
                 $workData['work_stage_id'] ?? null,
@@ -1341,7 +1426,7 @@ class WorkDoneController extends Controller
 
             'unit' =>
                 $this->nullableTrim(
-                    $workData['unit'] ?? null
+                    $this->bibleOperationUnit((int) $workData['bible_operation_id'])
                 ),
 
             'progress_percentage' =>
