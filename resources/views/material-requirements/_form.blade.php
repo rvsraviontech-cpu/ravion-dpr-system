@@ -150,7 +150,7 @@
         {{-- Category-first browsing and direct Product search are complementary selection methods. --}}
         <div class="grid grid-cols-1 gap-x-4 gap-y-5 md:grid-cols-2 xl:grid-cols-4">
             <div class="min-w-0">
-                <x-rds.product-selector name="entry_product_id" label="Direct Product Search (Alternative)" placeholder="Search any Product..." />
+                <x-rds.product-selector name="entry_product_id" label="Direct Product Search (Alternative)" placeholder="Search any Product..." catalogue-only="true" />
             </div>
             <div class="min-w-0">
                 <label class="{{ $labelClass }}" for="entry_trade">Trade Category</label>

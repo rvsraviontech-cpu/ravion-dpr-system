@@ -8,6 +8,7 @@
     'disabled' => false,
     'help' => null,
     'endpoint' => null,
+    'catalogueOnly' => false,
 ])
 
 @php
@@ -18,6 +19,7 @@
     class="relative min-w-0"
     x-data="ravionProductSelector({
         endpoint: @js($endpoint),
+        catalogueOnly: @js((bool) $catalogueOnly),
         value: @js($value),
         selectedProduct: @js($selectedProduct),
     })"
@@ -89,7 +91,7 @@
             <span class="text-xs font-semibold text-gray-600">Product Search Results</span>
             <span class="text-xs text-gray-400"
                   x-show="!loading"
-                  x-text="results.length ? `${results.length} shown` : ''"></span>
+                  x-text="total ? `${results.length} of ${total} shown` : (results.length ? `${results.length} shown` : '')"></span>
         </div>
 
         <div x-show="loading" class="px-4 py-5 text-sm text-gray-500">
@@ -98,7 +100,7 @@
 
         <div x-show="error" class="px-4 py-4 text-sm text-red-600" x-text="error"></div>
 
-        <div x-show="!loading && !error" class="max-h-[420px] overflow-y-auto">
+        <div x-show="!loading || results.length" class="max-h-[420px] overflow-y-auto">
             <template x-for="product in results" :key="product.id">
                 <button type="button"
                         @mousedown.prevent="selectProduct(product)"
@@ -114,7 +116,7 @@
                             </div>
 
                             <div class="mt-1 font-mono text-[11px] text-gray-400"
-                                 x-text="product.catalogue_code || product.code || ''"></div>
+                                 x-text="product.code || ''"></div>
                         </div>
 
                         <div class="flex shrink-0 items-center gap-2">
@@ -128,9 +130,16 @@
                 </button>
             </template>
 
-            <div x-show="results.length === 0 && query.trim().length >= 2"
+            <div x-show="!loading && !error && results.length === 0 && query.trim().length >= 2"
                  class="px-4 py-6 text-center text-sm text-gray-500">
                 No matching Product found.
+            </div>
+            <div x-show="hasMore && !loading" x-cloak class="border-t border-gray-100 bg-gray-50 px-4 py-3 text-center">
+                <button type="button" @mousedown.prevent="loadMore()" :disabled="loadingMore"
+                        class="rounded-lg border border-blue-200 bg-white px-5 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+                    <span x-show="!loadingMore">Load More Products</span>
+                    <span x-show="loadingMore">Loading more...</span>
+                </button>
             </div>
         </div>
     </div>

@@ -11,13 +11,48 @@ class ProductDependencyController extends Controller
 {
     public function __invoke(MaterialType $materialType): JsonResponse
     {
-        if (
-            ! $materialType->is_active
-            || $materialType->is_legacy
-            || ! in_array($materialType->master_status, ['Approved', 'CANONICAL'], true)
-        ) {
-            abort(404, 'Product is not available for operational use.');
-        }
+        $isCatalogueProduct = DB::table('material_bible_product_mappings as bpm')
+    ->join(
+        'material_bible_sub_categories as sc',
+        'sc.id',
+        '=',
+        'bpm.material_bible_sub_category_id'
+    )
+    ->join(
+        'material_bible_main_categories as mc',
+        'mc.id',
+        '=',
+        'sc.material_bible_main_category_id'
+    )
+    ->join(
+        'material_bible_trades as t',
+        't.id',
+        '=',
+        'mc.material_bible_trade_id'
+    )
+    ->where('bpm.material_type_id', $materialType->id)
+    ->whereIn('bpm.source_code', [
+        'RAVION_BIBLE_20260912',
+        'RAVION_ERP_MANUAL',
+    ])
+    ->where('bpm.is_active', true)
+    ->where('sc.is_active', true)
+    ->where('mc.is_active', true)
+    ->where('t.is_active', true)
+    ->exists();
+
+if (
+    ! $materialType->is_active
+    || $materialType->is_legacy
+    || ! in_array(
+        $materialType->master_status,
+        ['Approved', 'CANONICAL'],
+        true
+    )
+    || ! $isCatalogueProduct
+) {
+    abort(404, 'Product is not available for operational use.');
+}
 
         $materialType->load([
             'unit:id,unit_name,unit_code,symbol',

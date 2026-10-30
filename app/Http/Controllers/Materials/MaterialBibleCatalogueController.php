@@ -65,6 +65,7 @@ class MaterialBibleCatalogueController extends Controller
                 ->join('material_types as mt', 'mt.id', '=', 'bpm.material_type_id')
                 ->where('bpm.material_bible_sub_category_id', $subId)
                 ->where('bpm.is_active', true)
+                ->whereIn('bpm.source_code', ['RAVION_BIBLE_20260912', 'RAVION_ERP_MANUAL',])
                 ->where('sc.is_active', true)
                 ->where('mc.is_active', true)
                 ->where('t.is_active', true)

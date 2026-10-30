@@ -465,7 +465,7 @@ Route::patch(
     // Read-only Material Bible category-first browsing for Material Requirements.
     Route::get('/materials/bible-catalogue', MaterialBibleCatalogueController::class)
         ->name('materials.bible-catalogue')
-        ->middleware('permission:material_required.view');
+        ->middleware('permission:material_required.view|material_required.create|material_required.edit|material_received.view|material_received.create|material_received.edit');
 
     Route::get('/materials/product-search', ProductSearchController::class)
     ->name('materials.product-search');

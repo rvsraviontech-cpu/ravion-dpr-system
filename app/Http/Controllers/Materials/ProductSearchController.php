@@ -19,6 +19,9 @@ class ProductSearchController extends Controller
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:255'],
             'product_master' => ['nullable', 'boolean'],
+            'catalogue_only' => ['nullable', 'boolean'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
             'activity_division_id' => [
                 'nullable',
                 'integer',
@@ -50,9 +53,20 @@ class ProductSearchController extends Controller
         $search = trim((string) ($validated['q'] ?? ''));
         $limit = (int) ($validated['limit'] ?? 30);
         $productMaster = (bool) ($validated['product_master'] ?? false);
+        $catalogueOnly = (bool) ($validated['catalogue_only'] ?? false);
+        $paginated = $catalogueOnly || isset($validated['page']) || isset($validated['per_page']);
+        $perPage = (int) ($validated['per_page'] ?? $limit);
+        $page = (int) ($validated['page'] ?? 1);
 
         $normalized = $this->normalizeSearch($search);
         $concepts = $this->searchConcepts($normalized);
+
+        // Fast Bible selector: resolve eligible/searchable IDs with independent
+        // indexed lookups instead of evaluating correlated OR/EXISTS queries
+        // for every material row. Other consumers retain the old search path.
+        $fastBibleIds = $catalogueOnly
+            ? $this->fastBibleMatchingIds($concepts)
+            : null;
 
         $query = MaterialType::query()
             ->with([
@@ -85,7 +99,7 @@ class ProductSearchController extends Controller
             ])
             ->where('material_types.is_active', true)
             ->where('material_types.is_legacy', false)
-            ->when($productMaster, function (Builder $q) {
+            ->when($productMaster && ! $catalogueOnly, function (Builder $q) {
                 $q->whereExists(function ($mapping) {
                     $mapping->selectRaw('1')
                         ->from('material_bible_product_mappings as bible_map')
@@ -104,6 +118,11 @@ class ProductSearchController extends Controller
                 'Approved',
                 'CANONICAL',
             ]);
+
+        if ($catalogueOnly) {
+            // Empty sets must not fall back to unrestricted browsing.
+            $query->whereIn('material_types.id', $fastBibleIds);
+        }
 
         /*
          * Optional contextual filters.
@@ -172,11 +191,10 @@ class ProductSearchController extends Controller
          * Both concepts therefore belong to the same Product.
          */
         if ($normalized !== '') {
-            foreach ($concepts as $concept) {
-                $this->applyConceptConstraint(
-                    $query,
-                    $concept
-                );
+            if (! $catalogueOnly) {
+                foreach ($concepts as $concept) {
+                    $this->applyConceptConstraint($query, $concept);
+                }
             }
 
             /*
@@ -287,10 +305,22 @@ class ProductSearchController extends Controller
             );
         }
 
-        $products = $query
-            ->orderBy('material_types.material_type_name')
-            ->limit($limit)
-            ->get();
+        $query->orderBy('material_types.material_type_name')
+            ->orderBy('material_types.id');
+
+        if ($catalogueOnly) {
+            // Fetch one extra row to detect Load More; avoid COUNT(*) and
+            // its expensive correlated search/sort work.
+            $batch = $query->offset(($page - 1) * $perPage)
+                ->limit($perPage + 1)->get();
+            $hasMore = $batch->count() > $perPage;
+            $products = $batch->take($perPage);
+        } elseif ($paginated) {
+            $paginator = $query->paginate($perPage, ['material_types.*'], 'page', $page);
+            $products = $paginator->getCollection();
+        } else {
+            $products = $query->limit($limit)->get();
+        }
 
         // Only Product Master requests receive the expanded Bible details.
         // Other ERP consumers retain their existing response contract.
@@ -314,9 +344,97 @@ class ProductSearchController extends Controller
                 'normalized_query' => $normalized,
                 'concepts' => $concepts,
                 'returned' => $products->count(),
-                'limit' => $limit,
+                'limit' => $paginated ? $perPage : $limit,
+                'page' => $catalogueOnly ? $page : ($paginated ? $paginator->currentPage() : null),
+                'per_page' => $catalogueOnly ? $perPage : ($paginated ? $paginator->perPage() : null),
+                'total' => $catalogueOnly ? null : ($paginated ? $paginator->total() : null),
+                'last_page' => $catalogueOnly ? null : ($paginated ? $paginator->lastPage() : null),
+                'has_more' => $catalogueOnly ? $hasMore : ($paginated ? $paginator->hasMorePages() : false),
             ],
         ]);
+    }
+
+    /**
+     * Build the Bible selector's candidate set with simple independent queries.
+     * All concepts must match, but each may match a different product field,
+     * alias, variant or classification (same semantics as the original query).
+     * No cache: mapping activation/approval changes are visible immediately.
+     */
+    private function fastBibleMatchingIds(array $concepts): array
+    {
+        $eligible = DB::table('material_bible_product_mappings as map')
+            ->join('material_bible_sub_categories as sub', 'sub.id', '=', 'map.material_bible_sub_category_id')
+            ->join('material_bible_main_categories as main', 'main.id', '=', 'sub.material_bible_main_category_id')
+            ->join('material_bible_trades as trade', 'trade.id', '=', 'main.material_bible_trade_id')
+            ->whereIn('map.source_code', [self::BIBLE_SOURCE, 'RAVION_ERP_MANUAL'])
+            ->where('map.is_active', 1)->where('sub.is_active', 1)
+            ->where('main.is_active', 1)->where('trade.is_active', 1)
+            ->distinct()->pluck('map.material_type_id')->map(fn ($id) => (int) $id)->all();
+
+        $remaining = array_fill_keys($eligible, true);
+        foreach ($concepts as $concept) {
+            if ($remaining === []) break;
+            $like = '%'.$concept.'%';
+            $compactLike = '%'.$this->compactSearch($concept).'%';
+            $matches = [];
+            $add = static function ($ids) use (&$matches): void {
+                foreach ($ids as $id) $matches[(int) $id] = true;
+            };
+
+            $add(DB::table('material_types')
+                ->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(material_type_name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(material_type_code, "")) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(COALESCE(material_group, "")) LIKE ?', [$like]);
+                })->pluck('id'));
+
+            $add(DB::table('material_search_aliases')
+                ->where('is_active', 1)
+                ->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(alias) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(normalized_alias) LIKE ?', [$like]);
+                })->pluck('material_type_id'));
+
+            $add(DB::table('material_variants')->where('is_active', 1)
+                ->where(function ($q) use ($like, $compactLike) {
+                    foreach (['variant_name', 'variant_code', 'size_dimension', 'finish', 'colour_shade', 'search_aliases'] as $field) {
+                        $q->orWhereRaw('LOWER(COALESCE('.$field.', "")) LIKE ?', [$like]);
+                    }
+                    foreach (['variant_name', 'size_dimension', 'search_aliases'] as $field) {
+                        $q->orWhereRaw('REPLACE(LOWER(COALESCE('.$field.', "")), " ", "") LIKE ?', [$compactLike]);
+                    }
+                })->pluck('material_type_id'));
+
+            $add(DB::table('material_types as mt')
+                ->join('material_product_groups as pg', 'pg.id', '=', 'mt.material_product_group_id')
+                ->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(pg.group_name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(pg.group_code) LIKE ?', [$like]);
+                })->pluck('mt.id'));
+
+            $add(DB::table('material_types as mt')
+                ->join('material_product_types as pt', 'pt.id', '=', 'mt.material_product_type_id')
+                ->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(pt.type_name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(pt.type_code) LIKE ?', [$like]);
+                })->pluck('mt.id'));
+
+            $add(DB::table('material_bible_product_mappings as map')
+                ->join('material_bible_sub_categories as sub', 'sub.id', '=', 'map.material_bible_sub_category_id')
+                ->join('material_bible_main_categories as main', 'main.id', '=', 'sub.material_bible_main_category_id')
+                ->join('material_bible_trades as trade', 'trade.id', '=', 'main.material_bible_trade_id')
+                ->where('map.is_active', 1)->where('sub.is_active', 1)
+                ->where('main.is_active', 1)->where('trade.is_active', 1)
+                ->where(function ($q) use ($like) {
+                    $q->whereRaw('LOWER(trade.name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(main.name) LIKE ?', [$like])
+                      ->orWhereRaw('LOWER(sub.name) LIKE ?', [$like]);
+                })->distinct()->pluck('map.material_type_id'));
+
+            $remaining = array_intersect_key($remaining, $matches);
+        }
+
+        return array_map('intval', array_keys($remaining));
     }
 
     /**
