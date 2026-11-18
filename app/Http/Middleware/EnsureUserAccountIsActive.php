@@ -14,6 +14,11 @@ class EnsureUserAccountIsActive
      */
     public function handle(Request $request, Closure $next): Response
     {
+
+    // Client Portal uses its own authentication guard and account checks.
+if ($request->is('client', 'client/*')) {
+    return $next($request);
+}
         $user = $request->user();
 
         if (! $user) {

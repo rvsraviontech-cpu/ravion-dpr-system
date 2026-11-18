@@ -17,7 +17,7 @@
 
     @if(!$isPoReceipt)
         <div class="border-b border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-            Product not found? Use <strong>+ Material Not Found</strong>. The receipt continues and the item goes to Pending Classification.
+            Select an approved Bible product using search or classification. Receipt quantities are recorded below.
         </div>
     @else
         <div class="border-b border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-900">
@@ -82,7 +82,19 @@
                                     <input type="search" class="{{ $inputClass }} material-search-input" autocomplete="off" placeholder="Search product...">
                                 @endif
                                 <div class="material-search-results absolute left-3 right-3 z-50 mt-1 hidden max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl"></div>
-                                @if(!$isPoReceipt)<button type="button" class="enable-temporary-material mt-2 w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">+ Material Not Found</button>@else<span class="enable-temporary-material hidden"></span>@endif
+                                 @if(!$isPoReceipt)
+                                 <div class="bible-selector mt-2 grid grid-cols-2 gap-2">
+                                     <select class="bible-trade rounded-lg border border-slate-300 bg-white p-2 text-xs"><option value="">Trade Category</option></select>
+                                     <select class="bible-main rounded-lg border border-slate-300 bg-white p-2 text-xs"><option value="">Main Category</option></select>
+                                     <select class="bible-sub rounded-lg border border-slate-300 bg-white p-2 text-xs"><option value="">Sub Category</option></select>
+                                     <select class="bible-product rounded-lg border border-slate-300 bg-white p-2 text-xs"><option value="">Item / Product</option></select>
+                                     <select class="bible-subitem rounded-lg border border-slate-300 bg-white p-2 text-xs"><option value="">Sub Item</option></select>
+                                     <select class="bible-variant rounded-lg border border-slate-300 bg-white p-2 text-xs"><option value="">Size / Variant</option></select>
+                                 </div>
+                                 <p class="bible-status mt-1 text-xs text-slate-500" aria-live="polite">Search the approved Bible or browse by category.</p>
+                                 @endif
+
+                                @if(!$isPoReceipt)<button type="button" class="enable-temporary-material hidden mt-2 w-full rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">+ Material Not Found</button>@else<span class="enable-temporary-material hidden"></span>@endif
                             </div>
                             <div class="temporary-panel {{ $entryMode === 'temporary' ? '' : 'hidden' }}">
                                 <div class="rounded-lg border border-amber-300 bg-amber-50 p-3">
@@ -298,6 +310,116 @@
    and provide a horizontal scroll only at narrow viewports. */
 @media(max-width:850px) {
   .po-material-cards .material-item-row { min-width:890px; }
+}
+</style>
+@endif
+
+{{-- Enterprise responsive layout refinement. Presentation only: preserve all form names, IDs and JS hooks. --}}
+<style>
+#direct-entry-card, #direct-summary-card, .po-material-cards { min-width:0; max-width:100%; }
+#direct-entry-card { background:#fff; border-color:#dbe3ed; border-radius:12px; padding:20px; }
+#direct-entry-card .material-item-row { gap:18px 14px; }
+#direct-entry-card .material-item-row>td:nth-child(2) { grid-column:span 12; }
+#direct-entry-card .material-item-row>td:nth-child(3) { grid-column:span 8; }
+#direct-entry-card .material-item-row>td:nth-child(4) { grid-column:span 4; }
+#direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 2; }
+#direct-entry-card .material-item-row>td:nth-child(11) { grid-column:span 12; }
+#direct-entry-card .material-search-input { width:100%; max-width:100%; }
+#direct-entry-card .bible-selector { grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+#direct-entry-card .bible-selector select { width:100%; min-width:0; min-height:40px; font-size:13px; }
+#direct-entry-card .material-item-row input:not([type=hidden]),
+#direct-entry-card .material-item-row select:not(.hidden) { min-width:0; max-width:100%; min-height:40px; border-radius:7px; }
+#direct-entry-card .material-item-row>td:nth-child(n+2):nth-child(-n+11)::before { font-size:12px; margin-bottom:6px; color:#475569; }
+#direct-entry-card .material-search-results { max-width:100%; }
+#direct-summary-card .overflow-x-auto { overflow-x:visible; }
+#direct-summary-card table { min-width:0!important; table-layout:fixed; }
+#direct-summary-card th, #direct-summary-card td { overflow-wrap:anywhere; }
+#direct-summary-card th:nth-child(1) { width:5%; }
+#direct-summary-card th:nth-child(2) { width:35%; }
+#direct-summary-card th:nth-child(3),#direct-summary-card th:nth-child(4) { width:15%; }
+#direct-summary-card th:nth-child(5) { width:15%; }
+#direct-summary-card th:nth-child(6) { width:15%; }
+.po-material-cards { overflow-x:visible!important; padding:12px; }
+.po-material-cards .material-item-row { min-width:0!important; max-width:100%; grid-template-columns:repeat(12,minmax(0,1fr))!important; gap:12px!important; padding:16px!important; border-radius:10px; }
+.po-material-cards .material-item-row>td { min-width:0!important; grid-row:auto!important; }
+.po-material-cards .material-item-row>td:nth-child(1) { grid-column:1/-1!important; }
+.po-material-cards .material-item-row>td:nth-child(2) { grid-column:span 4!important; }
+.po-material-cards .material-item-row>td:nth-child(3) { grid-column:span 2!important; }
+.po-material-cards .material-item-row>td:nth-child(4) { grid-column:span 2!important; }
+.po-material-cards .material-item-row>td:nth-child(5) { grid-column:span 2!important; }
+.po-material-cards .material-item-row>td:nth-child(6) { grid-column:span 2!important; }
+.po-material-cards .material-item-row>td:nth-child(n+7):nth-child(-n+15) { grid-column:span 2!important; }
+.po-material-cards .material-item-row>td:nth-child(16) { grid-column:1/-1!important; }
+.po-material-cards .material-item-row>td:nth-child(17) { grid-column:auto!important; }
+.po-material-cards .material-item-row input:not([type=hidden]),
+.po-material-cards .material-item-row select:not(.hidden) { min-height:38px; border-radius:7px; }
+@media(max-width:1100px) {
+ #direct-entry-card .material-item-row>td:nth-child(3),#direct-entry-card .material-item-row>td:nth-child(4) { grid-column:span 6; }
+ #direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 4; }
+ .po-material-cards .material-item-row>td:nth-child(n+2):nth-child(-n+6) { grid-column:span 4!important; }
+ .po-material-cards .material-item-row>td:nth-child(n+7):nth-child(-n+15) { grid-column:span 3!important; }
+}
+@media(max-width:700px) {
+ #direct-entry-card { margin:10px!important; padding:14px!important; }
+ #direct-entry-card .bible-selector { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #direct-entry-card .material-item-row>td:nth-child(3),#direct-entry-card .material-item-row>td:nth-child(4) { grid-column:span 12; }
+ #direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 6; }
+ .po-material-cards .material-item-row>td:nth-child(n+2):nth-child(-n+6) { grid-column:span 6!important; }
+ .po-material-cards .material-item-row>td:nth-child(n+7):nth-child(-n+15) { grid-column:span 4!important; }
+ #direct-summary-card table,#direct-summary-card tbody { display:block; width:100%; }
+ #direct-summary-card thead { display:none; }
+ #direct-summary-card tbody tr { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); padding:12px; gap:8px; border-bottom:1px solid #e2e8f0; }
+ #direct-summary-card tbody td { display:block; width:auto!important; padding:4px!important; min-width:0; text-align:left!important; }
+ #direct-summary-card tbody td:nth-child(2) { grid-column:1/-1; font-weight:600; }
+ #direct-summary-card tbody td:nth-child(5),#direct-summary-card tbody td:nth-child(6) { grid-column:span 1; }
+}
+@media(max-width:430px) {
+ #direct-entry-card .bible-selector { grid-template-columns:1fr; }
+ #direct-entry-card .material-item-row>td:nth-child(n+5):nth-child(-n+10) { grid-column:span 12; }
+ .po-material-cards .material-item-row>td:nth-child(n+2):nth-child(-n+6) { grid-column:span 12!important; }
+ .po-material-cards .material-item-row>td:nth-child(n+7):nth-child(-n+15) { grid-column:span 6!important; }
+}
+</style>
+
+@if(!$isPoReceipt)
+<style>
+/* Direct Receipt: four-row enterprise form; PO styles remain untouched. */
+#direct-entry-card .material-item-row { display:block!important; }
+#direct-entry-card .material-item-row>td { display:none!important; }
+#direct-entry-card .material-item-row>td:nth-child(2) { display:block!important; }
+#direct-entry-card .ravion-receipt-grid { display:grid; gap:12px; min-width:0; }
+#direct-entry-card .ravion-receipt-line { display:grid; gap:12px; min-width:0; align-items:end; }
+#direct-entry-card .ravion-receipt-line-1 { grid-template-columns:1.35fr repeat(3,minmax(0,1fr)); }
+#direct-entry-card .ravion-receipt-line-2 { grid-template-columns:repeat(5,minmax(0,1fr)); }
+#direct-entry-card .ravion-receipt-line-3 { grid-template-columns:repeat(6,minmax(0,1fr)); }
+#direct-entry-card .ravion-receipt-line-4 { grid-template-columns:minmax(0,1fr); }
+#direct-entry-card .ravion-receipt-field { min-width:0; position:relative; width:100%; }\n#direct-entry-card .material-item-row>td:nth-child(2)::before,\n#direct-entry-card .material-item-row>td:nth-child(11)::before { display:none!important; content:none!important; }\n#direct-entry-card .ravion-receipt-line-2 .ravion-receipt-field { width:100%; min-width:0; }
+#direct-entry-card .ravion-receipt-field>label { display:block; margin-bottom:5px; font-size:11px; font-weight:650; color:#475569; }
+#direct-entry-card .ravion-receipt-field input:not([type=hidden]),
+#direct-entry-card .ravion-receipt-field select { display:block; width:100%; min-width:0; max-width:100%; height:38px; padding:6px 9px; font-size:12px; border-radius:6px; }
+#direct-entry-card .ravion-receipt-field .material-search-results { left:0; right:0; z-index:60; }
+#direct-entry-card .ravion-receipt-field .material-search-input { width:100%; }
+#direct-entry-card .ravion-spec-grade-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; min-width:0; width:100%; }
+#direct-entry-card .ravion-spec-grade-pair select { width:100%; min-width:0; margin:0; }
+#direct-entry-card .ravion-receipt-field .hidden { display:none!important; }
+#direct-entry-card .ravion-receipt-field select:disabled { background:#f8fafc; }
+#direct-entry-card .ravion-receipt-line-4 input { width:100%; }
+#direct-entry-card .ravion-receipt-grid .bible-status { margin:0; font-size:11px; color:#64748b; }
+#direct-entry-card .enable-temporary-material { display:none!important; }
+@media(max-width:1050px) {
+ #direct-entry-card .ravion-receipt-line-1 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #direct-entry-card .ravion-receipt-line-2 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ #direct-entry-card .ravion-receipt-line-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media(max-width:650px) {
+ #direct-entry-card .ravion-receipt-line-1,
+ #direct-entry-card .ravion-receipt-line-2,
+ #direct-entry-card .ravion-receipt-line-3 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media(max-width:400px) {
+ #direct-entry-card .ravion-receipt-line-1,
+ #direct-entry-card .ravion-receipt-line-2,
+ #direct-entry-card .ravion-receipt-line-3 { grid-template-columns:minmax(0,1fr); }
 }
 </style>
 @endif

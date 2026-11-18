@@ -1,0 +1,116 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+class ClientQualityTestMasterSeeder extends Seeder
+{
+    public function run(): void
+    {
+        // Suggested catalogue only: no standards or acceptance limits are assumed.
+        // Safe to rerun: existing records and user edits are never overwritten.
+        $tests = [
+            ['code' => 'RQT-001', 'category' => 'Soil & Geotechnical', 'name' => 'Soil classification', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-002', 'category' => 'Soil & Geotechnical', 'name' => 'Moisture content', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-003', 'category' => 'Soil & Geotechnical', 'name' => 'Grain-size analysis', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-004', 'category' => 'Soil & Geotechnical', 'name' => 'Atterberg limits', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-005', 'category' => 'Soil & Geotechnical', 'name' => 'Standard Proctor compaction', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-006', 'category' => 'Soil & Geotechnical', 'name' => 'Modified Proctor compaction', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-007', 'category' => 'Soil & Geotechnical', 'name' => 'Field density', 'kind' => 'Field'],
+            ['code' => 'RQT-008', 'category' => 'Soil & Geotechnical', 'name' => 'California Bearing Ratio (CBR)', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-009', 'category' => 'Soil & Geotechnical', 'name' => 'Safe bearing capacity assessment', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-010', 'category' => 'Soil & Geotechnical', 'name' => 'Plate load test', 'kind' => 'Field'],
+            ['code' => 'RQT-011', 'category' => 'Soil & Geotechnical', 'name' => 'Soil permeability', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-012', 'category' => 'Aggregates', 'name' => 'Sieve analysis', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-013', 'category' => 'Aggregates', 'name' => 'Specific gravity', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-014', 'category' => 'Aggregates', 'name' => 'Water absorption', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-015', 'category' => 'Aggregates', 'name' => 'Aggregate crushing value', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-016', 'category' => 'Aggregates', 'name' => 'Aggregate impact value', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-017', 'category' => 'Aggregates', 'name' => 'Los Angeles abrasion value', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-018', 'category' => 'Aggregates', 'name' => 'Flakiness index', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-019', 'category' => 'Aggregates', 'name' => 'Elongation index', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-020', 'category' => 'Cement', 'name' => 'Fineness', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-021', 'category' => 'Cement', 'name' => 'Standard consistency', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-022', 'category' => 'Cement', 'name' => 'Initial setting time', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-023', 'category' => 'Cement', 'name' => 'Final setting time', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-024', 'category' => 'Cement', 'name' => 'Soundness', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-025', 'category' => 'Cement', 'name' => 'Compressive strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-026', 'category' => 'Reinforcement Steel', 'name' => 'Tensile strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-027', 'category' => 'Reinforcement Steel', 'name' => 'Yield strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-028', 'category' => 'Reinforcement Steel', 'name' => 'Elongation', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-029', 'category' => 'Reinforcement Steel', 'name' => 'Bend test', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-030', 'category' => 'Reinforcement Steel', 'name' => 'Rebend test', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-031', 'category' => 'Reinforcement Steel', 'name' => 'Unit weight', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-032', 'category' => 'Reinforcement Steel', 'name' => 'Chemical composition', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-033', 'category' => 'Concrete', 'name' => 'Slump', 'kind' => 'Field'],
+            ['code' => 'RQT-034', 'category' => 'Concrete', 'name' => 'Concrete temperature', 'kind' => 'Field'],
+            ['code' => 'RQT-035', 'category' => 'Concrete', 'name' => 'Cube compressive strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-036', 'category' => 'Concrete', 'name' => 'Core compressive strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-037', 'category' => 'Concrete', 'name' => 'Rebound hammer', 'kind' => 'Field'],
+            ['code' => 'RQT-038', 'category' => 'Concrete', 'name' => 'Ultrasonic pulse velocity (UPV)', 'kind' => 'Field'],
+            ['code' => 'RQT-039', 'category' => 'Concrete', 'name' => 'Mix design verification', 'kind' => 'Inspection'],
+            ['code' => 'RQT-040', 'category' => 'Concrete', 'name' => 'Water permeability', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-041', 'category' => 'Concrete', 'name' => 'Fresh concrete density', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-042', 'category' => 'Concrete', 'name' => 'Air content', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-043', 'category' => 'Concrete', 'name' => 'Chloride content', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-044', 'category' => 'Concrete', 'name' => 'Concrete cover measurement', 'kind' => 'Inspection'],
+            ['code' => 'RQT-045', 'category' => 'Masonry & Blocks', 'name' => 'Brick compressive strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-046', 'category' => 'Masonry & Blocks', 'name' => 'Brick water absorption', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-047', 'category' => 'Masonry & Blocks', 'name' => 'Brick efflorescence', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-048', 'category' => 'Masonry & Blocks', 'name' => 'Block compressive strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-049', 'category' => 'Masonry & Blocks', 'name' => 'Dimensional tolerance', 'kind' => 'Inspection'],
+            ['code' => 'RQT-050', 'category' => 'Masonry & Blocks', 'name' => 'Mortar compressive strength', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-051', 'category' => 'Waterproofing', 'name' => 'Ponding test', 'kind' => 'Field'],
+            ['code' => 'RQT-052', 'category' => 'Waterproofing', 'name' => 'Roof flood test', 'kind' => 'Field'],
+            ['code' => 'RQT-053', 'category' => 'Waterproofing', 'name' => 'Wet-area flood test', 'kind' => 'Field'],
+            ['code' => 'RQT-054', 'category' => 'Waterproofing', 'name' => 'Basement water-tightness', 'kind' => 'Field'],
+            ['code' => 'RQT-055', 'category' => 'Waterproofing', 'name' => 'Membrane adhesion', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-056', 'category' => 'Waterproofing', 'name' => 'Membrane thickness', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-057', 'category' => 'Plumbing & Sanitary', 'name' => 'Water-supply pressure test', 'kind' => 'Field'],
+            ['code' => 'RQT-058', 'category' => 'Plumbing & Sanitary', 'name' => 'Drainage leakage test', 'kind' => 'Field'],
+            ['code' => 'RQT-059', 'category' => 'Plumbing & Sanitary', 'name' => 'Drainage flow test', 'kind' => 'Field'],
+            ['code' => 'RQT-060', 'category' => 'Plumbing & Sanitary', 'name' => 'Water-tank leakage test', 'kind' => 'Field'],
+            ['code' => 'RQT-061', 'category' => 'Plumbing & Sanitary', 'name' => 'Pipe-joint inspection', 'kind' => 'Inspection'],
+            ['code' => 'RQT-062', 'category' => 'Plumbing & Sanitary', 'name' => 'Sanitary fixture functional test', 'kind' => 'Field'],
+            ['code' => 'RQT-063', 'category' => 'Electrical', 'name' => 'Insulation resistance', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-064', 'category' => 'Electrical', 'name' => 'Earth resistance', 'kind' => 'Field'],
+            ['code' => 'RQT-065', 'category' => 'Electrical', 'name' => 'Continuity', 'kind' => 'Field'],
+            ['code' => 'RQT-066', 'category' => 'Electrical', 'name' => 'Polarity', 'kind' => 'Field'],
+            ['code' => 'RQT-067', 'category' => 'Electrical', 'name' => 'RCD/RCCB trip test', 'kind' => 'Field'],
+            ['code' => 'RQT-068', 'category' => 'Electrical', 'name' => 'Functional circuit test', 'kind' => 'Field'],
+            ['code' => 'RQT-069', 'category' => 'Electrical', 'name' => 'Lightning protection continuity', 'kind' => 'Field'],
+            ['code' => 'RQT-070', 'category' => 'Finishes', 'name' => 'Plaster thickness', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-071', 'category' => 'Finishes', 'name' => 'Plaster adhesion', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-072', 'category' => 'Finishes', 'name' => 'Tile adhesion', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-073', 'category' => 'Finishes', 'name' => 'Tile hollow-sound inspection', 'kind' => 'Inspection'],
+            ['code' => 'RQT-074', 'category' => 'Finishes', 'name' => 'Floor levelness', 'kind' => 'Field'],
+            ['code' => 'RQT-075', 'category' => 'Finishes', 'name' => 'Paint adhesion', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-076', 'category' => 'Doors, Windows & Glazing', 'name' => 'Window water-tightness', 'kind' => 'Field'],
+            ['code' => 'RQT-077', 'category' => 'Doors, Windows & Glazing', 'name' => 'Air infiltration', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-078', 'category' => 'Doors, Windows & Glazing', 'name' => 'Glazing thickness', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-079', 'category' => 'Doors, Windows & Glazing', 'name' => 'Hardware operation', 'kind' => 'Inspection'],
+            ['code' => 'RQT-080', 'category' => 'Doors, Windows & Glazing', 'name' => 'Door alignment', 'kind' => 'Inspection'],
+            ['code' => 'RQT-081', 'category' => 'Water & Environmental', 'name' => 'Construction water quality', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-082', 'category' => 'Water & Environmental', 'name' => 'pH', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-083', 'category' => 'Water & Environmental', 'name' => 'Chloride content', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-084', 'category' => 'Water & Environmental', 'name' => 'Sulphate content', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-085', 'category' => 'Water & Environmental', 'name' => 'Total dissolved solids', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-086', 'category' => 'Water & Environmental', 'name' => 'Potable-water microbiological test', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-087', 'category' => 'Water & Environmental', 'name' => 'Ambient noise', 'kind' => 'Field'],
+            ['code' => 'RQT-088', 'category' => 'Water & Environmental', 'name' => 'Dust monitoring', 'kind' => 'Field'],
+            ['code' => 'RQT-089', 'category' => 'Water & Environmental', 'name' => 'Wastewater quality', 'kind' => 'Laboratory'],
+            ['code' => 'RQT-090', 'category' => 'Water & Environmental', 'name' => 'Curing-water suitability', 'kind' => 'Laboratory'],
+        ];
+        $now = now();
+        foreach ($tests as $test) {
+            DB::table('client_quality_test_masters')->insertOrIgnore(array_merge($test, [
+                'requires_evidence' => true,
+                'is_active' => true,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]));
+        }
+    }
+}

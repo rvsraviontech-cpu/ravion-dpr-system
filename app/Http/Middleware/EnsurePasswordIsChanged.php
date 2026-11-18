@@ -13,6 +13,10 @@ class EnsurePasswordIsChanged
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Client Portal has a separate mandatory password-change workflow.
+if ($request->is('client', 'client/*')) {
+    return $next($request);
+}
         $user = $request->user();
 
         if (! $user) {

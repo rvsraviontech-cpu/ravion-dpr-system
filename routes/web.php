@@ -103,6 +103,11 @@ use App\Http\Controllers\WorkDoneReviewController;
 
 
 
+/*
+|==========================================================================
+| PUBLIC — WELCOME AND DASHBOARD
+|==========================================================================
+*/
 Route::get('/', function () {
     return view('welcome');
 });
@@ -129,6 +134,11 @@ Route::post('/vendor/rfq/{token}', [\App\Http\Controllers\RfqVendorAccessControl
     ->name('vendor-rfqs.save');
 
 /* Internal ERP routes — login required */
+/*
+|==========================================================================
+| ERP — AUTHENTICATED INTERNAL ROUTES
+|==========================================================================
+*/
 Route::middleware('auth')->group(function () {
 
     /*
@@ -288,7 +298,102 @@ Route::post('/project-locations/rooms/{projectRoom}/designer/walls', [ProjectRoo
 
 Route::post('/project-locations/rooms/{projectRoom}/designer/openings', [ProjectRoomDesignerController::class, 'saveOpening'])->name('project-locations.rooms.designer.opening');
  Route::post('/project-locations/rooms/{projectRoom}/designer/zones', [ProjectRoomDesignerController::class, 'saveZone'])->name('project-locations.rooms.designer.zone');
-    /*
+     /* ROUTE SECTION: CLIENT CONTROL — ERP ADMIN WORK PROGRESS */
+Route::prefix('client-control/progress')
+    ->name('client-control.admin.progress.')
+    ->controller(\App\Http\Controllers\ClientControl\ClientWorkProgressController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{project}', 'show')
+    ->whereNumber('project')
+    ->name('show');
+
+        Route::post('/{project}/stages', 'storeStage')
+            ->name('stages.store');
+
+        Route::post('/{project}/stages/{stage}/tasks', 'storeTask')
+            ->name('tasks.store');
+
+        Route::patch(
+            '/{project}/stages/{stage}/tasks/{task}/progress',
+            'updateTaskProgress'
+        )->name('tasks.progress');
+
+        Route::patch(
+    '/{project}/stages/{stage}',
+    [\App\Http\Controllers\ClientControl\ClientWorkProgressController::class, 'updateStage']
+)->middleware('permission:client_control.progress.manage')
+ ->name('stages.update');
+
+Route::post(
+    '/{project}/stages/{stage}/archive',
+    [\App\Http\Controllers\ClientControl\ClientWorkProgressController::class, 'archiveStage']
+)->middleware('permission:client_control.progress.manage')
+ ->name('stages.archive');
+
+Route::post(
+    '/{project}/stages/{stage}/restore',
+    [\App\Http\Controllers\ClientControl\ClientWorkProgressController::class, 'restoreStage']
+)->middleware('permission:client_control.progress.manage')
+ ->name('stages.restore');
+    });
+
+    $progressSnapshots = \App\Http\Controllers\ClientControl\ClientProgressSnapshotController::class;
+Route::prefix('client-control/progress/{project}/snapshots')->whereNumber('project')->name('client-control.admin.progress.snapshots.')->group(function () use ($progressSnapshots) {
+    Route::get('/', [$progressSnapshots, 'index'])->middleware('permission:client_control.progress.view')->name('index');
+    Route::post('/', [$progressSnapshots, 'create'])->middleware('permission:client_control.progress.update')->name('create');
+    Route::post('/{snapshot}/submit', [$progressSnapshots, 'submit'])->middleware('permission:client_control.progress.update')->whereNumber('snapshot')->name('submit');
+    Route::post('/{snapshot}/approve', [$progressSnapshots, 'approve'])->middleware('permission:client_control.progress.review')->whereNumber('snapshot')->name('approve');
+    Route::post('/{snapshot}/publish', [$progressSnapshots, 'publish'])->middleware('permission:client_control.publish')->whereNumber('snapshot')->name('publish');
+});
+
+    Route::prefix('client-control/progress/master')
+    ->name('client-control.admin.progress.master.')
+    ->controller(\App\Http\Controllers\ClientControl\ClientCommonProgressController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/stages', 'storeStage')->name('stages.store');
+        Route::patch('/stages/{stage}', 'updateStage')->name('stages.update');
+        Route::patch('/stages/{stage}/archive', 'archiveStage')->name('stages.archive');
+        Route::post('/stages/{stage}/tasks', 'storeTask')->name('tasks.store');
+        Route::patch('/stages/{stage}/tasks/{task}', 'updateTask')->name('tasks.update');
+        Route::patch('/stages/{stage}/tasks/{task}/archive', 'archiveTask')->name('tasks.archive');
+    });
+
+Route::get('client-control/progress/{project}/common-preview',
+    [\App\Http\Controllers\ClientControl\ClientCommonProgressController::class, 'preview'])
+    ->whereNumber('project')->name('client-control.admin.progress.master.preview');
+Route::post('client-control/progress/{project}/common-import',
+    [\App\Http\Controllers\ClientControl\ClientCommonProgressController::class, 'import'])
+    ->whereNumber('project')->name('client-control.admin.progress.master.import');
+
+
+    Route::prefix('client-control/decisions')->name('client-control.admin.decisions.')->group(function () {
+    $c = \App\Http\Controllers\ClientControl\ClientDecisionAdminController::class;
+    Route::get('/', [$c, 'index'])->middleware('permission:client_control.decisions.view')->name('index');
+    Route::get('/create', [$c, 'create'])->middleware('permission:client_control.decisions.create')->name('create');
+    Route::post('/', [$c, 'store'])->middleware('permission:client_control.decisions.create')->name('store');
+    Route::get('/{decision}', [$c, 'show'])->whereNumber('decision')->middleware('permission:client_control.decisions.view')->name('show');
+    Route::post('/{decision}/actions/{action}', [$c, 'transition'])->whereNumber('decision')->where('action','submit|approve|publish|withdraw|close')->middleware('permission:client_control.decisions.view')->name('transition');
+    Route::post('/{decision}/responses/{response}/acknowledge', [$c, 'acknowledge'])->whereNumber('decision')->whereNumber('response')->middleware('permission:client_control.decisions.acknowledge')->name('acknowledge');
+    Route::get('/{decision}/files/{file}/download', [$c, 'download'])->whereNumber('decision')->whereNumber('file')->middleware('permission:client_control.decisions.view')->name('files.download');
+    // Phase 4A — draft editing (internal ERP only)
+    Route::get('/{decision}/edit', [$c, 'edit'])->whereNumber('decision')->middleware('permission:client_control.decisions.update')->name('edit');
+    Route::put('/{decision}', [$c, 'update'])->whereNumber('decision')->middleware('permission:client_control.decisions.update')->name('update');
+
+    Route::post('/{decision}/clarifications/{clarification}/reply', [$c, 'replyClarification'])
+    ->whereNumber('decision')->whereNumber('clarification')
+    ->middleware('permission:client_control.decisions.update')
+    ->name('clarifications.reply');
+
+    });
+
+Route::get('/projects/{project}/decisions', [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'index'])->whereNumber('project')->name('decisions.index');
+Route::get('/projects/{project}/decisions/{decision}', [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'show'])->whereNumber('project')->whereNumber('decision')->name('decisions.show');
+Route::post('/projects/{project}/decisions/{decision}/respond', [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'respond'])->middleware('throttle:5,1')->whereNumber('project')->whereNumber('decision')->name('decisions.respond');
+Route::get('/projects/{project}/decisions/{decision}/files/{file}/download', [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'download'])->whereNumber('project')->whereNumber('decision')->whereNumber('file')->name('decisions.download');
+
+ /*
     |--------------------------------------------------------------------------
     | Dashboards
     |--------------------------------------------------------------------------
@@ -340,6 +445,21 @@ Route::middleware(['auth'])->group(function () {
         'activity-material-mappings',
         App\Http\Controllers\ActivityMaterialMappingController::class
     );
+
+/*
+|==========================================================================
+| CLIENT CONTROL — ERP ADMIN DOCUMENT VAULT
+|==========================================================================
+*/
+    Route::prefix('client-control/vault')->name('client-control.admin.vault.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'index'])->middleware('permission:client_control.documents.view')->name('index');
+    Route::post('/', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'store'])->middleware('permission:client_control.documents.upload')->name('store');
+    Route::get('/{document}', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'show'])->whereNumber('document')->middleware('permission:client_control.documents.view')->name('show');
+    Route::post('/{document}/revisions', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'revise'])->whereNumber('document')->middleware('permission:client_control.documents.upload')->name('revise');
+    Route::post('/{document}/actions/{action}', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'transition'])->whereNumber('document')->where('action','submit|verify|approve|publish|reject')->middleware('permission:client_control.documents.view')->name('transition');
+    Route::post('/{document}/withdraw', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'withdraw'])->whereNumber('document')->middleware('permission:client_control.documents.withdraw')->name('withdraw');
+    Route::get('/{document}/versions/{version}/download', [\App\Http\Controllers\ClientControl\ClientVaultController::class, 'download'])->whereNumber('document')->whereNumber('version')->middleware('permission:client_control.documents.view')->name('download');
+});
 
 });
 
@@ -465,7 +585,7 @@ Route::patch(
     // Read-only Material Bible category-first browsing for Material Requirements.
     Route::get('/materials/bible-catalogue', MaterialBibleCatalogueController::class)
         ->name('materials.bible-catalogue')
-        ->middleware('permission:material_required.view|material_required.create|material_required.edit|material_received.view|material_received.create|material_received.edit');
+        ->middleware('permission:material_required.view');
 
     Route::get('/materials/product-search', ProductSearchController::class)
     ->name('materials.product-search');
@@ -602,6 +722,7 @@ Route::post('/weekly-attendance', [WeeklyAttendanceController::class, 'store'])
 |
 */
 
+/* ROUTE SECTION: WORK DONE — EXECUTION ROUTES */
 Route::prefix('work-done')
     ->name('work-done.')
     ->group(function () {
@@ -676,8 +797,102 @@ Route::get(
 
         Route::get('/available-labour', [WorkDoneController::class, 'availableLabour'])->name('available-labour');
     });
+/* ROUTE SECTION: CLIENT CONTROL — QA/QC PROJECT REGISTER (PHASE 2) */
+Route::prefix('client-control/quality/register')->name('client-control.admin.quality.register.')->group(function () {
+    $controller = \App\Http\Controllers\ClientControl\ClientQualityProjectRegisterController::class;
+    Route::get('/', [$controller, 'index'])->middleware('permission:client_control.quality.view')->name('index');
+    Route::post('/assign', [$controller, 'assign'])->middleware('permission:client_control.quality.project.manage')->name('assign');
+    Route::post('/{test}/results', [$controller, 'record'])->whereNumber('test')->middleware('permission:client_control.quality.results.create')->name('record');
+    Route::post('/results/{result}/{action}', [$controller, 'transition'])->whereNumber('result')->where('action','submit|verify|approve|return|publish|withdraw')->middleware('permission:client_control.quality.view')->name('transition');
+    Route::get('/evidence/{evidence}', [$controller, 'evidence'])->whereNumber('evidence')->middleware('permission:client_control.quality.view')->name('evidence');
+});
 
-    
+/* ROUTE SECTION: CLIENT CONTROL — QA/QC QUALITY MANAGEMENT (PHASE 1) */
+Route::prefix('client-control/quality')->name('client-control.admin.quality.')->group(function () {
+    $controller = \App\Http\Controllers\ClientControl\ClientQualityTestMasterController::class;
+    Route::get('/tests', [$controller, 'index'])->middleware('permission:client_control.quality.view')->name('tests.index');
+    Route::post('/tests', [$controller, 'store'])->middleware('permission:client_control.quality.master.manage')->name('tests.store');
+    Route::put('/tests/{test}', [$controller, 'update'])->whereNumber('test')->middleware('permission:client_control.quality.master.manage')->name('tests.update');
+    Route::patch('/tests/{test}/status', [$controller, 'status'])->whereNumber('test')->middleware('permission:client_control.quality.master.manage')->name('tests.status');
+});
+
+/*
+|==========================================================================
+| CLIENT CONTROL — ERP ADMIN CLIENTS AND PUBLICATIONS
+|==========================================================================
+*/
+Route::prefix('client-control')->name('client-control.admin.')->group(function () {
+    Route::get('/clients', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'index'])
+        ->middleware('permission:client_control.view')->name('index');
+    Route::post('/clients', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'store'])
+        ->middleware('permission:client_control.manage_access')->name('store');
+    Route::post('/clients/{clientUser}/activate', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'activate'])
+        ->middleware('permission:client_control.manage_access')->name('activate');
+    Route::post('/clients/{clientUser}/deactivate', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'deactivate'])
+        ->middleware('permission:client_control.manage_access')->name('deactivate');
+    Route::post('/clients/{clientUser}/grants', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'grant'])
+        ->middleware('permission:client_control.manage_access')->name('grant');
+    Route::post('/grants/{grant}/approve', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'approve'])
+        ->middleware('permission:client_control.manage_access')->name('approve');
+    Route::post('/grants/{grant}/revoke', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'revoke'])
+        ->middleware('permission:client_control.manage_access')->name('revoke');
+
+          Route::patch('/clients/{clientUser}/details', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'updateDetails'])
+    ->middleware('permission:client_control.manage_access')->name('update-details');
+Route::post('/clients/{clientUser}/reset-password', [\App\Http\Controllers\ClientControl\ClientAdminController::class, 'resetPassword'])
+    ->middleware('permission:client_control.manage_access')->name('reset-password');
+
+    // Release A2: publication workflow (ERP guard inherited from parent group).
+    Route::prefix('publications')->name('publications.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\ClientControl\ClientPublicationController::class, 'index'])
+            ->middleware('permission:client_control.view')->name('index');
+        Route::post('/', [\App\Http\Controllers\ClientControl\ClientPublicationController::class, 'store'])
+            ->middleware('permission:client_control.publish')->name('store');
+        Route::post('/{publication}/approve', [\App\Http\Controllers\ClientControl\ClientPublicationController::class, 'approve'])
+            ->whereNumber('publication')->middleware('permission:client_control.approve')->name('approve');
+        Route::post('/{publication}/publish', [\App\Http\Controllers\ClientControl\ClientPublicationController::class, 'publish'])
+            ->whereNumber('publication')->middleware('permission:client_control.publish')->name('publish');
+        Route::post('/{publication}/withdraw', [\App\Http\Controllers\ClientControl\ClientPublicationController::class, 'withdraw'])
+            ->whereNumber('publication')->middleware('permission:client_control.withdraw')->name('withdraw');
+    });
+});
+
+/*
+|==========================================================================
+| CLIENT CONTROL — ERP ADMIN PROGRESS REPORTS
+|==========================================================================
+*/
+Route::prefix('client-control/reports')->name('client-control.admin.reports.')->group(function () {
+    $controller = \App\Http\Controllers\ClientControl\ClientProgressReportController::class;
+    Route::get('/', [$controller, 'index'])->middleware('permission:client_control.view')->name('index');
+    Route::get('/create', [$controller, 'create'])->middleware('permission:client_control.report_draft')->name('create');
+    Route::post('/', [$controller, 'store'])->middleware('permission:client_control.report_draft')->name('store');
+    Route::get('/{report}/edit', [$controller, 'edit'])->whereNumber('report')->middleware('permission:client_control.view')->name('edit');
+    Route::put('/{report}', [$controller, 'update'])->whereNumber('report')->middleware('permission:client_control.report_draft')->name('update');
+    Route::post('/{report}/submit', [$controller, 'submit'])->whereNumber('report')->middleware('permission:client_control.report_submit')->name('submit');
+    Route::post('/{report}/pm-verify', [$controller, 'pmVerify'])->whereNumber('report')->middleware('permission:client_control.report_pm_verify')->name('pm-verify');
+    Route::post('/{report}/review', [$controller, 'review'])->whereNumber('report')->middleware('permission:client_control.view')->name('review');
+});
+
+Route::patch(
+    '/{project}/stages/{stage}',
+    [\App\Http\Controllers\ClientControl\ClientWorkProgressController::class, 'updateStage']
+)->middleware('permission:client_control.progress.manage')
+ ->name('stages.update');
+
+Route::post(
+    '/{project}/stages/{stage}/archive',
+    [\App\Http\Controllers\ClientControl\ClientWorkProgressController::class, 'archiveStage']
+)->middleware('permission:client_control.progress.manage')
+ ->name('stages.archive');
+
+Route::post(
+    '/{project}/stages/{stage}/restore',
+    [\App\Http\Controllers\ClientControl\ClientWorkProgressController::class, 'restoreStage']
+)->middleware('permission:client_control.progress.manage')
+ ->name('stages.restore');
+
+// Client project detail route is registered under auth:client below.
 
 
 
@@ -732,6 +947,7 @@ Route::get('rfqs/{rfq}/invitations/{invitation}/editable-pdf', [\App\Http\Contro
 Route::get('rfqs/comparisons', [\App\Http\Controllers\RfqWorkflowIndexController::class, 'comparisons'])->name('rfqs.comparisons.index');
 Route::get('rfqs/awards', [\App\Http\Controllers\RfqWorkflowIndexController::class, 'awards'])->name('rfqs.awards.index');
 
+/* ROUTE SECTION: PROCUREMENT — RFQ ROUTES */
 Route::get('/rfqs/requirement-items', [\App\Http\Controllers\RfqController::class, 'requirementItems'])->name('rfqs.requirement-items');
 Route::get('/rfqs', [\App\Http\Controllers\RfqController::class, 'index'])->name('rfqs.index');
 Route::get('/rfqs/create', [\App\Http\Controllers\RfqController::class, 'create'])->name('rfqs.create');
@@ -773,7 +989,8 @@ Route::post(
 )->name('work-done.review.item.resubmit');
 
 
-    Route::resource('projects', ProjectController::class)
+    /* ROUTE SECTION: PROJECTS — ERP PROJECT MASTER */
+Route::resource('projects', ProjectController::class)
     ->except(['destroy'])
     ->middleware('permission:projects.view');
 
@@ -1743,7 +1960,8 @@ Route::patch('/brand-masters/{brandMaster}/products/{materialProductBrand}/toggl
 
 
 
-    Route::resource('dprs', DprController::class)
+    /* ROUTE SECTION: DPR — DAILY PROGRESS REPORTS */
+Route::resource('dprs', DprController::class)
         ->middleware('permission:dpr.view');
 
     Route::get('/dprs/{id}/pdf', [DprController::class, 'downloadPdf'])
@@ -2042,7 +2260,8 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
     |--------------------------------------------------------------------------
     */
 
-    Route::resource('material-received', MaterialReceivedController::class)
+    /* ROUTE SECTION: MATERIALS — RECEIPTS AND INVENTORY */
+Route::resource('material-received', MaterialReceivedController::class)
         ->middleware('permission:material_received.view');
 
     Route::patch('/material-received/{materialReceived}/submit', [MaterialReceivedController::class, 'submit'])
@@ -2107,7 +2326,8 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
         ->name('weekly-plans.progress-dashboard')
         ->middleware('permission:weekly_plans.view');
 
-    Route::resource('weekly-plans', WeeklyPlanController::class)
+    /* ROUTE SECTION: PLANNING — WEEKLY AND MONTHLY */
+Route::resource('weekly-plans', WeeklyPlanController::class)
         ->middleware('permission:weekly_plans.view');
 
     Route::get('/monthly-plans/progress-dashboard', [MonthlyPlanController::class, 'progressDashboard'])
@@ -2143,7 +2363,8 @@ Route::post('/project-locations/{project}/wizard/generate', [ProjectLocationCont
     |--------------------------------------------------------------------------
     */
 
-    Route::resource('site-issues', SiteIssueController::class)
+    /* ROUTE SECTION: SITE — ISSUES AND PHOTOS */
+Route::resource('site-issues', SiteIssueController::class)
         ->middleware('permission:site_issues.view');
 
 
@@ -2209,6 +2430,7 @@ Route::delete(
 |--------------------------------------------------------------------------
 */
 
+/* ROUTE SECTION: ADMINISTRATION — USERS */
 Route::get('/users', [UserController::class, 'index'])
     ->name('users.index')
     ->middleware('permission:users.view');
@@ -2370,7 +2592,8 @@ Route::post('/employee-designations/{id}/deactivate', [EmployeeDesignationContro
     | Administration
     |--------------------------------------------------------------------------
     */
-    Route::resource('roles', RoleController::class)
+    /* ROUTE SECTION: ADMINISTRATION — ROLES AND PERMISSIONS */
+Route::resource('roles', RoleController::class)
         ->middleware('permission:roles.view');
 
     Route::resource('permissions', PermissionController::class)
@@ -2397,4 +2620,77 @@ Route::post('/employee-designations/{id}/deactivate', [EmployeeDesignationContro
         ->middleware('permission:audit_trail.view');
 });
 
+/*
+|==========================================================================
+| CLIENT PORTAL — LOGIN, PROJECTS, DOCUMENTS AND LOGOUT
+|==========================================================================
+*/
+Route::prefix('client')->name('client.')->group(function () {
+    Route::middleware('guest:client')->group(function () {
+        Route::get('/login', [\App\Http\Controllers\ClientControl\ClientSessionController::class, 'loginForm'])->name('login');
+        Route::post('/login', [\App\Http\Controllers\ClientControl\ClientSessionController::class, 'login'])->middleware('throttle:5,1')->name('login.submit');
+    });
+    Route::middleware(['auth:client', \App\Http\Middleware\EnsureClientAccess::class])->group(function () {
+        Route::get('/projects', [\App\Http\Controllers\ClientControl\ClientProjectController::class, 'index'])->name('projects.index');
+        Route::get('/projects/{project}', [\App\Http\Controllers\ClientControl\ClientProjectController::class, 'show'])->whereNumber('project')->name('projects.show');
+// Client Control — My Decisions
+Route::get(
+    '/projects/{project}/decisions',
+    [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'index']
+)->whereNumber('project')->name('decisions.index');
+
+Route::get(
+    '/projects/{project}/decisions/{decision}',
+    [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'show']
+)->whereNumber('project')->whereNumber('decision')->name('decisions.show');
+
+Route::post(
+    '/projects/{project}/decisions/{decision}/respond',
+    [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'respond']
+)->whereNumber('project')->whereNumber('decision')->name('decisions.respond');
+
+Route::get(
+    '/projects/{project}/decisions/{decision}/files/{file}/download',
+    [\App\Http\Controllers\ClientControl\ClientDecisionPortalController::class, 'download']
+)->whereNumber('project')->whereNumber('decision')->whereNumber('file')->name('decisions.files.download');
+        /*
+        |--------------------------------------------------------------------------
+        | CLIENT PORTAL — DOCUMENT VAULT (CLIENT AUTHENTICATION)
+        |--------------------------------------------------------------------------
+        | These routes must remain inside auth:client + EnsureClientAccess.
+        | ClientVaultPortalController must enforce project grants, visibility,
+        | published-version checks, and private-file download authorization.
+        */
+        Route::get('/projects/{project}/documents', [\App\Http\Controllers\ClientControl\ClientVaultPortalController::class, 'index'])
+            ->whereNumber('project')->name('vault.index');
+        Route::get('/projects/{project}/documents/{document}/preview', [\App\Http\Controllers\ClientControl\ClientVaultPortalController::class, 'preview'])
+            ->whereNumber('project')->whereNumber('document')->name('vault.preview');
+        Route::get('/projects/{project}/documents/{document}/download', [\App\Http\Controllers\ClientControl\ClientVaultPortalController::class, 'download'])
+            ->whereNumber('project')->whereNumber('document')->name('vault.download');
+        /*
+         | CLIENT PORTAL — PUBLISHED QUALITY TEST RESULTS (VIEW ONLY)
+         | ClientQualityPortalController must independently check the client's
+         | project grant, published result status and evidence ownership.
+         | Evidence must be streamed inline from private storage, not exposed
+         | via a public file URL or attachment/download response.
+         */
+        Route::get('/projects/{project}/quality', [\App\Http\Controllers\ClientControl\ClientQualityPortalController::class, 'index'])
+            ->whereNumber('project')->name('quality.index');
+        Route::get('/projects/{project}/quality/{result}', [\App\Http\Controllers\ClientControl\ClientQualityPortalController::class, 'show'])
+            ->whereNumber('project')->whereNumber('result')->name('quality.show');
+        Route::get('/projects/{project}/quality/{result}/evidence/{evidence}', [\App\Http\Controllers\ClientControl\ClientQualityPortalController::class, 'evidence'])
+            ->whereNumber('project')->whereNumber('result')->whereNumber('evidence')->name('quality.evidence');
+
+        Route::get('/change-password', [\App\Http\Controllers\ClientControl\ClientSessionController::class, 'changePasswordForm'])->name('password.edit');
+        Route::put('/change-password', [\App\Http\Controllers\ClientControl\ClientSessionController::class, 'changePassword'])->middleware('throttle:5,1')->name('password.update');
+        Route::post('/logout', [\App\Http\Controllers\ClientControl\ClientSessionController::class, 'logout'])->name('logout');
+    });
+});
+
+
+/*
+|==========================================================================
+| AUTH — FRAMEWORK AUTHENTICATION ROUTES
+|==========================================================================
+*/
 require __DIR__.'/auth.php';

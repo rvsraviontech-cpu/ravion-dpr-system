@@ -590,6 +590,69 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | CLIENT CONTROL
+    |--------------------------------------------------------------------------
+    */
+
+    [
+        'title' => 'Client Control',
+        'icon' => 'shield',
+        'items' => [
+            [
+                'title' => 'Client Accounts & Grants',
+                'route' => 'client-control.admin.index',
+                'permission' => 'client_control.view',
+                'icon' => 'users',
+            ],
+            [
+                'title' => 'Project Work Progress',
+                'route' => 'client-control.admin.progress.index',
+                'permission' => 'client_control.view',
+                'icon' => 'chart',
+            ],
+            [
+                'title' => 'Common Stages & Tasks',
+                'route' => 'client-control.admin.progress.master.index',
+                'permission' => 'client_control.progress.manage',
+                'icon' => 'layers',
+            ],
+            [
+                'title' => 'Weekly Progress Reports',
+                'route' => 'client-control.admin.reports.index',
+                'permission' => 'client_control.view',
+                'icon' => 'document',
+            ],
+            // CLIENT CONTROL — DOCUMENT VAULT
+            [
+                'title' => 'Document Vault',
+                'route' => 'client-control.admin.vault.index',
+                'permission' => 'client_control.documents.view',
+                'icon' => 'folder',
+            ],
+            [
+                'title' => 'Project QA/QC Register',
+                'route' => 'client-control.admin.quality.register.index',
+                'permission' => 'client_control.quality.view',
+                'icon' => 'clipboard',
+            ],
+            // CLIENT CONTROL — QA/QC QUALITY & TESTING (PHASE 1)
+            [
+                'title' => 'Quality & Testing',
+                'route' => 'client-control.admin.quality.tests.index',
+                'permission' => 'client_control.quality.view',
+                'icon' => 'clipboard',
+            ],
+            [
+                'title' => 'Client Publications',
+                'route' => 'client-control.admin.publications.index',
+                'permission' => 'client_control.view',
+                'icon' => 'folder',
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | ADMINISTRATION
     |--------------------------------------------------------------------------
     */
