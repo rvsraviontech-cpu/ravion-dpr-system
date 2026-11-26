@@ -150,7 +150,13 @@ body:has(.rv-exact) .signout{border-radius:10px;color:#163d65;border-color:#d7e5
       <span class="hero-status"><span class="hero-dot"></span>Secure access verified</span>
     </div>
 </section>
-@include('client-control.partials.project-navigation')
+<nav class="nav" aria-label="Client project navigation"><a class="nav-item active" href="{{ route('client.projects.show', $project['id']) }}" aria-current="page"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-home"/></svg>Home</a>
+<a class="nav-item" href="#published-progress"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-chart"/></svg>Progress</a>
+<a class="nav-item" href="{{ route('client.quality.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-camera"/></svg>Quality &amp; Testing</a>
+<a class="nav-item" href="{{ route('client.vault.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-file"/></svg>Documents</a>
+<a class="nav-item" href="{{ route('client.decisions.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-check"/></svg>My Decisions</a>
+<a class="nav-item" href="{{ route('client.payments.show', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-wallet"/></svg>Payments</a>
+<span class="nav-item disabled" aria-disabled="true" title="Coming soon"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-help"/></svg>Contact &amp; Support</span></nav>
 <div class="info-note" role="status"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-shield"/></svg><span><strong>Verified information, delivered securely.</strong> Project updates and documents appear here only after Ravion completes the required checks, approvals and publication.</span></div>
 <div class="section-label"><h2>Project at a glance</h2><span class="status">{{ $publishedProgress ? 'Progress published' : 'Publication pending' }}</span></div>
 <div class="dashboard-grid rv-dashboard-grid">

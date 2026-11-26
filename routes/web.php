@@ -797,6 +797,57 @@ Route::get(
 
         Route::get('/available-labour', [WorkDoneController::class, 'availableLabour'])->name('available-labour');
     });
+
+    Route::prefix('client-control/payments')
+    ->name('client-control.admin.payments.')
+    ->controller(\App\Http\Controllers\ClientControl\ClientPaymentAdminController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/{project}', 'show')->whereNumber('project')->name('show');
+        Route::post('/{project}/contract', 'storeContract')->whereNumber('project')->name('contract.store');
+        Route::post('/{project}/milestones', 'storeMilestone')->whereNumber('project')->name('milestones.store');
+        Route::patch('/{project}/milestones/{milestone}', 'updateMilestone')->whereNumber('project')->whereNumber('milestone')->name('milestones.update');
+        Route::post('/{project}/milestones/{milestone}/archive', 'archiveMilestone')->whereNumber('project')->whereNumber('milestone')->name('milestones.archive');
+        Route::post('/{project}/milestones/{milestone}/move', 'moveMilestone')->whereNumber('project')->whereNumber('milestone')->name('milestones.move');
+        // Split a payment milestone
+Route::post(
+    '/{project}/milestones/{milestone}/split',
+    'splitMilestone'
+)->name('milestones.split');
+
+// Record a full or partial client payment
+Route::post(
+    '/{project}/milestones/{milestone}/receipts',
+    'storeReceipt'
+)->name('receipts.store');
+
+// Verify a recorded payment receipt
+Route::post(
+    '/{project}/receipts/{receipt}/verify',
+    'verifyReceipt'
+)->name('receipts.verify');
+
+ Route::post('/{project}/master-stages/load', 'loadStageMaster')->name('master.load');
+ Route::post(
+    '/{project}/schedule/save',
+    'saveInlineSchedule'
+)->name('schedule.save');
+
+Route::post(
+    '/{project}/publish',
+    [\App\Http\Controllers\ClientControl\ClientPaymentPublicationController::class, 'publish']
+)->middleware('permission:client_control.payments.publish')
+ ->name('publish');
+Route::get(
+    '/{project}/receipts',
+    'receiptsIndex'
+)->name('receipts.index');
+
+Route::post(
+    '/{project}/receipts/{receipt}/void',
+    'voidReceipt'
+)->name('receipts.void');
+        });
 /* ROUTE SECTION: CLIENT CONTROL — QA/QC PROJECT REGISTER (PHASE 2) */
 Route::prefix('client-control/quality/register')->name('client-control.admin.quality.register.')->group(function () {
     $controller = \App\Http\Controllers\ClientControl\ClientQualityProjectRegisterController::class;
@@ -2633,6 +2684,9 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::middleware(['auth:client', \App\Http\Middleware\EnsureClientAccess::class])->group(function () {
         Route::get('/projects', [\App\Http\Controllers\ClientControl\ClientProjectController::class, 'index'])->name('projects.index');
         Route::get('/projects/{project}', [\App\Http\Controllers\ClientControl\ClientProjectController::class, 'show'])->whereNumber('project')->name('projects.show');
+        // Client payment statement: published snapshot only, client guard and project grant enforced.
+        Route::get('/projects/{project}/payments', [\App\Http\Controllers\ClientControl\ClientPaymentPublicationController::class, 'clientStatement'])
+            ->whereNumber('project')->name('payments.show');
 // Client Control — My Decisions
 Route::get(
     '/projects/{project}/decisions',

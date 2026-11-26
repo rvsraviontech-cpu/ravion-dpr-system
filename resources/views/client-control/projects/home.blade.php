@@ -150,12 +150,27 @@ body:has(.rv-exact) .signout{border-radius:10px;color:#163d65;border-color:#d7e5
       <span class="hero-status"><span class="hero-dot"></span>Secure access verified</span>
     </div>
 </section>
-<nav class="nav" aria-label="Client project navigation"><a class="nav-item active" href="{{ route('client.projects.show', $project['id']) }}" aria-current="page"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-home"/></svg>Home</a>
-<a class="nav-item" href="#published-progress"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-chart"/></svg>Progress</a>
-<a class="nav-item" href="{{ route('client.quality.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-camera"/></svg>Quality &amp; Testing</a>
- @foreach([['Documents','ri-file'],['My Decisions','ri-check'],['Payments','ri-wallet'],['Contact & Support','ri-help']] as $item)
-<span class="nav-item disabled" aria-disabled="true" title="Available after verification and publication"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#{{ $item[1] }}"/></svg>{{ $item[0] }}</span>
-@endforeach</nav>
+<nav class="nav" aria-label="Client project navigation">
+@php
+    $clientProjectId = $project['id'];
+    $clientProjectNav = [
+        ['Home', 'ri-home', route('client.projects.show', $clientProjectId), true],
+        ['Progress', 'ri-chart', '#published-progress', false],
+        ['Quality & Testing', 'ri-camera', route('client.quality.index', $clientProjectId), false],
+        ['Documents', 'ri-file', Route::has('client.vault.index') ? route('client.vault.index', $clientProjectId) : null, false],
+        ['My Decisions', 'ri-check', Route::has('client.decisions.index') ? route('client.decisions.index', $clientProjectId) : null, false],
+        ['Payments', 'ri-wallet', url('/client/projects/'.$clientProjectId.'/payments'), false],
+        ['Contact & Support', 'ri-help', null, false],
+    ];
+@endphp
+@foreach($clientProjectNav as [$label, $icon, $href, $active])
+    @if($href)
+        <a class="nav-item{{ $active ? ' active' : '' }}" href="{{ $href }}" @if($active) aria-current="page" @endif><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#{{ $icon }}"/></svg>{{ $label }}</a>
+    @else
+        <span class="nav-item disabled" aria-disabled="true"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#{{ $icon }}"/></svg>{{ $label }}</span>
+    @endif
+@endforeach
+</nav>
 <div class="info-note" role="status"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-shield"/></svg><span><strong>Verified information, delivered securely.</strong> Project updates and documents appear here only after Ravion completes the required checks, approvals and publication.</span></div>
 <div class="section-label"><h2>Project at a glance</h2><span class="status">{{ $publishedProgress ? 'Progress published' : 'Publication pending' }}</span></div>
 <div class="dashboard-grid rv-dashboard-grid">

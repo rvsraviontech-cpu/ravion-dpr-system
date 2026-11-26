@@ -642,6 +642,20 @@ return [
                 'permission' => 'client_control.quality.view',
                 'icon' => 'clipboard',
             ],
+            // CLIENT CONTROL — MY DECISIONS
+            [
+                'title' => 'My Decisions',
+                'route' => 'client-control.admin.decisions.index',
+                'permission' => 'client_control.decisions.view',
+                'icon' => 'clipboard',
+            ],
+            // CLIENT CONTROL — PAYMENTS & MILESTONES
+            [
+                'title' => 'Payments & Milestones',
+                'route' => 'client-control.admin.payments.index',
+                'permission' => 'client_control.payments.view',
+                'icon' => 'currency',
+            ],
             [
                 'title' => 'Client Publications',
                 'route' => 'client-control.admin.publications.index',
