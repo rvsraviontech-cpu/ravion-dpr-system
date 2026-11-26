@@ -30,8 +30,22 @@ body:has(.rv-project-navigation) .signout{border-radius:10px;color:#163d65;borde
 .rv-project-navigation .rv-project-link.is-active{background:linear-gradient(135deg,#245e93,#0f315d);color:#fff;box-shadow:0 4px 9px #17456b2e}
 .rv-project-navigation .rv-project-link.is-disabled{color:#8ba0bd;opacity:.75;cursor:not-allowed}
 .rv-project-navigation .rv-project-link:focus-visible{outline:3px solid #0e8897;outline-offset:2px}
-@media(max-width:800px){body:has(.rv-project-navigation) .container{padding:12px 16px 50px};body:has(.rv-project-navigation) .top-inner{padding:12px 16px}}
+@media(max-width:800px){body:has(.rv-project-navigation) .container{padding:12px 16px 50px}body:has(.rv-project-navigation) .top-inner{padding:12px 16px}}
 @media(max-width:580px){.rv-project-navigation{justify-content:flex-start;margin-left:0;margin-right:0;padding-left:0;padding-right:0}}
+
+.rv-shared-hero{height:176px;border-radius:21px;background:linear-gradient(100deg,#244e7e 0%,#0e567d 76%,#0b7284 100%);box-shadow:0 10px 24px #123a6c20;position:relative;overflow:hidden}
+.rv-shared-hero .rv-hero-image{position:absolute;right:0;top:0;bottom:0;width:34%;background-image:url('{{ asset('images/client-control/ravion-hero-illustration.jpg') }}');background-size:cover;background-position:center;clip-path:polygon(19% 0,100% 0,100% 100%,0 100%)}
+.rv-shared-hero .rv-hero-image:before{content:'';position:absolute;left:0;top:0;bottom:0;width:10px;background:#e2b33e;transform:skew(-37deg);transform-origin:bottom left}
+.rv-shared-hero .rv-hero-content{position:relative;z-index:1;padding:17px 42px;height:100%;display:flex;flex-direction:column;align-items:flex-start}
+.rv-shared-hero .rv-hero-back{color:#fff;font-weight:700;font-size:13px;opacity:.95}
+.rv-shared-hero .rv-hero-copy{margin:8px 0 0 125px;max-width:58%}
+.rv-shared-hero .eyebrow{font-size:12px;font-weight:700;letter-spacing:.7px;color:#dceeff}
+.rv-shared-hero .page-title{font-size:38px;line-height:1.1;letter-spacing:-1px;margin:8px 0 10px;color:#fff}
+.rv-shared-hero .lead{font-size:15px;margin:0;color:#f1f7ff}
+.rv-shared-hero .hero-status{position:absolute;right:35%;top:54px;padding:11px 17px;border-radius:16px;background:#0a6d7cbb;color:#fff;border:1px solid #a7ebe380;white-space:nowrap;font-size:13px;font-weight:700}
+@media(max-width:1100px){.rv-shared-hero .rv-hero-copy{margin-left:45px}.rv-shared-hero .hero-status{right:34%;top:15px}}
+@media(max-width:800px){.rv-shared-hero .rv-hero-copy{margin-left:0;max-width:75%}.rv-shared-hero .rv-hero-image{width:42%;opacity:.8}.rv-shared-hero .hero-status{right:12px;top:16px}.rv-shared-hero .page-title{font-size:30px}.rv-shared-hero .rv-hero-content{padding:15px 22px}}
+@media(max-width:580px){.rv-shared-hero{height:auto;min-height:200px}.rv-shared-hero .rv-hero-image{width:53%;opacity:.35}.rv-shared-hero .hero-status{position:static;margin-top:10px;font-size:11px;padding:7px 11px}.rv-shared-hero .rv-hero-copy{margin-top:12px;max-width:100%}}
 </style>
 </head>
 <body>

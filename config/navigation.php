@@ -657,6 +657,18 @@ return [
                 'icon' => 'currency',
             ],
             [
+                'title' => 'Construction Drawings',
+                'route' => 'client-control.admin.drawings.index',
+                'permission' => 'client_control.drawings.view',
+                'icon' => 'document',
+            ],
+            [
+                'title' => 'Drawing Masters',
+                'route' => 'client-control.admin.drawings.masters.index',
+                'permission' => 'client_control.drawings.manage_masters',
+                'icon' => 'layers',
+            ],
+            [
                 'title' => 'Client Publications',
                 'route' => 'client-control.admin.publications.index',
                 'permission' => 'client_control.view',

@@ -1,11 +1,11 @@
-@extends('client-control.layout')
+@extends('client-control.project-layout', ['workspaceProject' => $project])
 @section('title', 'Decision Details')
-@section('content')
+@section('project-content')
 <a class="back" href="{{ route('client.decisions.index', ['project' => $project->id]) }}">← All decisions</a>
 <div class="eyebrow">{{ $project->project_name }} · {{ $item->reference }}</div>
 <h1 class="page-title">{{ $item->title }}</h1>
 <p class="lead">{{ $item->category }} · Response due {{ $item->response_due_at ?? 'not specified' }}</p>
-@include('client-control.partials.project-navigation', ['project' => $project])
+
 <style>
 .rv-d-stack{display:grid;gap:16px;max-width:920px}.rv-d-copy{white-space:pre-wrap;line-height:1.7;color:#334e66}.rv-d-option{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-top:1px solid #e1eaf3}.rv-d-option input{margin-top:5px;accent-color:#145a79}.rv-d-option strong{display:block;color:#102448}.rv-d-option p{color:#637b8f;margin:5px 0 0;font-size:13px;line-height:1.5}.rv-d-field{width:100%;border:1px solid #cbd9e7;border-radius:10px;padding:12px;font:inherit;min-height:100px}.rv-d-select{width:100%;border:1px solid #cbd9e7;border-radius:10px;padding:12px;font:inherit}.rv-d-btn{background:#153c55;color:#fff;border:0;border-radius:10px;padding:12px 20px;font-weight:750}.rv-d-alert{padding:14px;border-radius:10px;background:#e8f6f3;color:#176051}.rv-d-error{color:#ae3030;font-size:13px;margin-top:5px}.rv-d-file{display:block;padding:10px 0;border-top:1px solid #e1eaf3;color:#1a6a80;text-decoration:underline}.rv-d-note{background:#f5f8fc;padding:14px;border-radius:10px;color:#536b7e;font-size:13px;line-height:1.6}
 </style>

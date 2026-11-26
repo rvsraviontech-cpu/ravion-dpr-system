@@ -1,6 +1,6 @@
-@extends('client-control.layout')
+@extends('client-control.project-layout', ['workspaceProject' => $project])
 @section('title', 'Project Documents')
-@section('content')
+@section('project-content')
 <style>
 .rv-vault{--navy:#173c67;--teal:#087f8c;color:#19344b}.rv-vault .rv-head{background:linear-gradient(105deg,#173c67,#087f8c);color:white;border-radius:20px;padding:29px 32px;margin-bottom:19px}.rv-vault .rv-head a{color:#e1f6fc;font-size:13px;font-weight:700}.rv-vault .rv-head h1{font-size:clamp(24px,3vw,34px);margin:13px 0 5px;letter-spacing:-.6px}.rv-vault .rv-head p{margin:0;color:#e3f4fa;font-size:13px}.rv-vault .rv-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 16px}.rv-vault .rv-toolbar h2{font-size:18px;margin:0}.rv-vault .rv-count{font-size:12px;color:#59758b;background:#edf5f9;padding:8px 12px;border-radius:99px}.rv-vault .rv-groups{display:grid;gap:16px}.rv-vault .rv-group{border:1px solid #e1eaf2;background:#fff;border-radius:17px;padding:21px;box-shadow:0 7px 20px #19344b0a}.rv-vault .rv-group h3{font-size:15px;margin:0 0 14px;color:#173c67}.rv-vault .rv-file{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:15px 0;border-top:1px solid #edf2f6}.rv-vault .rv-file:first-of-type{border-top:0}.rv-vault .rv-file-name{font-weight:750;font-size:14px;overflow-wrap:anywhere}.rv-vault .rv-meta{font-size:12px;color:#6b8093;line-height:1.7;margin-top:5px}.rv-vault .rv-download{flex:none;display:inline-block;background:#087f8c;color:#fff;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:800}.rv-vault .rv-download:hover{background:#076b76}.rv-vault .rv-empty{border:1px dashed #cddde8;border-radius:16px;padding:32px;background:#fff;text-align:center;color:#587185;line-height:1.7}@media(max-width:600px){.rv-vault .rv-head{padding:23px 19px}.rv-vault .rv-group{padding:16px}.rv-vault .rv-file{align-items:flex-start;flex-direction:column}.rv-vault .rv-download{width:100%;text-align:center}}
  .rv-vault .rv-actions{display:flex;align-items:center;gap:9px;flex:none}
@@ -24,11 +24,7 @@
 @media(max-width:580px){.rv-vault .rv-project-hero{height:200px}.rv-vault .rv-project-hero:after{width:53%;opacity:.35}}
 </style>
 <div class="rv-vault">
-  <header class="rv-head rv-project-hero">
-    <a href="{{ route('client.projects.show', $project['id']) }}">← Back to project dashboard</a>
-    <div class="rv-project-hero-copy"><div class="rv-project-eyebrow">YOUR PROJECT WORKSPACE</div><h1>{{ $project['project_name'] }}</h1><p>Project Reference: {{ $project['project_code'] }}</p></div>
-  </header>
-  @include('client-control.partials.project-navigation')
+
   <div class="rv-toolbar"><h2>Published document library</h2><span class="rv-count">{{ $documents->count() }} {{ $documents->count() === 1 ? 'document' : 'documents' }}</span></div>
   @if($documents->isEmpty())
     <div class="rv-empty"><strong>No published documents available yet.</strong><div>Approved project documents will appear here when Ravion publishes them for your access.</div></div>

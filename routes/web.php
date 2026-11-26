@@ -2715,6 +2715,9 @@ Route::get(
         | ClientVaultPortalController must enforce project grants, visibility,
         | published-version checks, and private-file download authorization.
         */
+        Route::get('/projects/{project}/drawings', [\App\Http\Controllers\ClientControl\ClientDrawingPortalController::class, 'index'])->whereNumber('project')->name('drawings.index');
+        Route::post('/projects/{project}/drawings/{publication}/respond', [\App\Http\Controllers\ClientControl\ClientDrawingPortalController::class, 'respond'])->whereNumber('project')->whereNumber('publication')->name('drawings.respond');
+        Route::get('/projects/{project}/drawings/{publication}/{mode}', [\App\Http\Controllers\ClientControl\ClientDrawingPortalController::class, 'file'])->whereNumber('project')->whereNumber('publication')->whereIn('mode',['preview','download'])->name('drawings.file');
         Route::get('/projects/{project}/documents', [\App\Http\Controllers\ClientControl\ClientVaultPortalController::class, 'index'])
             ->whereNumber('project')->name('vault.index');
         Route::get('/projects/{project}/documents/{document}/preview', [\App\Http\Controllers\ClientControl\ClientVaultPortalController::class, 'preview'])
@@ -2748,3 +2751,29 @@ Route::get(
 |==========================================================================
 */
 require __DIR__.'/auth.php';
+
+// Client Control — Construction Drawings (internal only)
+Route::middleware('auth:web')->prefix('client-control/drawings')->name('client-control.admin.drawings.')->group(function () {
+    Route::controller(\App\Http\Controllers\ClientControl\ClientDrawingMasterController::class)->group(function () {
+        Route::get('/masters','index')->name('masters.index');
+        Route::post('/masters/{kind}','store')->name('masters.store');
+        Route::put('/masters/{kind}/{id}','update')->whereNumber('id')->name('masters.update');
+        Route::patch('/masters/{kind}/{id}/status','status')->whereNumber('id')->name('masters.status');
+    });
+    Route::controller(\App\Http\Controllers\ClientControl\ClientDrawingAdminController::class)->group(function () {
+        Route::get('/','index')->name('index');
+        Route::get('/create','create')->name('create');
+        Route::get('/locations/{project}','locations')->whereNumber('project')->name('locations');
+        Route::post('/{drawing}/files','upload')->whereNumber('drawing')->name('upload');
+        Route::get('/{drawing}/revise','revise')->whereNumber('drawing')->name('revise');
+        Route::post('/{drawing}/revisions','storeRevision')->whereNumber('drawing')->name('revisions.store');
+        Route::post('/{drawing}/revisions/{revision}/workflow/{action}','workflow')->whereNumber('drawing')->whereNumber('revision')->name('workflow');
+        Route::get('/{drawing}/files/{file}/preview','preview')->whereNumber('drawing')->whereNumber('file')->name('preview');
+        Route::get('/{drawing}/files/{file}','download')->whereNumber('drawing')->whereNumber('file')->name('download');
+
+        Route::post('/','store')->name('store');
+        Route::get('/{drawing}','show')->whereNumber('drawing')->name('show');
+        Route::get('/{drawing}/edit','edit')->whereNumber('drawing')->name('edit');
+        Route::put('/{drawing}','update')->whereNumber('drawing')->name('update');
+    });
+});

@@ -1,6 +1,6 @@
-@extends('client-control.layout')
+@extends('client-control.project-layout', ['workspaceProject' => $project])
 @section('title', $project['project_name'])
-@section('content')
+@section('project-content')
 <style>
 .published-progress-stages{margin-top:22px}.published-stage-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;font-size:13px;color:#102b42}.published-stage-heading span{font-size:11px;color:#71869a}.published-stage{border:1px solid #e2eaf1;border-radius:13px;margin-bottom:10px;background:#fff;overflow:hidden}.published-stage-summary{display:flex;align-items:center;gap:12px;padding:15px;cursor:pointer;list-style:none}.published-stage-summary::-webkit-details-marker{display:none}.published-stage-summary:focus-visible{outline:3px solid #55b5be;outline-offset:-3px}.published-stage-number{display:grid;place-items:center;flex:none;width:33px;height:33px;border-radius:10px;background:#e8f5f6;color:#087f8c;font-size:13px;font-weight:800}.published-stage-main{flex:1;min-width:0}.published-stage-name{display:block;color:#102b42;font-weight:800;font-size:13px;line-height:1.45}.published-stage-track{display:block;margin-top:8px;height:6px;background:#edf2f6;border-radius:20px;overflow:hidden}.published-stage-track span{display:block;height:100%;background:#087f8c;border-radius:20px}.published-stage-metric{text-align:right;flex:none;min-width:59px}.published-stage-metric strong{display:block;font-size:15px;color:#087f8c}.published-stage-metric small{font-size:10px;color:#71869a}.published-stage-chevron{color:#71869a;transition:transform .2s}.published-stage[open] .published-stage-chevron{transform:rotate(180deg)}.published-stage-body{padding:4px 15px 14px 60px;border-top:1px solid #edf2f6}.published-task{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid #edf2f6;font-size:12px;color:#38566b}.published-task:last-child{border-bottom:0}.published-task strong{color:#087f8c;white-space:nowrap}.published-task-empty{font-size:12px;color:#71869a;line-height:1.6}@media(max-width:640px){.published-stage-heading{align-items:flex-start;flex-direction:column}.published-stage-summary{gap:9px;padding:12px}.published-stage-body{padding-left:14px}.published-stage-name{font-size:12px}.published-stage-metric{min-width:48px}}
 
@@ -142,21 +142,8 @@ body:has(.rv-exact) .signout{border-radius:10px;color:#163d65;border-color:#d7e5
 
 <div class="ravion-premium rv-exact">
 
-<section class="portal-hero" aria-label="Project introduction">
-    <div class="rv-hero-image" aria-hidden="true"></div>
-    <div class="rv-hero-content">
-      <a class="rv-hero-back" href="{{ route('client.projects.index') }}">← &nbsp;All Projects</a>
-      <div class="rv-hero-copy"><div class="eyebrow">Your project workspace</div><h1 class="page-title">{{ $project['project_name'] }}</h1><p class="lead">Project Reference: {{ $project['project_code'] }}</p></div>
-      <span class="hero-status"><span class="hero-dot"></span>Secure access verified</span>
-    </div>
-</section>
-<nav class="nav" aria-label="Client project navigation"><a class="nav-item active" href="{{ route('client.projects.show', $project['id']) }}" aria-current="page"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-home"/></svg>Home</a>
-<a class="nav-item" href="#published-progress"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-chart"/></svg>Progress</a>
-<a class="nav-item" href="{{ route('client.quality.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-camera"/></svg>Quality &amp; Testing</a>
-<a class="nav-item" href="{{ route('client.vault.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-file"/></svg>Documents</a>
-<a class="nav-item" href="{{ route('client.decisions.index', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-check"/></svg>My Decisions</a>
-<a class="nav-item" href="{{ route('client.payments.show', $project['id']) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-wallet"/></svg>Payments</a>
-<span class="nav-item disabled" aria-disabled="true" title="Coming soon"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-help"/></svg>Contact &amp; Support</span></nav>
+
+
 <div class="info-note" role="status"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8"><use href="#ri-shield"/></svg><span><strong>Verified information, delivered securely.</strong> Project updates and documents appear here only after Ravion completes the required checks, approvals and publication.</span></div>
 <div class="section-label"><h2>Project at a glance</h2><span class="status">{{ $publishedProgress ? 'Progress published' : 'Publication pending' }}</span></div>
 <div class="dashboard-grid rv-dashboard-grid">

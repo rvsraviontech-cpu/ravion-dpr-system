@@ -1,5 +1,5 @@
-@extends('client-control.layout')
-@section('content')
+@extends('client-control.project-layout', ['workspaceProject' => $projectRecord])
+@section('project-content')
 @php
     $money = function ($number) {
         $value = number_format((float) ($number ?? 0), 2, '.', '');
@@ -22,7 +22,7 @@
     $progress = $contractTotal > 0 ? max(0, min(100, ($received / $contractTotal) * 100)) : 0;
 @endphp
 <style>
-    .rpay { --rp-ink:#142943; --rp-muted:#64748b; --rp-line:#e2e8f0; --rp-bg:#f5f8fc; --rp-blue:#1e40af; color:var(--rp-ink); max-width:1120px; margin:0 auto; padding:24px 18px 44px; font-family:inherit; }
+    .rpay { --rp-ink:#142943; --rp-muted:#64748b; --rp-line:#e2e8f0; --rp-bg:#f5f8fc; --rp-blue:#1e40af; color:var(--rp-ink); max-width:none; margin:0; padding:0 0 24px; font-family:inherit; }
     .rpay *, .rpay *::before, .rpay *::after { box-sizing:border-box; }
     .rpay a { color:#1d4ed8; text-decoration:none; }
     .rpay a:hover { text-decoration:underline; }
@@ -64,7 +64,7 @@
     .rpay-footer { margin:22px 2px 0; font-size:12px; line-height:1.6; color:var(--rp-muted); }
     .rpay-unpublished { padding:25px; color:#475569; line-height:1.6; }
     @media (max-width:800px) {
-      .rpay { padding:20px 12px 35px; }
+      .rpay { padding:0 0 24px; }
       .rpay-header { display:block; }
       .rpay-version { margin-top:13px; white-space:normal; }
       .rpay-summary { gap:9px; }
@@ -104,25 +104,6 @@
     @media(max-width:620px) { .rpay .nav { justify-content:flex-start; padding-left:0; padding-right:0; } .rpay .nav-item { padding:10px 12px; } }
 </style>
 <div class="rpay">
-    <nav class="nav" aria-label="Client project navigation">
-        <a class="nav-item" href="{{ route('client.projects.show', $projectRecord->id) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-home"/></svg>Home</a>
-        <a class="nav-item" href="{{ route('client.projects.show', $projectRecord->id) }}#published-progress"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-chart"/></svg>Progress</a>
-        <a class="nav-item" href="{{ route('client.quality.index', $projectRecord->id) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-camera"/></svg>Quality &amp; Testing</a>
-        @if(Route::has('client.vault.index'))
-            <a class="nav-item" href="{{ route('client.vault.index', $projectRecord->id) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-file"/></svg>Documents</a>
-        @else
-            <span class="nav-item disabled" aria-disabled="true">Documents</span>
-        @endif
-        @if(Route::has('client.decisions.index'))
-            <a class="nav-item" href="{{ route('client.decisions.index', $projectRecord->id) }}"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-check"/></svg>My Decisions</a>
-        @else
-            <span class="nav-item disabled" aria-disabled="true">My Decisions</span>
-        @endif
-        <a class="nav-item active" href="{{ route('client.payments.show', $projectRecord->id) }}" aria-current="page"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-wallet"/></svg>Payments</a>
-        <span class="nav-item disabled" aria-disabled="true" title="Coming soon"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><use href="#ri-help"/></svg>Contact &amp; Support</span>
-    </nav>
-
-    <a class="rpay-back" href="{{ route('client.projects.show', $projectRecord->id) }}">&larr; Back to project</a>
     <div class="rpay-header">
         <div>
             <h1>{{ $projectRecord->project_name }} — Payments</h1>
