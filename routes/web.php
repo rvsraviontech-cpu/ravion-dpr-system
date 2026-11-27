@@ -2684,6 +2684,11 @@ Route::prefix('client')->name('client.')->group(function () {
     Route::middleware(['auth:client', \App\Http\Middleware\EnsureClientAccess::class])->group(function () {
         Route::get('/projects', [\App\Http\Controllers\ClientControl\ClientProjectController::class, 'index'])->name('projects.index');
         Route::get('/projects/{project}', [\App\Http\Controllers\ClientControl\ClientProjectController::class, 'show'])->whereNumber('project')->name('projects.show');
+        Route::get('/projects/{project}/support', [\App\Http\Controllers\ClientControl\ClientSupportPortalController::class, 'index'])->whereNumber('project')->name('support.index');
+        Route::post('/projects/{project}/support', [\App\Http\Controllers\ClientControl\ClientSupportPortalController::class, 'store'])->whereNumber('project')->middleware('throttle:10,1')->name('support.store');
+        Route::get('/projects/{project}/support/{ticket}', [\App\Http\Controllers\ClientControl\ClientSupportPortalController::class, 'show'])->whereNumber('project')->whereNumber('ticket')->name('support.show');
+        Route::post('/projects/{project}/support/{ticket}/reply', [\App\Http\Controllers\ClientControl\ClientSupportPortalController::class, 'reply'])->whereNumber('project')->whereNumber('ticket')->middleware('throttle:20,1')->name('support.reply');
+        Route::get('/projects/{project}/support/{ticket}/attachments/{attachment}', [\App\Http\Controllers\ClientControl\ClientSupportPortalController::class, 'attachment'])->whereNumber('project')->whereNumber('ticket')->whereNumber('attachment')->name('support.attachment');
         // Client payment statement: published snapshot only, client guard and project grant enforced.
         Route::get('/projects/{project}/payments', [\App\Http\Controllers\ClientControl\ClientPaymentPublicationController::class, 'clientStatement'])
             ->whereNumber('project')->name('payments.show');
@@ -2776,4 +2781,31 @@ Route::middleware('auth:web')->prefix('client-control/drawings')->name('client-c
         Route::get('/{drawing}/edit','edit')->whereNumber('drawing')->name('edit');
         Route::put('/{drawing}','update')->whereNumber('drawing')->name('update');
     });
+});
+
+// Client Control — Project Contact Directory
+Route::middleware('auth:web')->prefix('client-control/support/contacts')->name('client-control.admin.support.contacts.')->controller(\App\Http\Controllers\ClientControl\ClientSupportContactController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::post('/{project}', 'store')->whereNumber('project')->name('store');
+    Route::put('/{project}/{contact}', 'update')->whereNumber('project')->whereNumber('contact')->name('update');
+});
+
+Route::middleware('auth:web')->prefix('client-control/support/tickets')->name('client-control.admin.support.tickets.')->controller(\App\Http\Controllers\ClientControl\ClientSupportDeskController::class)->group(function () {
+ Route::get('/', 'index')->name('index');
+ Route::get('/create', 'create')->name('create');
+ Route::post('/', 'store')->name('store');
+ Route::get('/export/{format}', 'exportRegister')->whereIn('format',['pdf','xlsx'])->name('export');
+ Route::get('/{ticket}/export/{format}', 'exportTicket')->whereNumber('ticket')->whereIn('format',['pdf','xlsx'])->name('export-ticket');
+ Route::get('/{ticket}', 'show')->whereNumber('ticket')->name('show');
+ Route::post('/{ticket}/manage','manage')->whereNumber('ticket')->name('manage');
+ Route::post('/{ticket}/reply','reply')->whereNumber('ticket')->middleware('throttle:20,1')->name('reply');
+ Route::get('/{ticket}/attachments/{attachment}','attachment')->whereNumber('ticket')->whereNumber('attachment')->name('attachment');
+});
+
+
+Route::middleware('auth:web')->prefix('notifications')->name('erp.notifications.')->controller(\App\Http\Controllers\ErpNotificationController::class)->group(function(){
+ Route::get('/', 'index')->name('index');
+ Route::post('/read-all', 'readAll')->name('read-all');
+ Route::post('/{id}/open', 'open')->whereUuid('id')->name('open');
+ Route::post('/{id}/read', 'read')->whereUuid('id')->name('read');
 });

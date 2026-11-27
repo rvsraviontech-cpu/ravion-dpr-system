@@ -2,6 +2,7 @@
 @php
     $rvProjectId = data_get($project, 'id');
     $rvActive = match (true) {
+        request()->routeIs('client.support.*') => 'support',
         request()->routeIs('client.drawings.*') => 'drawings',
         request()->routeIs('client.payments.*') => 'payments',
         request()->routeIs('client.decisions.*') => 'decisions',
@@ -18,7 +19,7 @@
         ['label' => 'Drawings', 'url' => route('client.drawings.index', ['project' => $rvProjectId]), 'key' => 'drawings', 'enabled' => true],
         ['label' => 'My Decisions', 'url' => route('client.decisions.index', ['project' => $rvProjectId]), 'key' => 'decisions', 'enabled' => true],
         ['label' => 'Payments', 'url' => route('client.payments.show', ['project' => $rvProjectId]), 'key' => 'payments', 'enabled' => true],
-        ['label' => 'Contact & Support', 'url' => null, 'key' => 'support', 'enabled' => false],
+        ['label' => 'Contact & Support', 'url' => route('client.support.index', ['project' => $rvProjectId]), 'key' => 'support', 'enabled' => true],
     ];
 @endphp
 <nav class="rv-project-navigation" aria-label="Client project navigation">

@@ -15,6 +15,7 @@
 
     <div class="flex items-center gap-4">
         @auth
+                @include('notifications.bell')
             <span class="text-sm text-gray-700">
                 {{ auth()->user()->name }}
                 <span class="text-gray-400">

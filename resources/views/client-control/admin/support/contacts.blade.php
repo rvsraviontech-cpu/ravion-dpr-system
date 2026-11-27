@@ -1,0 +1,22 @@
+@extends('layouts.app')
+@section('content')
+<style>
+.cs-wrap{max-width:1250px;margin:auto;padding:20px;color:#334155}.cs-head{background:linear-gradient(110deg,#134e4a,#0f766e);color:white;padding:24px;border-radius:12px;margin-bottom:18px}.cs-card{background:white;border:1px solid #e2e8f0;border-radius:10px;padding:18px;margin:14px 0}.cs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}.cs-wrap label{display:block;font-size:13px;font-weight:600}.cs-wrap input:not([type=checkbox]),.cs-wrap select,.cs-wrap textarea{width:100%;border:1px solid #cbd5e1;border-radius:6px;padding:8px;margin-top:5px}.cs-wrap input[type=number]{appearance:textfield;-moz-appearance:textfield}.cs-wrap input::-webkit-inner-spin-button,.cs-wrap input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}.cs-btn{background:#0f766e;color:white;padding:9px 16px;border-radius:6px;margin-top:12px}.cs-flags{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0}.cs-flags label{display:flex;gap:6px;align-items:center}.cs-muted{color:#64748b;font-size:13px}.cs-wrap summary{cursor:pointer;font-weight:600}.cs-error{color:#991b1b;background:#fef2f2;padding:12px}.cs-ok{color:#166534;background:#f0fdf4;padding:12px}
+</style>
+<div class="cs-wrap">
+<div class="cs-head"><h1 class="text-2xl font-bold">Project Contact Directory</h1><p>Manage project representatives and control what clients can see.</p></div>
+@if(session('success'))<div class="cs-ok">{{ session('success') }}</div>@endif
+@if($errors->any())<div class="cs-error">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>@endif
+<form method="GET" class="cs-card" action="{{ route('client-control.admin.support.contacts.index') }}"><label>Project<select name="project" required><option value="">Select project</option>@foreach($projects as $p)<option value="{{ $p->id }}" @selected($project?->id == $p->id)>{{ $p->project_code }} — {{ $p->project_name }}</option>@endforeach</select></label><button class="cs-btn">Load contacts</button></form>
+@if($project)
+<div class="cs-card"><h2 class="text-lg font-bold">{{ $project->project_name }}</h2><p class="cs-muted">{{ $contacts->count() }} contacts · {{ $contacts->filter(fn($c)=>$c->is_active && $c->is_client_visible && $c->role_active)->count() }} visible to client</p><p class="cs-muted">To hide the entire directory, turn off client visibility for every contact. Ticketing remains independent.</p></div>
+@foreach($contacts->concat([null]) as $c)
+<details class="cs-card" @if(!$c || $errors->any()) open @endif><summary>{{ $c ? $c->designation.' — '.$c->name : '+ Add project contact' }} @if($c)<span class="cs-muted"> · {{ $c->is_active && $c->is_client_visible && $c->role_active ? 'Visible' : 'Hidden' }}</span>@endif</summary>
+<form method="POST" action="{{ $c ? route('client-control.admin.support.contacts.update',[$project->id,$c->id]) : route('client-control.admin.support.contacts.store',$project->id) }}" class="mt-4">@csrf @if($c) @method('PUT') @endif
+<div class="cs-grid"><label>Designation<select name="role_id" required><option value="">Select designation</option>@foreach($roles as $role) @if($role->is_active || $c?->role_id == $role->id)<option value="{{ $role->id }}" @selected($c?->role_id == $role->id)>{{ $role->name }}{{ $role->is_active ? '' : ' (Inactive)' }}</option>@endif @endforeach</select></label>
+<label>Contact name<input name="name" required maxlength="150" value="{{ $c?->name }}"></label><label>Phone<input name="phone" maxlength="50" value="{{ $c?->phone }}"></label><label>Email<input type="email" name="email" maxlength="255" value="{{ $c?->email }}"></label><label>Availability<textarea name="availability" maxlength="2000">{{ $c?->availability }}</textarea></label><label>Display order<input type="text" inputmode="numeric" pattern="[0-9]+" name="sort_order" required value="{{ $c?->sort_order ?? 0 }}"></label></div>
+<div class="cs-flags">@foreach(['is_active'=>'Active','is_client_visible'=>'Visible to client','show_name'=>'Show name','show_phone'=>'Show phone','show_email'=>'Show email','show_availability'=>'Show availability'] as $field=>$label)<label><input type="checkbox" name="{{ $field }}" value="1" @checked($c ? $c->$field : $field==='is_active')> {{ $label }}</label>@endforeach</div><button class="cs-btn">{{ $c ? 'Save changes' : 'Add contact' }}</button></form></details>
+@endforeach
+@endif
+</div>
+@endsection

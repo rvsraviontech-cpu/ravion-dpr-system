@@ -669,6 +669,18 @@ return [
                 'icon' => 'layers',
             ],
             [
+                'title' => 'Support Desk',
+                'route' => 'client-control.admin.support.tickets.index',
+                'permission' => 'client_control.support.view',
+                'icon' => 'clipboard',
+            ],
+            [
+                'title' => 'Project Contacts',
+                'route' => 'client-control.admin.support.contacts.index',
+                'permission' => 'client_control.support.manage_contacts',
+                'icon' => 'clipboard',
+            ],
+            [
                 'title' => 'Client Publications',
                 'route' => 'client-control.admin.publications.index',
                 'permission' => 'client_control.view',

@@ -111,6 +111,7 @@
             </a>
 
             @auth
+                @include('notifications.bell')
                 {{-- Logout --}}
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
